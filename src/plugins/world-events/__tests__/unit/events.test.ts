@@ -30,13 +30,13 @@ describe("World Events", () => {
       seen.push(evt.data.eventId);
     });
     const project = narrative.createProject("emit", {
-      entitiesSource: `BOTAO.{ tags: object; stats: ; links: ; }\nstart()\n`,
+      entitiesSource: `@botao.{ tags: object; stats: ; links: ; }\nstart()\n`,
       rulesSource: `# start
 ON: start
 narrativa: "ok"
 
 # tocar
-ON: BOTAO
+ON: @botao
 DO: EMIT acordou
 narrativa: "soa"
 
@@ -48,9 +48,9 @@ narrativa: "eco"
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "BOTAO");
+    game = narrative.interact(game, "@botao");
     assert.ok(game.worldModel.get("acordou")?.tags.has("event"));
-    assert.ok(game.history.some((b) => b.triggerId === "BOTAO"));
+    assert.ok(game.history.some((b) => b.triggerId === "@botao"));
     assert.ok(game.history.some((b) => b.triggerId === "acordou"));
     assert.match(game.history.find((b) => b.triggerId === "acordou")!.story, /eco/);
     await Promise.resolve();
@@ -59,20 +59,20 @@ narrativa: "eco"
 
   it("caps recursive EMIT", () => {
     const project = narrative.createProject("loop", {
-      entitiesSource: `X.{ tags: event; stats: ; links: ; }\nstart()\n`,
+      entitiesSource: `@x.{ tags: event; stats: ; links: ; }\nstart()\n`,
       rulesSource: `# start
 ON: start
 narrativa: "ok"
 
 # loop
-ON: X
-DO: EMIT X
+ON: @x
+DO: EMIT @x
 narrativa: "x"
 `,
     });
     const compiled = narrative.compileProject(project);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "X");
-    assert.ok(game.history.filter((b) => b.triggerId === "X").length <= 5);
+    game = narrative.interact(game, "@x");
+    assert.ok(game.history.filter((b) => b.triggerId === "@x").length <= 5);
   });
 });

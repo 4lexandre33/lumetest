@@ -95,6 +95,9 @@ export function IdeApp() {
   const bootPreview = useIdeStore((s) => s.bootPreview);
   const resetPreview = useIdeStore((s) => s.resetPreview);
   const startGuide = useIdeStore((s) => s.startGuide);
+  const showRef = useIdeStore((s) => s.showRef);
+  const openReference = useIdeStore((s) => s.openReference);
+  const closeReference = useIdeStore((s) => s.closeReference);
   const importProject = useIdeStore((s) => s.importProject);
   const importNotebooks = useIdeStore((s) => s.importNotebooks);
   const exportSessionJson = useIdeStore((s) => s.exportSessionJson);
@@ -102,7 +105,6 @@ export function IdeApp() {
   const openPlay = useIdeStore((s) => s.openPlay);
 
   const [openMenu, setOpenMenu] = useState<MenuId | null>(null);
-  const [showRef, setShowRef] = useState(false);
   const [showIndex, setShowIndex] = useState(false);
   const [showExt, setShowExt] = useState(false);
   const [motor, setMotor] = useState(false);
@@ -135,7 +137,7 @@ export function IdeApp() {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setOpenMenu(null);
-        setShowRef(false);
+        closeReference();
         setShowExt(false);
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
@@ -149,7 +151,7 @@ export function IdeApp() {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [openMenu, saveNow]);
+  }, [openMenu, saveNow, closeReference]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -255,6 +257,7 @@ export function IdeApp() {
     return (
       <>
         <Guide />
+        {showRef ? <Reference onClose={closeReference} /> : null}
         {chrome}
       </>
     );
@@ -263,6 +266,7 @@ export function IdeApp() {
     return (
       <>
         <Welcome />
+        {showRef ? <Reference onClose={closeReference} /> : null}
         {chrome}
       </>
     );
@@ -365,7 +369,7 @@ export function IdeApp() {
                 {m.id === "ajuda" ? (
                   <>
                     <MenuItem label="Guia" onSelect={() => closeAnd(startGuide)} />
-                    <MenuItem label="Referência da linguagem" onSelect={() => closeAnd(() => setShowRef(true))} />
+                    <MenuItem label="Rever guia" onSelect={() => closeAnd(openReference)} />
                     <MenuItem label="Plugins externos…" onSelect={() => closeAnd(() => setShowExt(true))} />
                   </>
                 ) : null}
@@ -536,7 +540,7 @@ export function IdeApp() {
         }}
       />
 
-      {showRef ? <Reference onClose={() => setShowRef(false)} /> : null}
+      {showRef ? <Reference onClose={closeReference} /> : null}
       {showIndex ? <WorldIndex onClose={() => setShowIndex(false)} /> : null}
       {showExt ? <ExtPluginsWindow onClose={() => setShowExt(false)} /> : null}
       {chrome}

@@ -18,16 +18,16 @@ function world(list: SpatialEntity[]): SpatialWorld {
 
 const boxRoom = () =>
   world([
-    entity("SALA", { exit_n: "CORREDOR" }, ["place"]),
-    entity("CORREDOR", { exit_s: "SALA" }, ["place"]),
-    entity("CAIXA", { in: "SALA" }, ["object", "container"]),
-    entity("CHAVE", { in: "CAIXA" }, ["object"]),
-    entity("MESA", { in: "SALA" }, ["object"]),
+    entity("@sala", { exit_n: "@corredor" }, ["place"]),
+    entity("@corredor", { exit_s: "@sala" }, ["place"]),
+    entity("@caixa", { in: "@sala" }, ["object", "container"]),
+    entity("@chave", { in: "@caixa" }, ["object"]),
+    entity("MESA", { in: "@sala" }, ["object"]),
     entity("LIVRO", { on: "MESA" }, ["object"]),
-    entity("JOGADOR", { [IN_ALIAS]: "SALA" }, ["agent"]),
-    entity("ESPADA", { held_by: "JOGADOR" }, ["object"]),
-    entity("CASACO", { worn_by: "JOGADOR" }, ["object"]),
-    entity("PORTA", { from: "SALA", to: "CORREDOR", dir: "n" }, ["connector"]),
+    entity("@jogador", { [IN_ALIAS]: "@sala" }, ["agent"]),
+    entity("ESPADA", { held_by: "@jogador" }, ["object"]),
+    entity("CASACO", { worn_by: "@jogador" }, ["object"]),
+    entity("@porta", { from: "@sala", to: "@corredor", dir: "n" }, ["connector"]),
   ]);
 
 describe("Spatial", () => {
@@ -52,17 +52,17 @@ describe("Spatial", () => {
 
   it("reads in, aliases current_location, and walks the box-in-room chain", () => {
     const w = boxRoom();
-    assert.equal(spatial.locationOf(w, "CHAVE"), "CAIXA");
-    assert.equal(spatial.locationOf(w, "CAIXA"), "SALA");
-    assert.equal(spatial.locationOf(w, "JOGADOR"), "SALA");
-    assert.equal(spatial.relationOf(w, "JOGADOR"), "in");
-    assert.equal(inOf(w.get("JOGADOR")!), "SALA");
-    assert.deepEqual(spatial.contents(w, "SALA"), ["CAIXA", "JOGADOR", "MESA"]);
-    assert.equal(spatial.contents(w, "SALA").includes("CHAVE"), false);
-    assert.equal(spatial.deepContains(w, "SALA", "CHAVE"), true);
-    assert.equal(spatial.deepContains(w, "CAIXA", "CHAVE"), true);
-    assert.equal(spatial.deepContains(w, "CAIXA", "JOGADOR"), false);
-    assert.deepEqual(spatial.chain(w, "CHAVE"), ["CAIXA", "SALA"]);
+    assert.equal(spatial.locationOf(w, "@chave"), "@caixa");
+    assert.equal(spatial.locationOf(w, "@caixa"), "@sala");
+    assert.equal(spatial.locationOf(w, "@jogador"), "@sala");
+    assert.equal(spatial.relationOf(w, "@jogador"), "in");
+    assert.equal(inOf(w.get("@jogador")!), "@sala");
+    assert.deepEqual(spatial.contents(w, "@sala"), ["@caixa", "@jogador", "MESA"]);
+    assert.equal(spatial.contents(w, "@sala").includes("@chave"), false);
+    assert.equal(spatial.deepContains(w, "@sala", "@chave"), true);
+    assert.equal(spatial.deepContains(w, "@caixa", "@chave"), true);
+    assert.equal(spatial.deepContains(w, "@caixa", "@jogador"), false);
+    assert.deepEqual(spatial.chain(w, "@chave"), ["@caixa", "@sala"]);
   });
 
   it("prefers in over current_location when both exist", () => {
@@ -76,36 +76,36 @@ describe("Spatial", () => {
   it("treats on, held_by and worn_by as sibling relations", () => {
     const w = boxRoom();
     assert.deepEqual(spatial.contentsOn(w, "MESA"), ["LIVRO"]);
-    assert.deepEqual(spatial.heldBy(w, "JOGADOR"), ["ESPADA"]);
-    assert.deepEqual(spatial.wornBy(w, "JOGADOR"), ["CASACO"]);
-    assert.equal(spatial.locationOf(w, "ESPADA"), "JOGADOR");
+    assert.deepEqual(spatial.heldBy(w, "@jogador"), ["ESPADA"]);
+    assert.deepEqual(spatial.wornBy(w, "@jogador"), ["CASACO"]);
+    assert.equal(spatial.locationOf(w, "ESPADA"), "@jogador");
     assert.equal(spatial.relationOf(w, "ESPADA"), "held_by");
     assert.equal(spatial.relationOf(w, "LIVRO"), "on");
-    assert.equal(spatial.deepContains(w, "SALA", "ESPADA"), true);
-    assert.deepEqual(spatial.occupants(w, "JOGADOR"), ["CASACO", "ESPADA"]);
+    assert.equal(spatial.deepContains(w, "@sala", "ESPADA"), true);
+    assert.deepEqual(spatial.occupants(w, "@jogador"), ["CASACO", "ESPADA"]);
   });
 
   it("reads travel from exit_* and connector entities", () => {
     const w = boxRoom();
-    assert.equal(spatial.destination(w, "SALA", "n"), "CORREDOR");
-    assert.equal(spatial.destination(w, "CORREDOR", "s"), "SALA");
-    assert.equal(spatial.destination(w, "SALA", "s"), null);
-    const fromSala = spatial.exits(w, "SALA");
-    assert.ok(fromSala.some((exit) => exit.dir === "n" && exit.to === "CORREDOR" && exit.via === "exit"));
-    assert.ok(fromSala.some((exit) => exit.dir === "n" && exit.to === "CORREDOR" && exit.via === "connector"));
+    assert.equal(spatial.destination(w, "@sala", "n"), "@corredor");
+    assert.equal(spatial.destination(w, "@corredor", "s"), "@sala");
+    assert.equal(spatial.destination(w, "@sala", "s"), null);
+    const fromSala = spatial.exits(w, "@sala");
+    assert.ok(fromSala.some((exit) => exit.dir === "n" && exit.to === "@corredor" && exit.via === "exit"));
+    assert.ok(fromSala.some((exit) => exit.dir === "n" && exit.to === "@corredor" && exit.via === "connector"));
     assert.deepEqual(
-      spatial.connectorsFrom(w, "SALA").map((c) => c.id),
-      ["PORTA"],
+      spatial.connectorsFrom(w, "@sala").map((c) => c.id),
+      ["@porta"],
     );
   });
 
   it("does not mutate the world and accepts a compiled WorldModel", () => {
     const project = narrative.createProject("caixa", {
-      entitiesSource: `SALA.{ tags: place; links: exit_n=CORREDOR; }
-CORREDOR.{ tags: place; links: exit_s=SALA; }
-CAIXA.{ tags: object; links: in=SALA; }
-CHAVE.{ tags: object; links: in=CAIXA; }
-JOGADOR.{ tags: agent; links: current_location=SALA; }
+      entitiesSource: `@sala.{ tags: place; links: exit_n=@corredor; }
+@corredor.{ tags: place; links: exit_s=@sala; }
+@caixa.{ tags: object; links: in=@sala; }
+@chave.{ tags: object; links: in=@caixa; }
+@jogador.{ tags: agent; links: current_location=@sala; }
 start()
 `,
       rulesSource: `# start
@@ -115,37 +115,37 @@ narrativa: "ok"
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    const before = compiled.worldModel.get("CHAVE")!.links.in;
-    assert.equal(spatial.deepContains(compiled.worldModel, "SALA", "CHAVE"), true);
-    assert.equal(spatial.locationOf(compiled.worldModel, "JOGADOR"), "SALA");
-    assert.equal(spatial.destination(compiled.worldModel, "SALA", "n"), "CORREDOR");
-    assert.equal(compiled.worldModel.get("CHAVE")!.links.in, before);
-    assert.equal(compiled.worldModel.get("JOGADOR")!.links.current_location, "SALA");
-    assert.equal(compiled.worldModel.get("JOGADOR")!.links.in, undefined);
+    const before = compiled.worldModel.get("@chave")!.links.in;
+    assert.equal(spatial.deepContains(compiled.worldModel, "@sala", "@chave"), true);
+    assert.equal(spatial.locationOf(compiled.worldModel, "@jogador"), "@sala");
+    assert.equal(spatial.destination(compiled.worldModel, "@sala", "n"), "@corredor");
+    assert.equal(compiled.worldModel.get("@chave")!.links.in, before);
+    assert.equal(compiled.worldModel.get("@jogador")!.links.current_location, "@sala");
+    assert.equal(compiled.worldModel.get("@jogador")!.links.in, undefined);
   });
 
   it("builds a room graph from exit_* and in without mutating the world", () => {
     const w = world([
-      entity("SALA", { exit_n: "CORREDOR" }, ["place"]),
-      entity("CORREDOR", { exit_s: "SALA" }, ["place"]),
-      entity("ALCOVA", { in: "SALA" }, ["place"]),
-      entity("JOGADOR", { current_location: "SALA" }, ["agent"]),
+      entity("@sala", { exit_n: "@corredor" }, ["place"]),
+      entity("@corredor", { exit_s: "@sala" }, ["place"]),
+      entity("ALCOVA", { in: "@sala" }, ["place"]),
+      entity("@jogador", { current_location: "@sala" }, ["agent"]),
     ]);
     const map = spatial.graphOf(w);
-    const sala = map.rooms.find((r) => r.id === "SALA");
-    const corredor = map.rooms.find((r) => r.id === "CORREDOR");
+    const sala = map.rooms.find((r) => r.id === "@sala");
+    const corredor = map.rooms.find((r) => r.id === "@corredor");
     const alcova = map.rooms.find((r) => r.id === "ALCOVA");
     assert.ok(sala && corredor && alcova);
     assert.ok(corredor.y < sala.y);
-    assert.ok(map.links.some((l) => l.from === "SALA" && l.to === "CORREDOR" && l.dir === "n" && l.via === "exit"));
-    assert.ok(map.links.some((l) => l.from === "SALA" && l.to === "ALCOVA" && l.via === "in"));
-    assert.equal(spatial.placeOf(w, "JOGADOR"), "SALA");
-    assert.equal(w.get("SALA")?.links.exit_n, "CORREDOR");
+    assert.ok(map.links.some((l) => l.from === "@sala" && l.to === "@corredor" && l.dir === "n" && l.via === "exit"));
+    assert.ok(map.links.some((l) => l.from === "@sala" && l.to === "ALCOVA" && l.via === "in"));
+    assert.equal(spatial.placeOf(w, "@jogador"), "@sala");
+    assert.equal(w.get("@sala")?.links.exit_n, "@corredor");
 
     const cave = narrative.compileProject(narrative.createProject("cave-map", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=ENTRADA; }
-ENTRADA.{ tags: place; }
-CAVERNA.{ tags: place; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@entrada; }
+@entrada.{ tags: place; }
+@caverna.{ tags: place; }
 start()
 `,
       rulesSource: `# start
@@ -155,6 +155,6 @@ narrativa: "ok"
     }));
     assert.equal(cave.errors.length, 0);
     const rooms = spatial.graphOf(cave.worldModel).rooms.map((r) => r.id).sort();
-    assert.deepEqual(rooms, ["CAVERNA", "ENTRADA"]);
+    assert.deepEqual(rooms, ["@caverna", "@entrada"]);
   });
 });

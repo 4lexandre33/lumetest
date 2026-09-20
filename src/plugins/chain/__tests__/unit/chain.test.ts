@@ -34,8 +34,8 @@ describe("Chain", () => {
 
   it("THEN interacts an existing entity without tagging it event", () => {
     const project = narrative.createProject("then", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; }
-CORREDOR.{ tags: place; stats: ; links: ; name: Corredor; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; }
+@corredor.{ tags: place; stats: ; links: ; name: Corredor; }
 start()
 `,
       rulesSource: `# start
@@ -43,30 +43,30 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
-DO: PORTA.aberta
-    THEN CORREDOR
+ON: @porta
+DO: @porta.aberta
+    THEN @corredor
 narrativa: "abre"
 
 # olhar
-ON: CORREDOR
+ON: @corredor
 narrativa: "O corredor continua."
 `,
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "PORTA");
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), true);
-    assert.equal(game.worldModel.get("CORREDOR")?.tags.has("event"), false);
-    assert.ok(game.history.some((beat) => beat.triggerId === "PORTA"));
-    assert.ok(game.history.some((beat) => beat.triggerId === "CORREDOR"));
-    assert.match(game.history.find((beat) => beat.triggerId === "CORREDOR")!.story, /corredor/);
+    game = narrative.interact(game, "@porta");
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), true);
+    assert.equal(game.worldModel.get("@corredor")?.tags.has("event"), false);
+    assert.ok(game.history.some((beat) => beat.triggerId === "@porta"));
+    assert.ok(game.history.some((beat) => beat.triggerId === "@corredor"));
+    assert.match(game.history.find((beat) => beat.triggerId === "@corredor")!.story, /corredor/);
   });
 
   it("THEN $ reuses the trigger and does not spawn", () => {
     const project = narrative.createProject("dollar", {
-      entitiesSource: `SINO.{ tags: object; stats: toques=0; links: ; }
+      entitiesSource: `@sino.{ tags: object; stats: toques=0; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -74,31 +74,31 @@ ON: start
 narrativa: "ok"
 
 # primeiro
-ON: SINO
-IF: SINO.toques=0
-DO: SINO.toques=1
+ON: @sino
+IF: @sino.toques=0
+DO: @sino.toques=1
     THEN $
 narrativa: "toca"
 
 # eco
-ON: SINO
-IF: SINO.toques=1
-DO: SINO.toques=2
+ON: @sino
+IF: @sino.toques=1
+DO: @sino.toques=2
 narrativa: "eco"
 `,
     });
     const compiled = narrative.compileProject(project);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "SINO");
-    assert.equal(game.worldModel.get("SINO")?.stats.toques, 2);
-    assert.equal(game.worldModel.has("SINO"), true);
-    assert.ok(game.history.filter((beat) => beat.triggerId === "SINO").length >= 2);
+    game = narrative.interact(game, "@sino");
+    assert.equal(game.worldModel.get("@sino")?.stats.toques, 2);
+    assert.equal(game.worldModel.has("@sino"), true);
+    assert.ok(game.history.filter((beat) => beat.triggerId === "@sino").length >= 2);
   });
 
   it("THEN is not EMIT: no event entity appears", () => {
     const project = narrative.createProject("nao-evento", {
-      entitiesSource: `BOTAO.{ tags: object; stats: ; links: ; }
-ALARME.{ tags: object; stats: ; links: ; }
+      entitiesSource: `@botao.{ tags: object; stats: ; links: ; }
+@alarme.{ tags: object; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -106,25 +106,25 @@ ON: start
 narrativa: "ok"
 
 # aperta
-ON: BOTAO
-DO: THEN ALARME
+ON: @botao
+DO: THEN @alarme
 narrativa: "clica"
 
 # soa
-ON: ALARME
+ON: @alarme
 narrativa: "soa"
 `,
     });
     const compiled = narrative.compileProject(project);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "BOTAO");
-    assert.equal(game.worldModel.get("ALARME")?.tags.has("event"), false);
-    assert.ok(game.history.some((beat) => beat.triggerId === "ALARME"));
+    game = narrative.interact(game, "@botao");
+    assert.equal(game.worldModel.get("@alarme")?.tags.has("event"), false);
+    assert.ok(game.history.some((beat) => beat.triggerId === "@alarme"));
   });
 
   it("caps recursive THEN with the same depth as EMIT", () => {
     const project = narrative.createProject("loop", {
-      entitiesSource: `X.{ tags: object; stats: ; links: ; }
+      entitiesSource: `@x.{ tags: object; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -132,21 +132,21 @@ ON: start
 narrativa: "ok"
 
 # loop
-ON: X
-DO: THEN X
+ON: @x
+DO: THEN @x
 narrativa: "x"
 `,
     });
     const compiled = narrative.compileProject(project);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "X");
-    assert.ok(game.history.filter((beat) => beat.triggerId === "X").length <= 5);
+    game = narrative.interact(game, "@x");
+    assert.ok(game.history.filter((beat) => beat.triggerId === "@x").length <= 5);
   });
 
   it("dry-run lists THEN without following", () => {
     const project = narrative.createProject("seco", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; }
-CORREDOR.{ tags: place; stats: ; links: ; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; }
+@corredor.{ tags: place; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -154,21 +154,21 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
-DO: PORTA.aberta
-    THEN CORREDOR
+ON: @porta
+DO: @porta.aberta
+    THEN @corredor
 narrativa: "abre"
 `,
     });
     const compiled = narrative.compileProject(project);
     const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    const report = narrative.dryRun(game, "PORTA");
+    const report = narrative.dryRun(game, "@porta");
     assert.deepEqual(
       report.effects.map((effect) => effect.verb),
       ["then"],
     );
-    assert.equal(game.history.some((beat) => beat.triggerId === "CORREDOR"), false);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), false);
+    assert.equal(game.history.some((beat) => beat.triggerId === "@corredor"), false);
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), false);
   });
 
   it("does not change goblin-cave play", () => {
@@ -176,9 +176,9 @@ narrativa: "abre"
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(
-      narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy),
+      narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy),
     );
-    game = narrative.interact(game, "GOBLIN");
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("sleeping"), false);
+    game = narrative.interact(game, "@goblin");
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("sleeping"), false);
   });
 });

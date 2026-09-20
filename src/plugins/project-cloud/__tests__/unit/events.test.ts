@@ -70,7 +70,7 @@ describe('Project Cloud Event Emissions', () => {
     const project = createProject('Playtest Events Project');
     await cloudService.saveProject(project);
 
-    const snapshot = { turn: 5, playerLocation: 'CAVERNA' };
+    const snapshot = { turn: 5, playerLocation: '@caverna' };
     await cloudService.savePlaytest(project.meta.id, snapshot);
 
     assert.ok(playtestSaved);

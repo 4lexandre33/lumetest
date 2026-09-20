@@ -40,13 +40,13 @@ describe("Adventure kit", () => {
 
   it("applies once and compiles a box room", () => {
     let project = narrative.createProject("kit-room", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; name: Sala; }
-CORREDOR.{ tags: place; name: Corredor; }
-ESPADA.{ tags: portable; links: current_location=SALA; name: Espada; }
-MESA.{ tags: fixture; links: current_location=SALA; name: Mesa; }
-CAIXA.{ tags: container, openable, lockable; links: current_location=SALA; name: Caixa; }
-PORTA_SANGRENTA.{ tags: openable; links: current_location=SALA; name: Porta; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; name: Sala; }
+@corredor.{ tags: place; name: Corredor; }
+@espada.{ tags: portable; links: current_location=@sala; name: Espada; }
+@mesa.{ tags: fixture; links: current_location=@sala; name: Mesa; }
+@caixa.{ tags: container, openable, lockable; links: current_location=@sala; name: Caixa; }
+@porta_sangrenta.{ tags: openable; links: current_location=@sala; name: Porta; }
 start()
 `,
       taxonomySource: "",
@@ -55,8 +55,8 @@ ON: start
 narrativa: "ok"
 
 # porta
-ON: PORTA_SANGRENTA
-IF: JOGADOR.intent=open
+ON: @porta_sangrenta
+IF: @jogador.intent=open
 narrativa: "Sangue sela a porta."
 `,
     });
@@ -65,7 +65,7 @@ narrativa: "Sangue sela a porta."
     assert.equal((project.taxonomySource.match(/# kit:adventure/g) ?? []).length, 1);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
 
     const run = (cmd: string) => {
       const result = executeIntent(cmd, game, q, interactWith);
@@ -74,45 +74,45 @@ narrativa: "Sangue sela a porta."
       return result;
     };
 
-    run("intent.action.interact.take.ESPADA");
-    assert.equal(game.worldModel.get("ESPADA")?.links.current_location, "JOGADOR");
+    run("intent.action.interact.take.@espada");
+    assert.equal(game.worldModel.get("@espada")?.links.current_location, "@jogador");
 
-    run("intent.action.interact.drop.ESPADA");
-    assert.equal(game.worldModel.get("ESPADA")?.links.current_location, "SALA");
+    run("intent.action.interact.drop.@espada");
+    assert.equal(game.worldModel.get("@espada")?.links.current_location, "@sala");
 
-    run("intent.action.interact.take.MESA");
-    assert.equal(game.worldModel.get("MESA")?.links.current_location, "SALA");
+    run("intent.action.interact.take.@mesa");
+    assert.equal(game.worldModel.get("@mesa")?.links.current_location, "@sala");
     assert.ok(game.story.includes("não sai"));
 
-    run("intent.action.interact.take.ESPADA");
-    run("intent.action.interact.put.ESPADA.CAIXA");
-    assert.equal(game.worldModel.get("ESPADA")?.links.current_location, "JOGADOR");
+    run("intent.action.interact.take.@espada");
+    run("intent.action.interact.put.@espada.@caixa");
+    assert.equal(game.worldModel.get("@espada")?.links.current_location, "@jogador");
     assert.ok(game.story.includes("fechado"));
-    run("intent.action.interact.open.CAIXA");
-    assert.equal(game.worldModel.get("CAIXA")?.tags.has("aberta"), true);
-    run("intent.action.interact.lock.CAIXA");
-    assert.equal(game.worldModel.get("CAIXA")?.tags.has("locked"), false);
+    run("intent.action.interact.open.@caixa");
+    assert.equal(game.worldModel.get("@caixa")?.tags.has("aberta"), true);
+    run("intent.action.interact.lock.@caixa");
+    assert.equal(game.worldModel.get("@caixa")?.tags.has("locked"), false);
     assert.ok(game.story.includes("Fecha"));
-    run("intent.action.interact.put.ESPADA.CAIXA");
-    assert.equal(game.worldModel.get("ESPADA")?.links.current_location, "CAIXA");
+    run("intent.action.interact.put.@espada.@caixa");
+    assert.equal(game.worldModel.get("@espada")?.links.current_location, "@caixa");
 
-    run("intent.action.interact.close.CAIXA");
-    assert.equal(game.worldModel.get("CAIXA")?.tags.has("aberta"), false);
-    run("intent.action.interact.lock.CAIXA");
-    assert.equal(game.worldModel.get("CAIXA")?.tags.has("locked"), true);
-    run("intent.action.interact.open.CAIXA");
-    assert.equal(game.worldModel.get("CAIXA")?.tags.has("aberta"), false);
-    run("intent.action.interact.unlock.CAIXA");
-    assert.equal(game.worldModel.get("CAIXA")?.tags.has("locked"), false);
+    run("intent.action.interact.close.@caixa");
+    assert.equal(game.worldModel.get("@caixa")?.tags.has("aberta"), false);
+    run("intent.action.interact.lock.@caixa");
+    assert.equal(game.worldModel.get("@caixa")?.tags.has("locked"), true);
+    run("intent.action.interact.open.@caixa");
+    assert.equal(game.worldModel.get("@caixa")?.tags.has("aberta"), false);
+    run("intent.action.interact.unlock.@caixa");
+    assert.equal(game.worldModel.get("@caixa")?.tags.has("locked"), false);
 
-    const door = executeIntent("intent.action.interact.open.PORTA_SANGRENTA", game, q, interactWith);
+    const door = executeIntent("intent.action.interact.open.@porta_sangrenta", game, q, interactWith);
     assert.equal(door.executed, true);
     assert.ok(door.game.story.includes("Sangue"));
-    assert.equal(door.game.worldModel.get("PORTA_SANGRENTA")?.tags.has("aberta"), false);
+    assert.equal(door.game.worldModel.get("@porta_sangrenta")?.tags.has("aberta"), false);
     game = door.game;
 
-    run("intent.action.go.CORREDOR");
-    assert.equal(game.worldModel.get("JOGADOR")?.links.current_location, "CORREDOR");
+    run("intent.action.go.@corredor");
+    assert.equal(game.worldModel.get("@jogador")?.links.current_location, "@corredor");
     run("intent.action.look");
     assert.ok(game.story.includes("Corredor"));
     run("intent.action.inventory");
@@ -121,7 +121,7 @@ narrativa: "Sangue sela a porta."
 
   it("keeps author taxonomy children and still marks the kit", () => {
     let project = narrative.createProject("kit-merge", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
+      entitiesSource: `@jogador.{ tags: agent; }
 start()
 `,
       taxonomySource: "portable → object\ncustom → object\n",
@@ -141,11 +141,11 @@ narrativa: "ok"
 
   it("conversation fallbacks yield to a more specific author rule", () => {
     let project = narrative.createProject("kit-talk", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; name: Sala; }
-GUARDA.{ tags: agent; links: current_location=SALA; name: Guarda; }
-CHEFE.{ tags: agent, falando; links: current_location=SALA; name: Chefe; }
-SEGREDO.{ tags: topic; name: chave; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; name: Sala; }
+@guarda.{ tags: agent; links: current_location=@sala; name: Guarda; }
+@chefe.{ tags: agent, falando; links: current_location=@sala; name: Chefe; }
+@segredo.{ tags: topic; name: chave; }
 start()
 `,
       taxonomySource: "",
@@ -154,16 +154,16 @@ ON: start
 narrativa: "ok"
 
 # pergunta específica
-ON: GUARDA
-IF: JOGADOR.intent=ask
-IF: JOGADOR.intent_topic=SEGREDO
+ON: @guarda
+IF: @jogador.intent=ask
+IF: @jogador.intent_topic=@segredo
 narrativa: "Cala-te."
 `,
     });
     project = kit.apply(project);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
 
     const run = (cmd: string) => {
       const result = executeIntent(cmd, game, q, interactWith);
@@ -172,23 +172,23 @@ narrativa: "Cala-te."
       return result;
     };
 
-    run("intent.action.interact.talk.GUARDA");
+    run("intent.action.interact.talk.@guarda");
     assert.ok(game.story.includes("nada a dizer"));
 
-    run("intent.action.communicate.GUARDA");
+    run("intent.action.communicate.@guarda");
     assert.ok(game.story.includes("nada a dizer"));
 
-    run("intent.action.interact.ask.GUARDA.SEGREDO");
+    run("intent.action.interact.ask.@guarda.@segredo");
     assert.ok(game.story.includes("Cala-te"));
 
-    run("intent.action.interact.tell.CHEFE.SEGREDO");
+    run("intent.action.interact.tell.@chefe.@segredo");
     assert.ok(game.story.includes("silêncio"));
 
-    run("intent.action.interact.bye.GUARDA");
+    run("intent.action.interact.bye.@guarda");
     assert.ok(game.story.includes("Não estavam"));
-    run("intent.action.interact.bye.CHEFE");
+    run("intent.action.interact.bye.@chefe");
     assert.ok(game.story.includes("termina"));
-    assert.equal(game.worldModel.get("CHEFE")?.tags.has("falando"), false);
+    assert.equal(game.worldModel.get("@chefe")?.tags.has("falando"), false);
   });
 
   it("does not alter official examples", () => {

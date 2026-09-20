@@ -5,7 +5,7 @@ Caderno humano. Plugin interno isolado: compile **e** UI. Fora do matcher.
 ## Abrir
 - `lib/notebook.ts` — `compileNotebook` / `slugOf` / `Entenda`
 - `lib/cache.ts` — hash por `###`
-- `lib/pages.ts` — `parseCadernoLibrary` / `applyNotebookToProject` / fatia `# --- lume-caderno ---`
+- `lib/pages.ts` — `parseCadernoLibrary` / `applyNotebookToProject` / fatia `# --- lume-caderno ---` (pad à mão antes de `start()`)
 - `lib/share.ts` — export/import `.lume.caderno.md`
 - `ui/NotebookPane.tsx` — abas, `+`, índice, editor
 - `ui/NotebookEditor.tsx` — um editor; Vincular / popover / bind só em Escrita; ¹ ² ³ ao lado da palavra; Secção de regras

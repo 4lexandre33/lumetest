@@ -82,7 +82,7 @@ function ValueField({
         <input
           className={cn(FIELD, "mt-1")}
           value={draft.value}
-          placeholder="JOGADOR ou #A8F2"
+          placeholder="@jogador ou #A8F2"
           onChange={(e) => onChange({ ...draft, value: e.target.value })}
         />
       </label>
@@ -142,7 +142,7 @@ function ValueField({
         <input
           className={FIELD}
           value={draft.value}
-          placeholder="3 ou 3>BOOM"
+          placeholder="3 ou 3>@boom"
           onChange={(e) => onChange({ ...draft, value: e.target.value })}
         />
       </label>
@@ -213,7 +213,7 @@ export function MutationSheet({
               <input
                 className={FIELD}
                 value={draft.entityId}
-                placeholder="TOCHA"
+                placeholder="@tocha"
                 list="lume-write-ids"
                 onChange={(e) => onChange({ ...draft, entityId: e.target.value.trim() })}
               />

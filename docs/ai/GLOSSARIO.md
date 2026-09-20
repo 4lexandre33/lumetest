@@ -4,7 +4,7 @@ Se um pedido usar a coluna da esquerda, traduzir e **não procurar** Component/L
 
 | Pediram | Em Lume | Onde |
 |---------|---------|------|
-| Entity | `Entity` (tags, stats, links, extra) | `narrative-engine` world-model |
+| Entity | `Entity` (tags, stats, links, extra). Id canónico `@slug` minúsculo (`@jogador`). Sem `@` ou maiúsculas → E040. `start` é sistema. | `narrative-engine` world-model |
 | Component | **não existe** — é tag / stat / link | — |
 | Intent | comando `intent.*` **ou** `DO: INTENT` | intent-engine / agency |
 | Law | **não existe** — é `Rule` ON/IF/DO | rule-engine |

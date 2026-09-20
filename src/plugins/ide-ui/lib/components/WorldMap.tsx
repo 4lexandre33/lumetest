@@ -13,7 +13,7 @@ export function WorldMap() {
   const selected = useIdeStore((s) => s.selectedEntityId);
   const revealEntity = useIdeStore((s) => s.revealEntity);
   const world = game?.worldModel ?? compiled?.worldModel ?? null;
-  const playerId = game?.playerEntityId ?? (compiled?.worldModel.has("JOGADOR") ? "JOGADOR" : null);
+  const playerId = game?.playerEntityId ?? (compiled?.worldModel.has("@jogador") ? "@jogador" : null);
 
   if (!world) {
     return (

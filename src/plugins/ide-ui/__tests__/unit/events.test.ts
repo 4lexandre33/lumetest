@@ -49,7 +49,7 @@ describe('IDE UI Event Subscriptions & Telemetry', () => {
 
     await core.emitEvent(new EntityInteractEvent({
       projectId: 'p1',
-      entityId: 'GOBLIN'
+      entityId: '@goblin'
     }), 'lume-ide-ui');
 
     await core.emitEvent(new UserEditedSourceEvent({
@@ -69,7 +69,7 @@ describe('IDE UI Event Subscriptions & Telemetry', () => {
     }), 'lume-ide-ui');
 
     assert.equal(capturedEvents.length, 4);
-    assert.ok(capturedEvents.includes('GOBLIN'));
+    assert.ok(capturedEvents.includes('@goblin'));
     assert.ok(capturedEvents.includes('rules'));
     assert.ok(capturedEvents.includes('p1'));
     assert.ok(capturedEvents.includes('rewind-2'));

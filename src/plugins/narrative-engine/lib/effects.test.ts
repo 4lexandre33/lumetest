@@ -8,36 +8,36 @@ import { compileEntityFile } from "./world-model.ts";
 
 describe("DO verbs: parse", () => {
   it("keeps existing change lines unchanged", () => {
-    const parsed = parseDoLine("JOGADOR.medo+2");
+    const parsed = parseDoLine("@jogador.medo+2");
     assert.equal(parsed.effect, undefined);
     assert.equal(parsed.change?.fields[0]?.kind, "deltaStat");
   });
 
   it("parses DO stat minus another entity stat", () => {
-    const parsed = parseDoLine("$.hp-JOGADOR.force");
+    const parsed = parseDoLine("$.hp-@jogador.force");
     assert.equal(parsed.effect, undefined);
     assert.deepEqual(parsed.change?.target, { kind: "trigger" });
     assert.deepEqual(parsed.change?.fields[0], {
       kind: "deltaStatFrom",
       key: "hp",
       sign: -1,
-      from: { kind: "id", id: "JOGADOR" },
+      from: { kind: "id", id: "@jogador" },
       stat: "force",
     });
   });
 
   it("parses DO link lookup as change target and setLink value", () => {
-    const drop = parseDoLine("$.current_location=(link JOGADOR.current_location)");
+    const drop = parseDoLine("$.current_location=(link @jogador.current_location)");
     assert.equal(drop.effect, undefined);
     assert.deepEqual(drop.change?.target, { kind: "trigger" });
     assert.deepEqual(drop.change?.fields[0], {
       kind: "setLink",
       key: "current_location",
-      value: { kind: "linkLookup", entityId: "JOGADOR", key: "current_location" },
+      value: { kind: "linkLookup", entityId: "@jogador", key: "current_location" },
     });
 
-    const put = parseDoLine("(link JOGADOR.intent_object).current_location=$");
-    assert.deepEqual(put.change?.target, { kind: "linkLookup", entityId: "JOGADOR", key: "intent_object" });
+    const put = parseDoLine("(link @jogador.intent_object).current_location=$");
+    assert.deepEqual(put.change?.target, { kind: "linkLookup", entityId: "@jogador", key: "intent_object" });
     assert.deepEqual(put.change?.fields[0], {
       kind: "setLink",
       key: "current_location",
@@ -47,14 +47,14 @@ describe("DO verbs: parse", () => {
 
   it("parses CREATE, DESTROY, EMIT, INTENT, KNOW and SEMANTIC", () => {
     const rule = parseRuleBlock(`# porta
-ON: PORTA
-IF: JOGADOR.intent=open
-DO: CREATE FUMACA.event.current_location=$
-    DESTROY TRAVA
+ON: @porta
+IF: @jogador.intent=open
+DO: CREATE @fumaca.event.current_location=$
+    DESTROY @trava
     EMIT porta_aberta
-    KNOW JOGADOR.PORTA
-    INTENT GOBLIN.attack.JOGADOR
-    PORTA.aberta
+    KNOW @jogador.@porta
+    INTENT @goblin.attack.@jogador
+    @porta.aberta
 SEMANTIC: agency, constraint, transformation
 narrativa: "abre"
 `);
@@ -67,15 +67,15 @@ narrativa: "abre"
       ["emit", "know", "intent"],
     );
     assert.deepEqual(rule.effects[0]?.args, ["porta_aberta"]);
-    assert.deepEqual(rule.effects[1]?.args, ["JOGADOR", "PORTA"]);
-    assert.deepEqual(rule.effects[2]?.args, ["GOBLIN", "attack", "JOGADOR"]);
+    assert.deepEqual(rule.effects[1]?.args, ["@jogador", "@porta"]);
+    assert.deepEqual(rule.effects[2]?.args, ["@goblin", "attack", "@jogador"]);
     assert.deepEqual(rule.semantics, ["agency", "constraint", "transformation"]);
   });
 
   it("parses FUNCAO and voice-indexed narrativa without changing SEMANTIC", () => {
     const rule = parseRuleBlock(`# porta
-ON: PORTA
-IF: JOGADOR.intent=open
+ON: @porta
+IF: @jogador.intent=open
 FUNCAO: curse
 narrativa: "A porta abre."
 narrativa: somber: "A porta range."
@@ -105,18 +105,18 @@ SEMANTIC: agency
   });
 
   it("parses THEN id and THEN $", () => {
-    const thenId = parseDoLine("THEN CORREDOR");
+    const thenId = parseDoLine("THEN @corredor");
     assert.equal(thenId.change, undefined);
-    assert.deepEqual(thenId.effect, { verb: "then", args: ["CORREDOR"], source: "THEN CORREDOR", line: 1 });
+    assert.deepEqual(thenId.effect, { verb: "then", args: ["@corredor"], source: "THEN @corredor", line: 1 });
     const thenTrigger = parseDoLine("THEN $");
     assert.deepEqual(thenTrigger.effect?.args, ["$"]);
     assert.throws(() => parseDoLine("THEN"));
   });
 
   it("parses LIVE id and LIVE with no args", () => {
-    const liveId = parseDoLine("LIVE GOBLIN");
+    const liveId = parseDoLine("LIVE @goblin");
     assert.equal(liveId.change, undefined);
-    assert.deepEqual(liveId.effect, { verb: "live", args: ["GOBLIN"], source: "LIVE GOBLIN", line: 1 });
+    assert.deepEqual(liveId.effect, { verb: "live", args: ["@goblin"], source: "LIVE @goblin", line: 1 });
     const liveBare = parseDoLine("LIVE");
     assert.deepEqual(liveBare.effect, { verb: "live", args: [], source: "LIVE", line: 1 });
   });
@@ -124,61 +124,61 @@ SEMANTIC: agency
 
 describe("DO verbs: applyChanges CREATE/DESTROY", () => {
   it("spawns and removes entities; $ becomes the trigger", () => {
-    const world = compileEntityFile(`SALA.{ tags: place; stats: ; links: ; }\nTRAVA.{ tags: object; stats: ; links: current_location=SALA; }`).worldModel;
-    const created = parseDoLine("CREATE FUMACA.event.current_location=$").change!;
-    const destroyed = parseDoLine("DESTROY TRAVA").change!;
-    const next = applyChanges(world, [created, destroyed], "SALA");
-    const smoke = next.get("FUMACA");
+    const world = compileEntityFile(`@sala.{ tags: place; stats: ; links: ; }\n@trava.{ tags: object; stats: ; links: current_location=@sala; }`).worldModel;
+    const created = parseDoLine("CREATE @fumaca.event.current_location=$").change!;
+    const destroyed = parseDoLine("DESTROY @trava").change!;
+    const next = applyChanges(world, [created, destroyed], "@sala");
+    const smoke = next.get("@fumaca");
     assert.ok(smoke);
     assert.ok(smoke.tags.has("event"));
-    assert.equal(smoke.links.current_location, "SALA");
-    assert.equal(next.get("TRAVA"), undefined);
-    assert.ok(world.get("TRAVA"));
+    assert.equal(smoke.links.current_location, "@sala");
+    assert.equal(next.get("@trava"), undefined);
+    assert.ok(world.get("@trava"));
   });
 
   it("resolves (link id.key) when applying drop/put changes", () => {
-    const world = compileEntityFile(`JOGADOR.{ tags: agent; stats: ; links: current_location=SALA, intent_object=ESPADA; }
-SALA.{ tags: place; stats: ; links: ; }
-ESPADA.{ tags: object; stats: ; links: current_location=JOGADOR; }
-CAIXA.{ tags: object, container; stats: ; links: current_location=SALA; }
+    const world = compileEntityFile(`@jogador.{ tags: agent; stats: ; links: current_location=@sala, intent_object=@espada; }
+@sala.{ tags: place; stats: ; links: ; }
+@espada.{ tags: object; stats: ; links: current_location=@jogador; }
+@caixa.{ tags: object, container; stats: ; links: current_location=@sala; }
 `).worldModel;
-    const dropped = applyChanges(world, [parseDoLine("$.current_location=(link JOGADOR.current_location)").change!], "ESPADA");
-    assert.equal(dropped.get("ESPADA")?.links.current_location, "SALA");
+    const dropped = applyChanges(world, [parseDoLine("$.current_location=(link @jogador.current_location)").change!], "@espada");
+    assert.equal(dropped.get("@espada")?.links.current_location, "@sala");
 
-    const put = applyChanges(world, [parseDoLine("(link JOGADOR.intent_object).current_location=$").change!], "CAIXA");
-    assert.equal(put.get("ESPADA")?.links.current_location, "CAIXA");
-    assert.equal(world.get("ESPADA")?.links.current_location, "JOGADOR");
+    const put = applyChanges(world, [parseDoLine("(link @jogador.intent_object).current_location=$").change!], "@caixa");
+    assert.equal(put.get("@espada")?.links.current_location, "@caixa");
+    assert.equal(world.get("@espada")?.links.current_location, "@jogador");
   });
 
   it("does not reset an entity that already exists", () => {
-    const world = compileEntityFile(`FUMACA.{ tags: event, old; stats: ; links: ; }`).worldModel;
-    const created = parseDoLine("CREATE FUMACA.event").change!;
-    const next = applyChanges(world, [created], "FUMACA");
-    assert.ok(next.get("FUMACA")?.tags.has("old"));
+    const world = compileEntityFile(`@fumaca.{ tags: event, old; stats: ; links: ; }`).worldModel;
+    const created = parseDoLine("CREATE @fumaca.event").change!;
+    const next = applyChanges(world, [created], "@fumaca");
+    assert.ok(next.get("@fumaca")?.tags.has("old"));
   });
 });
 
 describe("DO verbs: interact", () => {
   it("applies CREATE/DESTROY through interactWith", () => {
     const compiled = compileProject(createProject("t", {
-      entitiesSource: `SALA.{ tags: place; stats: ; links: ; }\nTRAVA.{ tags: object; stats: ; links: current_location=SALA; }\nstart()\n`,
+      entitiesSource: `@sala.{ tags: place; stats: ; links: ; }\n@trava.{ tags: object; stats: ; links: current_location=@sala; }\nstart()\n`,
       rulesSource: `# start
 ON: start
 narrativa: "ok"
 
 # acende
-ON: SALA
-DO: CREATE FUMACA.event.current_location=$
-    DESTROY TRAVA
+ON: @sala
+DO: CREATE @fumaca.event.current_location=$
+    DESTROY @trava
 narrativa: "fumaca"
 `,
     }));
     assert.equal(compiled.errors.length, 0);
     let game = createGame(compiled.worldModel, compiled.rules);
     game = bootGame(game);
-    game = interactWith(game, "SALA");
-    assert.ok(game.worldModel.get("FUMACA"));
-    assert.equal(game.worldModel.get("TRAVA"), undefined);
+    game = interactWith(game, "@sala");
+    assert.ok(game.worldModel.get("@fumaca"));
+    assert.equal(game.worldModel.get("@trava"), undefined);
   });
 
   it("does not change goblin-cave rules or match", () => {
@@ -190,10 +190,10 @@ narrativa: "fumaca"
       assert.deepEqual(rule.semantics, []);
     }
     let game = bootGame(createGame(compiled.worldModel, compiled.rules, project.settings.playerEntityId, compiled.taxonomy));
-    const before = game.worldModel.get("TOCHA")?.links.current_location;
-    game = interactWith(game, "TOCHA");
-    assert.equal(before, "ENTRADA");
-    assert.equal(game.worldModel.get("TOCHA")?.links.current_location, "JOGADOR");
+    const before = game.worldModel.get("@tocha")?.links.current_location;
+    game = interactWith(game, "@tocha");
+    assert.equal(before, "@entrada");
+    assert.equal(game.worldModel.get("@tocha")?.links.current_location, "@jogador");
   });
 });
 

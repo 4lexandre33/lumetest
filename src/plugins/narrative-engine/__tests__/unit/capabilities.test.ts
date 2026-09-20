@@ -24,20 +24,20 @@ describe('Narrative Engine Capabilities', () => {
 
     const project = engineService.createProject('Test Project', {
       entitiesSource: `
-JOGADOR.{
+@jogador.{
 tags: agent;
 stats: hp=100;
-links: current_location=SALA;
+links: current_location=@sala;
 }
 
-CHEST.{
+@chest.{
 tags: object;
 stats: gold=50;
-links: current_location=SALA;
+links: current_location=@sala;
 name: Baú;
 }
 
-SALA.{
+@sala.{
 tags: place;
 stats: ;
 links: ;
@@ -52,9 +52,9 @@ ON: start
 narrativa: "Início do teste."
 
 # open
-ON: CHEST
-DO: JOGADOR.hp+10
-    CHEST.gold=0
+ON: @chest
+DO: @jogador.hp+10
+    @chest.gold=0
 narrativa: "Você abre o baú e ganha vida!"
 `
     });
@@ -70,7 +70,7 @@ narrativa: "Você abre o baú e ganha vida!"
     const booted = engineService.bootGame(game);
     assert.ok(booted.history.length >= 1);
 
-    const nextState = engineService.interact(booted, 'CHEST');
+    const nextState = engineService.interact(booted, '@chest');
     assert.ok(nextState.history.length > booted.history.length);
     assert.match(nextState.story, /abre o baú/);
 
@@ -108,17 +108,17 @@ narrativa: "Você abre o baú e ganha vida!"
     const compiledTax = taxonomyService.compileTaxonomy('goblin -> monster\nmonster -> agent');
     const project = engineService.createProject('Query Test', {
       entitiesSource: `
-G1.{
+@g1.{
 tags: goblin;
 stats: hp=10;
 links: ;
 }
-G2.{
+@g2.{
 tags: goblin;
 stats: hp=20;
 links: ;
 }
-POTION.{
+@potion.{
 tags: object;
 stats: heal=15;
 links: ;
@@ -130,24 +130,24 @@ start()
     const compiled = engineService.compileProject(project);
     const results = queryEngine.query('*.monster', compiled.worldModel, '', compiledTax);
     assert.equal(results.length, 2);
-    assert.ok(results.some(([id]) => id === 'G1'));
-    assert.ok(results.some(([id]) => id === 'G2'));
+    assert.ok(results.some(([id]) => id === '@g1'));
+    assert.ok(results.some(([id]) => id === '@g2'));
   });
 
   it('provides LanguageTools capability for syntax highlighting and autocomplete', () => {
     const langTools = core.getService<LanguageToolsService>('LanguageTools');
     assert.ok(langTools);
 
-    const entityTokens = langTools.highlightSource('HERO.{\ntags: agent;\n}', 'entities');
+    const entityTokens = langTools.highlightSource('@hero.{\ntags: agent;\n}', 'entities');
     assert.ok(Array.isArray(entityTokens));
     assert.ok(entityTokens.length > 0);
 
-    const ruleTokens = langTools.highlightSource('ON: HERO\nIF: HERO.hp>0\nDO: HERO.hp+1', 'rules');
+    const ruleTokens = langTools.highlightSource('ON: @hero\nIF: @hero.hp>0\nDO: @hero.hp+1', 'rules');
     assert.ok(Array.isArray(ruleTokens));
     assert.ok(ruleTokens.length > 0);
 
     const vocab = langTools.collectVocabulary({});
-    const completions = langTools.completeAt('HERO.{\ntags: ', 'entities', 14, vocab);
+    const completions = langTools.completeAt('@hero.{\ntags: ', 'entities', 14, vocab);
     assert.ok(Array.isArray(completions.items));
   });
 });

@@ -3,7 +3,7 @@
 Dono do verbo `INTENT` no DO. Dispara IntentEngine (`source: script`). Sem tick autónomo.
 
 ## Abrir
-- `lib/command.ts` — `GOBLIN.attack.JOGADOR` → `intent.action.interact.attack.JOGADOR`
+- `lib/command.ts` — `@goblin.attack.@jogador` → `intent.action.interact.attack.@jogador`
 - `index.ts` — handler `intent`
 
 ## Provides

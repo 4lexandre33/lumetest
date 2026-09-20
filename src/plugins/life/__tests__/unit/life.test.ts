@@ -33,10 +33,10 @@ describe("Life", () => {
 
   it("LIVE id interacts an existing entity without tagging it event", () => {
     const project = narrative.createProject("live-id", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: in=CAVERNA; }
-GOBLIN.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
-CAVERNA.{ tags: place; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: in=CAVERNA; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: in=@caverna; }
+@goblin.{ tags: agent, vivo; stats: ; links: in=@caverna; }
+@caverna.{ tags: place; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: in=@caverna; }
 start()
 `,
       rulesSource: `# start
@@ -44,37 +44,37 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
-DO: PORTA.aberta
-    LIVE GOBLIN
+ON: @porta
+DO: @porta.aberta
+    LIVE @goblin
 narrativa: "abre"
 
 # reage
-ON: GOBLIN
-DO: GOBLIN.alerta
+ON: @goblin
+DO: @goblin.alerta
 narrativa: "O goblin reage."
 `,
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = narrative.interact(game, "PORTA");
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), true);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("alerta"), true);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("event"), false);
-    assert.ok(game.history.some((beat) => beat.triggerId === "PORTA"));
-    assert.ok(game.history.some((beat) => beat.triggerId === "GOBLIN"));
-    assert.match(game.history.find((beat) => beat.triggerId === "GOBLIN")!.story, /goblin/);
+    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = narrative.interact(game, "@porta");
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), true);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("alerta"), true);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("event"), false);
+    assert.ok(game.history.some((beat) => beat.triggerId === "@porta"));
+    assert.ok(game.history.some((beat) => beat.triggerId === "@goblin"));
+    assert.match(game.history.find((beat) => beat.triggerId === "@goblin")!.story, /goblin/);
   });
 
   it("LIVE without args scans vivo here, not the player or trigger", () => {
     const project = narrative.createProject("live-scan", {
-      entitiesSource: `CAVERNA.{ tags: place; stats: ; links: ; }
-JOGADOR.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
-PORTA.{ tags: object, vivo; stats: ; links: in=CAVERNA; }
-GOBLIN.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
-LONGE.{ tags: agent, vivo; stats: ; links: in=FLORESTA; }
-FLORESTA.{ tags: place; stats: ; links: ; }
+      entitiesSource: `@caverna.{ tags: place; stats: ; links: ; }
+@jogador.{ tags: agent, vivo; stats: ; links: in=@caverna; }
+@porta.{ tags: object, vivo; stats: ; links: in=@caverna; }
+@goblin.{ tags: agent, vivo; stats: ; links: in=@caverna; }
+@longe.{ tags: agent, vivo; stats: ; links: in=@floresta; }
+@floresta.{ tags: place; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -82,53 +82,53 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
-DO: PORTA.aberta
+ON: @porta
+DO: @porta.aberta
     LIVE
 narrativa: "abre"
 
 # reage
-ON: GOBLIN
-DO: GOBLIN.alerta
+ON: @goblin
+DO: @goblin.alerta
 narrativa: "reage"
 
 # porta viva
-ON: PORTA
-IF: PORTA.alerta
-DO: PORTA.eco
+ON: @porta
+IF: @porta.alerta
+DO: @porta.eco
 narrativa: "eco"
 
 # jogador
-ON: JOGADOR
-DO: JOGADOR.eco
+ON: @jogador
+DO: @jogador.eco
 narrativa: "eu"
 
 # longe
-ON: LONGE
-DO: LONGE.alerta
+ON: @longe
+DO: @longe.alerta
 narrativa: "longe"
 `,
     });
     const compiled = narrative.compileProject(project);
-    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = narrative.interact(game, "PORTA");
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), true);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("alerta"), true);
-    assert.equal(game.worldModel.get("JOGADOR")?.tags.has("eco"), false);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("eco"), false);
-    assert.equal(game.worldModel.get("LONGE")?.tags.has("alerta"), false);
+    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = narrative.interact(game, "@porta");
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), true);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("alerta"), true);
+    assert.equal(game.worldModel.get("@jogador")?.tags.has("eco"), false);
+    assert.equal(game.worldModel.get("@porta")?.tags.has("eco"), false);
+    assert.equal(game.worldModel.get("@longe")?.tags.has("alerta"), false);
   });
 
   it("scans vivos in id order and keeps the prefix under the cap", () => {
     const project = narrative.createProject("live-ordem", {
-      entitiesSource: `CAVERNA.{ tags: place; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: in=CAVERNA; }
-PORTA.{ tags: object; stats: ; links: in=CAVERNA; }
-A.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
-B.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
-C.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
-D.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
-E.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
+      entitiesSource: `@caverna.{ tags: place; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: in=@caverna; }
+@porta.{ tags: object; stats: ; links: in=@caverna; }
+@a.{ tags: agent, vivo; stats: ; links: in=@caverna; }
+@b.{ tags: agent, vivo; stats: ; links: in=@caverna; }
+@c.{ tags: agent, vivo; stats: ; links: in=@caverna; }
+@d.{ tags: agent, vivo; stats: ; links: in=@caverna; }
+@e.{ tags: agent, vivo; stats: ; links: in=@caverna; }
 start()
 `,
       rulesSource: `# start
@@ -136,51 +136,51 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
+ON: @porta
 DO: LIVE
 narrativa: "abre"
 
 # a
-ON: A
-DO: A.reagiu
+ON: @a
+DO: @a.reagiu
 narrativa: "a"
 
 # b
-ON: B
-DO: B.reagiu
+ON: @b
+DO: @b.reagiu
 narrativa: "b"
 
 # c
-ON: C
-DO: C.reagiu
+ON: @c
+DO: @c.reagiu
 narrativa: "c"
 
 # d
-ON: D
-DO: D.reagiu
+ON: @d
+DO: @d.reagiu
 narrativa: "d"
 
 # e
-ON: E
-DO: E.reagiu
+ON: @e
+DO: @e.reagiu
 narrativa: "e"
 `,
     });
     const compiled = narrative.compileProject(project);
-    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = narrative.interact(game, "PORTA");
-    const reacted = ["A", "B", "C", "D", "E"].filter((id) => game.worldModel.get(id)?.tags.has("reagiu"));
-    assert.deepEqual(reacted, ["A", "B", "C", "D"]);
-    const liveBeats = game.history.filter((beat) => ["A", "B", "C", "D", "E"].includes(beat.triggerId)).map((beat) => beat.triggerId);
-    assert.deepEqual(liveBeats, ["A", "B", "C", "D"]);
+    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = narrative.interact(game, "@porta");
+    const reacted = ["@a", "@b", "@c", "@d", "@e"].filter((id) => game.worldModel.get(id)?.tags.has("reagiu"));
+    assert.deepEqual(reacted, ["@a", "@b", "@c", "@d"]);
+    const liveBeats = game.history.filter((beat) => ["@a", "@b", "@c", "@d", "@e"].includes(beat.triggerId)).map((beat) => beat.triggerId);
+    assert.deepEqual(liveBeats, ["@a", "@b", "@c", "@d"]);
   });
 
   it("LIVE without vivo nearby does nothing extra", () => {
     const project = narrative.createProject("live-vazio", {
-      entitiesSource: `CAVERNA.{ tags: place; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: in=CAVERNA; }
-PORTA.{ tags: object; stats: ; links: in=CAVERNA; }
-GOBLIN.{ tags: agent; stats: ; links: in=CAVERNA; }
+      entitiesSource: `@caverna.{ tags: place; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: in=@caverna; }
+@porta.{ tags: object; stats: ; links: in=@caverna; }
+@goblin.{ tags: agent; stats: ; links: in=@caverna; }
 start()
 `,
       rulesSource: `# start
@@ -188,28 +188,28 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
-DO: PORTA.aberta
+ON: @porta
+DO: @porta.aberta
     LIVE
 narrativa: "abre"
 
 # reage
-ON: GOBLIN
-DO: GOBLIN.alerta
+ON: @goblin
+DO: @goblin.alerta
 narrativa: "reage"
 `,
     });
     const compiled = narrative.compileProject(project);
-    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = narrative.interact(game, "PORTA");
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), true);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("alerta"), false);
-    assert.equal(game.history.some((beat) => beat.triggerId === "GOBLIN"), false);
+    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = narrative.interact(game, "@porta");
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), true);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("alerta"), false);
+    assert.equal(game.history.some((beat) => beat.triggerId === "@goblin"), false);
   });
 
   it("caps recursive LIVE with the same depth as EMIT", () => {
     const project = narrative.createProject("loop", {
-      entitiesSource: `X.{ tags: object; stats: ; links: ; }
+      entitiesSource: `@x.{ tags: object; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -217,23 +217,23 @@ ON: start
 narrativa: "ok"
 
 # loop
-ON: X
-DO: LIVE X
+ON: @x
+DO: LIVE @x
 narrativa: "x"
 `,
     });
     const compiled = narrative.compileProject(project);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "X");
-    assert.ok(game.history.filter((beat) => beat.triggerId === "X").length <= 5);
+    game = narrative.interact(game, "@x");
+    assert.ok(game.history.filter((beat) => beat.triggerId === "@x").length <= 5);
   });
 
   it("dry-run lists LIVE without following", () => {
     const project = narrative.createProject("seco", {
-      entitiesSource: `CAVERNA.{ tags: place; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: in=CAVERNA; }
-PORTA.{ tags: object; stats: ; links: in=CAVERNA; }
-GOBLIN.{ tags: agent, vivo; stats: ; links: in=CAVERNA; }
+      entitiesSource: `@caverna.{ tags: place; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: in=@caverna; }
+@porta.{ tags: object; stats: ; links: in=@caverna; }
+@goblin.{ tags: agent, vivo; stats: ; links: in=@caverna; }
 start()
 `,
       rulesSource: `# start
@@ -241,27 +241,27 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
-DO: PORTA.aberta
+ON: @porta
+DO: @porta.aberta
     LIVE
 narrativa: "abre"
 
 # reage
-ON: GOBLIN
-DO: GOBLIN.alerta
+ON: @goblin
+DO: @goblin.alerta
 narrativa: "reage"
 `,
     });
     const compiled = narrative.compileProject(project);
-    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    const report = narrative.dryRun(game, "PORTA");
+    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    const report = narrative.dryRun(game, "@porta");
     assert.deepEqual(
       report.effects.map((effect) => effect.verb),
       ["live"],
     );
-    assert.equal(game.history.some((beat) => beat.triggerId === "GOBLIN"), false);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), false);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("alerta"), false);
+    assert.equal(game.history.some((beat) => beat.triggerId === "@goblin"), false);
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), false);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("alerta"), false);
   });
 
   it("does not change goblin-cave play", () => {
@@ -269,9 +269,9 @@ narrativa: "reage"
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(
-      narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy),
+      narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy),
     );
-    game = narrative.interact(game, "GOBLIN");
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("sleeping"), false);
+    game = narrative.interact(game, "@goblin");
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("sleeping"), false);
   });
 });

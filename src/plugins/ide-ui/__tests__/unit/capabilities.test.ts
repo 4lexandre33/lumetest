@@ -73,7 +73,7 @@ describe('IDE UI Plugin Capabilities', () => {
     assert.match(html, /<strong>bold<\/strong>/);
 
     // 6. Highlight source
-    const spans = uiService.highlightSourceSpans('PLAYER.{\ntags: agent;\n}', 'entities');
+    const spans = uiService.highlightSourceSpans('@player.{\ntags: agent;\n}', 'entities');
     assert.ok(Array.isArray(spans));
     assert.ok(spans.length > 0);
   });

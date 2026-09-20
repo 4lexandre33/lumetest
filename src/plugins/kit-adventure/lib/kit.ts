@@ -13,138 +13,138 @@ topic → information
 
 export const ADVENTURE_RULES = `# take
 ON: *.portable
-IF: JOGADOR.intent=take
-IF: $.!current_location=JOGADOR
-DO: $.current_location=JOGADOR
+IF: @jogador.intent=take
+IF: $.!current_location=@jogador
+DO: $.current_location=@jogador
 SEMANTIC: transformation
 narrativa: "Você pega {$.name}."
 
 # take fixture
 ON: *.fixture
-IF: JOGADOR.intent=take
+IF: @jogador.intent=take
 SEMANTIC: constraint
 narrativa: "Isso não sai daqui."
 
 # drop
-ON: *.portable.current_location=JOGADOR
-IF: JOGADOR.intent=drop
-DO: $.current_location=(link JOGADOR.current_location)
+ON: *.portable.current_location=@jogador
+IF: @jogador.intent=drop
+DO: $.current_location=(link @jogador.current_location)
 SEMANTIC: transformation
 narrativa: "Você larga {$.name}."
 
 # put into closed container
 ON: *.container.!aberta
-IF: JOGADOR.intent=put
+IF: @jogador.intent=put
 SEMANTIC: constraint
 narrativa: "Está fechado."
 
 # put
 ON: *.container
-IF: JOGADOR.intent=put
-DO: (link JOGADOR.intent_object).current_location=$
+IF: @jogador.intent=put
+DO: (link @jogador.intent_object).current_location=$
 SEMANTIC: transformation
 narrativa: "Você guarda isso em {$.name}."
 
 # open locked
 ON: *.openable.!aberta.locked
-IF: JOGADOR.intent=open
+IF: @jogador.intent=open
 SEMANTIC: constraint
 narrativa: "Está trancado."
 
 # open
 ON: *.openable.!aberta
-IF: JOGADOR.intent=open
+IF: @jogador.intent=open
 DO: $.aberta
 SEMANTIC: transformation
 narrativa: "Você abre {$.name}."
 
 # close
 ON: *.openable.aberta
-IF: JOGADOR.intent=close
+IF: @jogador.intent=close
 DO: $.-aberta
 SEMANTIC: transformation
 narrativa: "Você fecha {$.name}."
 
 # lock while open
 ON: *.lockable.aberta
-IF: JOGADOR.intent=lock
+IF: @jogador.intent=lock
 SEMANTIC: constraint
 narrativa: "Fecha primeiro."
 
 # lock
 ON: *.lockable.!locked
-IF: JOGADOR.intent=lock
+IF: @jogador.intent=lock
 DO: $.locked
 SEMANTIC: transformation
 narrativa: "Você tranca {$.name}."
 
 # unlock
 ON: *.lockable.locked
-IF: JOGADOR.intent=unlock
+IF: @jogador.intent=unlock
 DO: $.-locked
 SEMANTIC: transformation
 narrativa: "Você destranca {$.name}."
 
 # go
 ON: *.place
-IF: JOGADOR.intent=go
-DO: JOGADOR.current_location=$
+IF: @jogador.intent=go
+DO: @jogador.current_location=$
 SEMANTIC: transformation
 narrativa: "Você vai para {$.name}."
 
 # move
 ON: *.place
-IF: JOGADOR.intent=move
-DO: JOGADOR.current_location=$
+IF: @jogador.intent=move
+DO: @jogador.current_location=$
 SEMANTIC: transformation
 narrativa: "Você vai para {$.name}."
 
 # look
 ON: *.place
-IF: JOGADOR.intent=look
+IF: @jogador.intent=look
 SEMANTIC: cognition
 narrativa: "Você olha {$.name}."
 
 # inventory
 ON: *.agent
-IF: JOGADOR.intent=inventory
+IF: @jogador.intent=inventory
 SEMANTIC: cognition
 narrativa: "Você revê o que carrega."
 
 # talk
 ON: *.agent
-IF: JOGADOR.intent=talk
+IF: @jogador.intent=talk
 SEMANTIC: agency
 narrativa: "{$.name} não tem nada a dizer."
 
 # communicate
 ON: *.agent
-IF: JOGADOR.intent=communicate
+IF: @jogador.intent=communicate
 SEMANTIC: agency
 narrativa: "{$.name} não tem nada a dizer."
 
 # ask
 ON: *.agent
-IF: JOGADOR.intent=ask
+IF: @jogador.intent=ask
 SEMANTIC: agency
 narrativa: "{$.name} não sabe disso."
 
 # tell
 ON: *.agent
-IF: JOGADOR.intent=tell
+IF: @jogador.intent=tell
 SEMANTIC: agency
 narrativa: "{$.name} ouve em silêncio."
 
 # bye while talking
 ON: *.agent.falando
-IF: JOGADOR.intent=bye
+IF: @jogador.intent=bye
 DO: $.-falando
 SEMANTIC: agency
 narrativa: "A conversa termina."
 
 # bye
 ON: *.agent
-IF: JOGADOR.intent=bye
+IF: @jogador.intent=bye
 SEMANTIC: agency
 narrativa: "Não estavam a falar."
 `;

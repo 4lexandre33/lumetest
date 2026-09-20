@@ -14,13 +14,13 @@ NarrativeEngine
 
 ## Idioma
 ```
-NARRADOR.{ tags: abstract; voice: somber; }
+@narrador.{ tags: abstract; voice: somber; }
 
 FUNCAO: curse
 narrativa: "A porta abre."
 narrativa: somber: "A porta range."
 ```
-`narrativa:` continua dona. Variantes por `cycleIndex` (`a|b`) e por `extra.voice` (trigger, depois JOGADOR, depois NARRADOR). `FUNCAO:` é etiqueta — **não** entra no score. Recap só lê `history[]` e devolve markdown. Flashback = `order: "reverse"`.
+`narrativa:` continua dona. Variantes por `cycleIndex` (`a|b`) e por `extra.voice` (trigger, depois @jogador, depois @narrador). `FUNCAO:` é etiqueta — **não** entra no score. Recap só lê `history[]` e devolve markdown. Flashback = `order: "reverse"`.
 
 ## Não fazer
 - Não alterar `findMatchingRule`

@@ -37,7 +37,7 @@ export type CompileProjectResult = {
 };
 export type WireProject = Project;
 
-export const BLANK_ENTITIES = `JOGADOR.{
+export const BLANK_ENTITIES = `@jogador.{
   name: Jogador;
   description: ;
   tags: agent;
@@ -46,13 +46,13 @@ export const BLANK_ENTITIES = `JOGADOR.{
   enums: ;
   phrases: ;
   hardLinks: ;
-  softLinks: current_location=SALA;
+  softLinks: current_location=@sala;
   lists: ;
   fuses: ;
   struct: ;
 }
 
-SALA.{
+@sala.{
   name: Sala;
   description: 'Uma sala vazia. A história começa aqui.';
   tags: place;
@@ -164,7 +164,7 @@ export function createProject(
     notebooksSource: seed?.notebooksSource ?? BLANK_NOTEBOOKS,
     extras: seed?.extras ? { ...seed.extras } : {},
     settings: {
-      playerEntityId: seed?.settings?.playerEntityId ?? "JOGADOR",
+      playerEntityId: seed?.settings?.playerEntityId ?? "@jogador",
       debug: seed?.settings?.debug ?? true,
       tree: seed?.settings?.tree ? cloneTree(seed.settings.tree) : undefined,
     },
@@ -227,7 +227,7 @@ export function coerceProject(raw: unknown): Project {
     notebooksSource: typeof p.notebooksSource === "string" ? p.notebooksSource : BLANK_NOTEBOOKS,
     extras: extrasIn,
     settings: {
-      playerEntityId: typeof settings.playerEntityId === "string" ? settings.playerEntityId : "JOGADOR",
+      playerEntityId: typeof settings.playerEntityId === "string" ? settings.playerEntityId : "@jogador",
       debug: settings.debug !== false,
       tree: coerceTree(settings.tree),
     },

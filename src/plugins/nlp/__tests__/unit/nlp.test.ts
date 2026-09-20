@@ -41,7 +41,7 @@ describe("Nlp", () => {
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     return narrative.bootGame(
-      narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy),
+      narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy),
     );
   }
 
@@ -55,41 +55,41 @@ describe("Nlp", () => {
 
   it("leaves dotted intent untouched", () => {
     const game = cave();
-    assert.equal(looksLikeIntent("intent.action.interact.take.TOCHA"), true);
-    assert.equal(interpret("intent.action.interact.take.TOCHA", game.worldModel), null);
-    const executed = intent.execute("intent.action.interact.take.TOCHA", game);
+    assert.equal(looksLikeIntent("intent.action.interact.take.@tocha"), true);
+    assert.equal(interpret("intent.action.interact.take.@tocha", game.worldModel), null);
+    const executed = intent.execute("intent.action.interact.take.@tocha", game);
     assert.equal(executed.executed, true);
-    assert.equal(executed.game.worldModel.get("TOCHA")?.links.current_location, "JOGADOR");
+    assert.equal(executed.game.worldModel.get("@tocha")?.links.current_location, "@jogador");
   });
 
   it("maps a Portuguese phrase onto take and executes the same intent", () => {
     const game = cave();
     assert.deepEqual(nlp.interpret("pega a tocha", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
     const result = intent.execute("pega a tocha", game);
     assert.equal(result.executed, true);
-    assert.equal(result.game.worldModel.get("TOCHA")?.links.current_location, "JOGADOR");
-    assert.equal(game.worldModel.get("TOCHA")?.links.current_location, "ENTRADA");
+    assert.equal(result.game.worldModel.get("@tocha")?.links.current_location, "@jogador");
+    assert.equal(game.worldModel.get("@tocha")?.links.current_location, "@entrada");
   });
 
   it("maps English take by entity id and compounds through the same execute", () => {
     const game = cave();
     assert.deepEqual(nlp.interpret("take tocha. wait", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA; intent.action.wait",
+      command: "intent.action.interact.take.@tocha; intent.action.wait",
       dryRun: false,
     });
     const result = intent.execute("take tocha. espera", game);
     assert.equal(result.executed, true);
-    assert.equal(result.game.worldModel.get("TOCHA")?.links.current_location, "JOGADOR");
+    assert.equal(result.game.worldModel.get("@tocha")?.links.current_location, "@jogador");
     assert.ok(result.game.history.length >= 2);
   });
 
   it("fails closed on unknown verbs and ambiguous names", () => {
     const game = cave();
     assert.equal(nlp.interpret("dance with the goblin", game.worldModel), null);
-    const cloned = game.worldModel.get("ISQUEIRO");
+    const cloned = game.worldModel.get("@isqueiro");
     assert.ok(cloned);
     cloned.extra = { ...cloned.extra, name: "Tocha" };
     assert.equal(nlp.interpret("pega a tocha", game.worldModel), null);
@@ -98,7 +98,7 @@ describe("Nlp", () => {
   it("marks posso / can i as dry-run and does not execute", () => {
     const game = cave();
     assert.deepEqual(nlp.interpret("posso pegar a tocha", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: true,
     });
     const result = intent.execute("can i take tocha", game);
@@ -106,28 +106,28 @@ describe("Nlp", () => {
     assert.equal(result.resolution.status, "VALID");
     assert.equal(result.dryRun, true);
     assert.equal(result.resolution.message, DRY_RUN_NOTICE);
-    assert.equal(result.game.worldModel.get("TOCHA")?.links.current_location, "ENTRADA");
+    assert.equal(result.game.worldModel.get("@tocha")?.links.current_location, "@entrada");
   });
 
   it("does not change goblin-cave dotted play", () => {
     const game = cave();
-    const result = intent.execute("intent.action.interact.talk.GOBLIN", game);
+    const result = intent.execute("intent.action.interact.talk.@goblin", game);
     assert.equal(result.executed, false);
     const moved = { ...game, worldModel: game.worldModel };
-    moved.worldModel.get("JOGADOR")!.links.current_location = "CAVERNA";
-    const talk = intent.execute("intent.action.interact.talk.GOBLIN", moved);
+    moved.worldModel.get("@jogador")!.links.current_location = "@caverna";
+    const talk = intent.execute("intent.action.interact.talk.@goblin", moved);
     assert.equal(talk.executed, true);
-    assert.equal(talk.game.worldModel.get("GOBLIN")?.tags.has("sleeping"), true);
+    assert.equal(talk.game.worldModel.get("@goblin")?.tags.has("sleeping"), true);
   });
 
   it("maps Sharpee synonyms onto existing intents and still fails closed", () => {
     const game = cave();
     assert.deepEqual(nlp.interpret("get tocha", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
     assert.deepEqual(nlp.interpret("examine tocha", game.worldModel), {
-      command: "intent.perceive.inspect.TOCHA",
+      command: "intent.perceive.inspect.@tocha",
       dryRun: false,
     });
     assert.deepEqual(nlp.interpret("listen", game.worldModel), {
@@ -136,7 +136,7 @@ describe("Nlp", () => {
     });
     assert.equal(nlp.interpret("dance with the goblin", game.worldModel), null);
     assert.deepEqual(nlp.interpret("kill goblin", game.worldModel), {
-      command: "intent.action.interact.attack.GOBLIN",
+      command: "intent.action.interact.attack.@goblin",
       dryRun: false,
     });
   });
@@ -144,19 +144,19 @@ describe("Nlp", () => {
   it("matches a grammar line and falls back when the preposition is missing", () => {
     const game = cave();
     assert.deepEqual(nlp.interpret("falar com goblin", game.worldModel), {
-      command: "intent.action.interact.talk.GOBLIN",
+      command: "intent.action.interact.talk.@goblin",
       dryRun: false,
     });
     assert.deepEqual(nlp.interpret("fala goblin", game.worldModel), {
-      command: "intent.action.interact.talk.GOBLIN",
+      command: "intent.action.interact.talk.@goblin",
       dryRun: false,
     });
     assert.deepEqual(nlp.interpret("mete a tocha em isqueiro", game.worldModel), {
-      command: "intent.action.interact.put.TOCHA.ISQUEIRO",
+      command: "intent.action.interact.put.@tocha.@isqueiro",
       dryRun: false,
     });
     assert.deepEqual(nlp.interpret("mete a tocha isqueiro", game.worldModel), {
-      command: "intent.action.interact.put.TOCHA.ISQUEIRO",
+      command: "intent.action.interact.put.@tocha.@isqueiro",
       dryRun: false,
     });
   });
@@ -164,11 +164,11 @@ describe("Nlp", () => {
   it("matches compound pick up without treating the first token as the whole verb", () => {
     const game = cave();
     assert.deepEqual(nlp.interpret("pick up tocha", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
     assert.deepEqual(nlp.interpret("pick up the tocha", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
   });
@@ -176,23 +176,23 @@ describe("Nlp", () => {
   it("filters needles by scope and prefers inventory for [held]", () => {
     const game = cave();
     assert.equal(nlp.interpret("pega a tocha", game.worldModel, []), null);
-    assert.deepEqual(nlp.interpret("pega a tocha", game.worldModel, ["TOCHA"]), {
-      command: "intent.action.interact.take.TOCHA",
+    assert.deepEqual(nlp.interpret("pega a tocha", game.worldModel, ["@tocha"]), {
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
-    assert.equal(nlp.interpret("pega a tocha", game.worldModel, ["GOBLIN"]), null);
+    assert.equal(nlp.interpret("pega a tocha", game.worldModel, ["@goblin"]), null);
     assert.deepEqual(
       nlp.interpret("larga a tocha", game.worldModel, {
-        see: ["ISQUEIRO"],
-        touch: ["ISQUEIRO"],
-        inventory: ["TOCHA"],
+        see: ["@isqueiro"],
+        touch: ["@isqueiro"],
+        inventory: ["@tocha"],
       }),
-      { command: "intent.action.interact.drop.TOCHA", dryRun: false },
+      { command: "intent.action.interact.drop.@tocha", dryRun: false },
     );
     assert.equal(
       nlp.interpret("larga o isqueiro", game.worldModel, {
-        see: ["ISQUEIRO"],
-        inventory: ["TOCHA"],
+        see: ["@isqueiro"],
+        inventory: ["@tocha"],
       }),
       null,
     );
@@ -200,41 +200,41 @@ describe("Nlp", () => {
 
   it("disambiguates by longest alias then held then visible; tie stays closed", () => {
     const game = cave();
-    const lighter = game.worldModel.get("ISQUEIRO");
-    const torch = game.worldModel.get("TOCHA");
+    const lighter = game.worldModel.get("@isqueiro");
+    const torch = game.worldModel.get("@tocha");
     assert.ok(lighter);
     assert.ok(torch);
     lighter.extra = { ...lighter.extra, name: "Tocha" };
     torch.extra = { ...torch.extra, name: "Tocha velha" };
     assert.deepEqual(nlp.interpret("pega a tocha velha", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
     torch.extra = { ...torch.extra, name: "Tocha" };
     assert.equal(nlp.interpret("pega a tocha", game.worldModel), null);
     assert.deepEqual(
       nlp.interpret("larga a tocha", game.worldModel, {
-        see: ["ISQUEIRO"],
-        inventory: ["TOCHA"],
+        see: ["@isqueiro"],
+        inventory: ["@tocha"],
       }),
-      { command: "intent.action.interact.drop.TOCHA", dryRun: false },
+      { command: "intent.action.interact.drop.@tocha", dryRun: false },
     );
     assert.deepEqual(
       nlp.interpret("pega a tocha", game.worldModel, {
-        see: ["ISQUEIRO"],
-        inventory: ["TOCHA"],
+        see: ["@isqueiro"],
+        inventory: ["@tocha"],
       }),
-      { command: "intent.action.interact.take.ISQUEIRO", dryRun: false },
+      { command: "intent.action.interact.take.@isqueiro", dryRun: false },
     );
   });
 
   it("reads extra.aliases as needles", () => {
     const game = cave();
-    const torch = game.worldModel.get("TOCHA");
+    const torch = game.worldModel.get("@tocha");
     assert.ok(torch);
     torch.extra = { ...torch.extra, aliases: "pincel, facho" };
     assert.deepEqual(nlp.interpret("pega o pincel", game.worldModel), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
   });

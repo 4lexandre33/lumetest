@@ -361,7 +361,7 @@ function sliceTouched(source: string, compiled: string): boolean {
 function entityIdsOf(source: string): string[] {
   const ids: string[] = [];
   for (const raw of source.split(/\n/)) {
-    const m = raw.trim().match(/^([\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{/u);
+    const m = raw.trim().match(/^(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{/u);
     if (m?.[1]) ids.push(m[1]);
   }
   return ids;
@@ -387,7 +387,7 @@ function dropEntityIds(source: string, drop: Set<string>): string {
   let i = 0;
   while (i < lines.length) {
     const trimmed = (lines[i] ?? "").trim();
-    const block = trimmed.match(/^([\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{(.*)$/u);
+    const block = trimmed.match(/^(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{(.*)$/u);
     if (block && drop.has(block[1]!)) {
       if ((block[2] ?? "").includes("}")) {
         i += 1;
@@ -445,12 +445,33 @@ function w031(id: string): NotebookIssue {
   };
 }
 
+function ensurePadBeforeStart(base: string): string {
+  const lines = base.split("\n");
+  let lastStart = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^start\(\)\s*$/.test(lines[i]!.trim())) lastStart = i;
+  }
+  if (lastStart < 0) return base;
+  let lastNonEmpty = lastStart;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i]!.trim()) {
+      lastNonEmpty = i;
+      break;
+    }
+  }
+  if (lastNonEmpty !== lastStart) return base;
+  if (lastStart === 0) return base;
+  if (lines[lastStart - 1]!.trim() === "") return base;
+  lines.splice(lastStart, 0, "");
+  return lines.join("\n");
+}
+
 export function writeCadernoSlice(handwritten: string, compiled: string): string {
   const base = stripCadernoSlice(handwritten).replace(/\n+$/, "");
   if (!compiled.trim()) return base ? `${base}\n` : "";
   const slice = `${CADERNO_SLICE_START}\n${compiled.trim()}\n${CADERNO_SLICE_END}\n`;
   if (!base) return slice;
-  return `${base}\n\n${slice}`;
+  return `${ensurePadBeforeStart(base)}\n\n${slice}`;
 }
 
 export type NotebookProjectSlice = {

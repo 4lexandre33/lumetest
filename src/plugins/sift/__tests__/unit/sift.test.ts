@@ -44,18 +44,18 @@ describe("Sift", () => {
 
   it("keeps significância on extra and only uses it in the banner", () => {
     const patterns = parsePadrao(`PADRAO alto
-  eventos: A, B
+  eventos: @a, @b
   nome: Alto
   extra: weight=0.9
 
 PADRAO baixo
-  eventos: A, B
+  eventos: @a, @b
   nome: Baixo
   significancia: 0.1
 `);
     assert.equal(patterns[0]?.extra?.weight, "0.9");
     assert.equal(patterns[1]?.extra?.weight, "0.1");
-    const hits = sift.match([{ triggerId: "A" }, { triggerId: "B" }], patterns);
+    const hits = sift.match([{ triggerId: "@a" }, { triggerId: "@b" }], patterns);
     assert.equal(hits.length, 2);
     assert.equal(bannerOf(hits), "Alto · Baixo");
   });
@@ -66,10 +66,10 @@ PADRAO baixo
       seen.push(evt.data.patternId);
     });
     let project = narrative.createProject("sift-room", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
-A.{ tags: object; }
-B.{ tags: object; }
-C.{ tags: object; }
+      entitiesSource: `@jogador.{ tags: agent; }
+@a.{ tags: object; }
+@b.{ tags: object; }
+@c.{ tags: object; }
 start()
 `,
       taxonomySource: "",
@@ -78,7 +78,7 @@ ON: start
 narrativa: "ok"
 
 # a
-ON: A
+ON: @a
 DO: EMIT suborno
 narrativa: "a"
 
@@ -87,7 +87,7 @@ ON: suborno
 narrativa: "sub"
 
 # b
-ON: B
+ON: @b
 DO: EMIT aceite
 narrativa: "b"
 
@@ -96,7 +96,7 @@ ON: aceite
 narrativa: "ace"
 
 # c
-ON: C
+ON: @c
 DO: EMIT canal_corrupted
 narrativa: "c"
 
@@ -111,22 +111,22 @@ ${SOURCE}
     assert.equal(compiled.errors.length, 0);
     assert.equal(compiled.patterns[0]?.id, "corrupcao_guarda");
     let game = narrative.bootGame(
-      createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy, compiled.patterns),
+      createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy, compiled.patterns),
     );
-    game = interactWith(game, "A");
+    game = interactWith(game, "@a");
     assert.equal(game.sifted.length, 0);
-    game = interactWith(game, "B");
+    game = interactWith(game, "@b");
     assert.equal(game.sifted.length, 0);
-    game = await narrative.interactAsync(game, "C");
+    game = await narrative.interactAsync(game, "@c");
     assert.equal(game.sifted.length, 1);
     assert.equal(game.sifted[0]?.name, "The Corruption of the Gate Guard");
-    assert.equal(game.worldModel.get("A")?.tags.has("event"), false);
+    assert.equal(game.worldModel.get("@a")?.tags.has("event"), false);
     assert.match(sift.banner(game.sifted), /Corruption/);
     await Promise.resolve();
     assert.ok(seen.includes("corrupcao_guarda"));
 
     const before = game.history.length;
-    game = rewindTo(game, game.history.findIndex((b) => b.triggerId === "B"));
+    game = rewindTo(game, game.history.findIndex((b) => b.triggerId === "@b"));
     assert.ok(game.history.length < before);
     assert.equal(game.sifted.length, 0);
   });

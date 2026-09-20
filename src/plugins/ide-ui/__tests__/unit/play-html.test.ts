@@ -8,14 +8,14 @@ import { playShareUrl, sessionShareUrl, staticPlayHtml } from "../../lib/play-ht
 describe("static play html", () => {
   it("embeds title turns prompt and lume-play json", () => {
     const project = createProject("Html", {
-      entitiesSource: `JOGADOR.{ tags: agent; }\nstart()\n`,
+      entitiesSource: `@jogador.{ tags: agent; }\nstart()\n`,
       rulesSource: `# start
 ON: start
 narrativa: "luz"
 `,
     });
     const compiled = compileProject(project);
-    const game = bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR"));
+    const game = bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador"));
     const bundle = buildPlayBundle(project, game);
     const url = playShareUrl("https://lume.example", "/", bundle);
     const html = staticPlayHtml(bundle, url);

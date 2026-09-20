@@ -110,7 +110,7 @@ export function exportSession(state: GameState): SessionJson {
 export function replaySession(
   session: SessionJson,
   rules: readonly Rule[],
-  playerEntityId = "JOGADOR",
+  playerEntityId = "@jogador",
   taxonomy?: CompiledTaxonomy,
   patterns: readonly SiftPattern[] = [],
 ): GameState {

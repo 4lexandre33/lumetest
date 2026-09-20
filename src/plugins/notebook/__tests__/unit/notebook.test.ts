@@ -13,6 +13,7 @@ import { exportSession, replaySession } from "../../../narrative-engine/lib/sess
 import { parsePadrao, bannerOf } from "../../../narrative-engine/lib/sift.ts";
 import { buildPlayBundle, encodePlayHash, parseShareHash } from "../../../narrative-engine/lib/play-bundle.ts";
 import { highlightSource } from "../../../narrative-engine/lib/highlight.ts";
+import { insertEntity, insertRule, expandEntityDecl } from "../../../narrative-engine/lib/source-ops.ts";
 import { interpret } from "../../../nlp/lib/nlp.ts";
 import { tabAfterKeyword, indentOnEnter, addLineNote, insertSectionBreak, completeAt, collectVocabulary } from "../../../narrative-engine/lib/complete.ts";
 import { LIFE_MANIFEST, createLifePlugin } from "../../../life/index.ts";
@@ -66,10 +67,10 @@ describe("Notebook", () => {
     assert.equal(nb.issues.length, 0);
     assert.equal(nb.rulesSource, "");
     assert.equal(compiled.errors.length, 0);
-    assert.ok(compiled.worldModel.get("CAVERNA")?.tags.has("place"));
-    assert.equal(compiled.worldModel.get("CAVERNA")?.links.exit_n, "FLORESTA");
-    assert.ok(compiled.worldModel.get("FLORESTA")?.tags.has("place"));
-    assert.equal(compiled.worldModel.get("FLORESTA")?.links.exit_s, "CAVERNA");
+    assert.ok(compiled.worldModel.get("@caverna")?.tags.has("place"));
+    assert.equal(compiled.worldModel.get("@caverna")?.links.exit_n, "@floresta");
+    assert.ok(compiled.worldModel.get("@floresta")?.tags.has("place"));
+    assert.equal(compiled.worldModel.get("@floresta")?.links.exit_s, "@caverna");
   });
 
   it("places objects and people, tags, and section aliases", () => {
@@ -87,18 +88,18 @@ Ele é covarde.
 `;
     const { nb, compiled } = worldOf(text);
     assert.equal(nb.issues.length, 0);
-    const espada = compiled.worldModel.get("ESPADA_ENFERRUJADA");
+    const espada = compiled.worldModel.get("@espada_enferrujada");
     assert.ok(espada?.tags.has("object"));
     assert.ok(espada?.tags.has("weapon"));
     assert.ok(espada?.tags.has("cursed"));
-    assert.equal(espada?.links.in, "CAVERNA");
-    const goblin = compiled.worldModel.get("GOBLIN");
+    assert.equal(espada?.links.in, "@caverna");
+    const goblin = compiled.worldModel.get("@goblin");
     assert.ok(goblin?.tags.has("agent"));
     assert.ok(goblin?.tags.has("vivo"));
     assert.ok(goblin?.tags.has("hostile"));
     assert.ok(goblin?.tags.has("covarde"));
-    assert.equal(goblin?.links.in, "CAVERNA");
-    assert.ok(compiled.worldModel.get("CAVERNA")?.tags.has("place"));
+    assert.equal(goblin?.links.in, "@caverna");
+    assert.ok(compiled.worldModel.get("@caverna")?.tags.has("place"));
   });
 
   it("uses a description line as place extra and fails closed on junk", () => {
@@ -109,10 +110,10 @@ Quando o jogador pega a espada:
 `);
     assert.ok(nb.issues.some((issue) => issue.message === "Não percebi esta linha." && issue.line === 3));
     assert.equal(nb.issues.some((issue) => issue.line === 4), false);
-    assert.match(nb.rulesSource, /on: ESPADA/);
-    assert.match(nb.rulesSource, /JOGADOR\.intent=take/);
-    assert.equal(compiled.worldModel.get("CAVERNA")?.description, "A caverna é húmida e fria.");
-    assert.ok(compiled.worldModel.get("ESPADA"));
+    assert.match(nb.rulesSource, /on: @espada/);
+    assert.match(nb.rulesSource, /@jogador\.intent=take/);
+    assert.equal(compiled.worldModel.get("@caverna")?.description, "A caverna é húmida e fria.");
+    assert.ok(compiled.worldModel.get("@espada"));
   });
 
   it("compiles Quando/narre/cause/marque like a handwritten rule", () => {
@@ -125,18 +126,18 @@ Quando o jogador pega a espada:
 `;
     const nb = compileNotebook(text);
     assert.equal(nb.issues.length, 0);
-    assert.match(nb.rulesSource, /on: ESPADA/);
-    assert.match(nb.rulesSource, /if: JOGADOR\.intent=take/);
-    assert.match(nb.rulesSource, /JOGADOR\.hp - 5/);
-    assert.match(nb.rulesSource, /JOGADOR\.maldito/);
+    assert.match(nb.rulesSource, /on: @espada/);
+    assert.match(nb.rulesSource, /if: @jogador\.intent=take/);
+    assert.match(nb.rulesSource, /@jogador\.hp - 5/);
+    assert.match(nb.rulesSource, /@jogador\.maldito/);
     assert.match(nb.rulesSource, /Sua mão recua/);
     assert.equal(nb.rulesSource.includes("WAIT"), false);
 
     const hand = `# pega
-ON: ESPADA
-IF: JOGADOR.intent=take
-DO: JOGADOR.hp - 5
-    JOGADOR.maldito
+ON: @espada
+IF: @jogador.intent=take
+DO: @jogador.hp - 5
+    @jogador.maldito
 narrativa: "Sua mão recua como se uma onda de pavor a tivesse atingido."
 `;
     const entities = `${nb.entitiesSource}
@@ -146,16 +147,16 @@ start()
     const fromHand = compileProject(createProject("hand", { entitiesSource: entities, rulesSource: `${hand}\n# start\nON: start\nnarrativa: "ok"\n` }));
     assert.equal(fromNb.errors.length, 0, fromNb.errors.map((e) => e.message).join("; "));
     assert.equal(fromHand.errors.length, 0);
-    fromNb.worldModel.get("JOGADOR")!.stats.hp = 10;
-    fromHand.worldModel.get("JOGADOR")!.stats.hp = 10;
-    let g1 = narrative.bootGame(createGame(fromNb.worldModel, fromNb.rules, "JOGADOR", fromNb.taxonomy));
-    let g2 = narrative.bootGame(createGame(fromHand.worldModel, fromHand.rules, "JOGADOR", fromHand.taxonomy));
-    g1 = take(g1, "ESPADA");
-    g2 = take(g2, "ESPADA");
-    assert.equal(g1.worldModel.get("JOGADOR")?.stats.hp, 5);
-    assert.equal(g2.worldModel.get("JOGADOR")?.stats.hp, 5);
-    assert.equal(g1.worldModel.get("JOGADOR")?.tags.has("maldito"), true);
-    assert.equal(g2.worldModel.get("JOGADOR")?.tags.has("maldito"), true);
+    fromNb.worldModel.get("@jogador")!.stats.hp = 10;
+    fromHand.worldModel.get("@jogador")!.stats.hp = 10;
+    let g1 = narrative.bootGame(createGame(fromNb.worldModel, fromNb.rules, "@jogador", fromNb.taxonomy));
+    let g2 = narrative.bootGame(createGame(fromHand.worldModel, fromHand.rules, "@jogador", fromHand.taxonomy));
+    g1 = take(g1, "@espada");
+    g2 = take(g2, "@espada");
+    assert.equal(g1.worldModel.get("@jogador")?.stats.hp, 5);
+    assert.equal(g2.worldModel.get("@jogador")?.stats.hp, 5);
+    assert.equal(g1.worldModel.get("@jogador")?.tags.has("maldito"), true);
+    assert.equal(g2.worldModel.get("@jogador")?.tags.has("maldito"), true);
     assert.ok(g1.story.includes("mão recua"));
     assert.ok(g2.story.includes("mão recua"));
   });
@@ -181,7 +182,7 @@ A maldição da espada é sanguessuga.
 Veja também: A Espada.
 `);
     assert.equal(nb.issues.filter((issue) => issue.code === "W014").length, 0);
-    assert.match(nb.entitiesSource, /^ESPADA\.\{/m);
+    assert.match(nb.entitiesSource, /^@espada\.\{/m);
     assert.equal(/MALDIC/i.test(nb.entitiesSource), false);
     const { compiled } = worldOf(`### A Espada
 A espada está na caverna.
@@ -189,9 +190,9 @@ A espada está na caverna.
 ### A Maldição da Espada
 A maldição da espada é sanguessuga.
 `);
-    assert.ok(compiled.worldModel.has("ESPADA"));
-    const extras = [...compiled.worldModel.keys()].filter((id) => id !== "start" && id !== "CAVERNA" && id !== "JOGADOR");
-    assert.deepEqual(extras, ["ESPADA"]);
+    assert.ok(compiled.worldModel.has("@espada"));
+    const extras = [...compiled.worldModel.keys()].filter((id) => id !== "start" && id !== "@caverna" && id !== "@jogador");
+    assert.deepEqual(extras, ["@espada"]);
   });
 
   it("warns W014 on missing Veja também and E020 on homonyms", () => {
@@ -212,16 +213,16 @@ A maldição está na caverna.
 também chamada: relíquia do goblin
 A relíquia do goblin está na caverna.
 `);
-    assert.ok(compiled.worldModel.has("ESPADA_ENFERRUJADA"));
-    assert.equal(compiled.worldModel.get("ESPADA_ENFERRUJADA")?.links.in, "CAVERNA");
+    assert.ok(compiled.worldModel.has("@espada_enferrujada"));
+    assert.equal(compiled.worldModel.get("@espada_enferrujada")?.links.in, "@caverna");
     assert.equal(compiled.worldModel.has("RELIQUIA_DO_GOBLIN"), false);
 
     const similar = compileNotebook(`### A Espada
 ### A Escada
 `);
-    const ids = [...similar.entitiesSource.matchAll(/^([A-Z0-9_]+)\.\{/gm)].map((m) => m[1]);
-    assert.ok(ids.includes("ESPADA"));
-    assert.ok(ids.includes("ESCADA"));
+    const ids = [...similar.entitiesSource.matchAll(/^(@?[A-Za-z0-9_]+)\.\{/gm)].map((m) => m[1]);
+    assert.ok(ids.includes("@espada"));
+    assert.ok(ids.includes("@escada"));
   });
 
   it("omits inactive Maldições rules; ids stay put; old session still replays", () => {
@@ -250,17 +251,17 @@ A espada está na caverna.
 `;
     const onNb = compileNotebook(base);
     const offNb = compileNotebook(off);
-    assert.match(onNb.rulesSource, /JOGADOR\.hp - 5/);
+    assert.match(onNb.rulesSource, /@jogador\.hp - 5/);
     assert.equal(offNb.rulesSource.includes("hp"), false);
-    assert.match(offNb.entitiesSource, /^ESPADA\.\{/m);
+    assert.match(offNb.entitiesSource, /^@espada\.\{/m);
     assert.equal(/MALDIC/i.test(offNb.entitiesSource), false);
     const movedNb = compileNotebook(moved);
-    assert.match(movedNb.entitiesSource, /^ESPADA\.\{/m);
+    assert.match(movedNb.entitiesSource, /^@espada\.\{/m);
 
     const withPlayer = (source: string) =>
-      /JOGADOR\.\{/.test(source)
+      /@jogador\.\{/.test(source)
         ? `${source}\nstart()\n`
-        : `JOGADOR.{ tags: agent; stats: hp=10; links: ; name: Jogador; }\n${source}\nstart()\n`;
+        : `@jogador.{ tags: agent; stats: hp=10; links: ; name: Jogador; }\n${source}\nstart()\n`;
 
     const onProj = createProject("on", {
       entitiesSource: withPlayer(onNb.entitiesSource),
@@ -268,26 +269,26 @@ A espada está na caverna.
     });
     const onCompiled = compileProject(onProj);
     assert.equal(onCompiled.errors.length, 0);
-    onCompiled.worldModel.get("JOGADOR")!.stats.hp = 10;
-    let live = narrative.bootGame(createGame(onCompiled.worldModel, onCompiled.rules, "JOGADOR", onCompiled.taxonomy));
-    live = take(live, "ESPADA");
-    assert.equal(live.worldModel.get("JOGADOR")?.stats.hp, 5);
+    onCompiled.worldModel.get("@jogador")!.stats.hp = 10;
+    let live = narrative.bootGame(createGame(onCompiled.worldModel, onCompiled.rules, "@jogador", onCompiled.taxonomy));
+    live = take(live, "@espada");
+    assert.equal(live.worldModel.get("@jogador")?.stats.hp, 5);
     const snapshot = exportSession(live);
     const rewound = rewindTo(live, 0);
-    assert.equal(rewound.worldModel.get("JOGADOR")?.stats.hp, 10);
-    const replayed = replaySession(snapshot, onCompiled.rules, "JOGADOR", onCompiled.taxonomy);
+    assert.equal(rewound.worldModel.get("@jogador")?.stats.hp, 10);
+    const replayed = replaySession(snapshot, onCompiled.rules, "@jogador", onCompiled.taxonomy);
     assert.equal(replayed.history.length, snapshot.triggerIds.length);
-    assert.equal(live.worldModel.get("JOGADOR")?.stats.hp, 5);
+    assert.equal(live.worldModel.get("@jogador")?.stats.hp, 5);
 
     const offCompiled = compileProject(createProject("off", {
       entitiesSource: withPlayer(offNb.entitiesSource),
       rulesSource: `${offNb.rulesSource}\n# start\nON: start\nnarrativa: "ok"\n`,
     }));
-    offCompiled.worldModel.get("JOGADOR")!.stats.hp = 10;
-    let fresh = narrative.bootGame(createGame(offCompiled.worldModel, offCompiled.rules, "JOGADOR", offCompiled.taxonomy));
-    fresh = take(fresh, "ESPADA");
-    assert.equal(fresh.worldModel.get("JOGADOR")?.stats.hp, 10);
-    assert.equal(live.worldModel.get("JOGADOR")?.stats.hp, 5);
+    offCompiled.worldModel.get("@jogador")!.stats.hp = 10;
+    let fresh = narrative.bootGame(createGame(offCompiled.worldModel, offCompiled.rules, "@jogador", offCompiled.taxonomy));
+    fresh = take(fresh, "@espada");
+    assert.equal(fresh.worldModel.get("@jogador")?.stats.hp, 10);
+    assert.equal(live.worldModel.get("@jogador")?.stats.hp, 5);
   });
 
   it("chains LIVE for a nearby coward goblin and WAIT on a cada turno; dry-run lists only", async () => {
@@ -299,7 +300,7 @@ Quando o jogador pega a espada:
 `);
     assert.equal(turno.issues.length, 0);
     assert.match(turno.rulesSource, /WAIT 1\.FUSE_/);
-    assert.match(turno.rulesSource, /JOGADOR\.hp - 1/);
+    assert.match(turno.rulesSource, /@jogador\.hp - 1/);
     assert.equal(turno.rulesSource.includes("LIVE"), false);
 
     const text = `### A Caverna
@@ -321,26 +322,26 @@ Quando o jogador pega a espada:
     const { nb, compiled } = worldOf(text);
     assert.equal(nb.issues.length, 0);
     assert.match(nb.rulesSource, /do: LIVE/);
-    assert.match(nb.rulesSource, /on: GOBLIN/);
+    assert.match(nb.rulesSource, /on: @goblin/);
     assert.equal(compiled.errors.length, 0);
 
-    compiled.worldModel.get("JOGADOR")!.links.in = "CAVERNA";
-    const game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    compiled.worldModel.get("@jogador")!.links.in = "@caverna";
+    const game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
     const world = cloneWorldModel(game.worldModel);
-    const actor = world.get("JOGADOR");
+    const actor = world.get("@jogador");
     if (actor) actor.links.intent = "take";
     const hypot = { ...game, worldModel: world };
-    const report = narrative.dryRun(hypot, "ESPADA");
+    const report = narrative.dryRun(hypot, "@espada");
     assert.ok(report.effects.some((effect) => effect.verb === "live"));
-    assert.equal(hypot.worldModel.get("GOBLIN")?.tags.has("alerta"), false);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("alerta"), false);
+    assert.equal(hypot.worldModel.get("@goblin")?.tags.has("alerta"), false);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("alerta"), false);
 
     core.registerPlugin(LIFE_MANIFEST, createLifePlugin);
     await core.activatePlugin("lume-life");
-    let played = take(hypot, "ESPADA");
-    assert.equal(played.worldModel.get("GOBLIN")?.tags.has("alerta"), true);
-    assert.ok(played.history.some((beat) => beat.triggerId === "GOBLIN"));
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("alerta"), false);
+    let played = take(hypot, "@espada");
+    assert.equal(played.worldModel.get("@goblin")?.tags.has("alerta"), true);
+    assert.ok(played.history.some((beat) => beat.triggerId === "@goblin"));
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("alerta"), false);
   });
 
   it("compiles Canais and Histórias into channel + PADRAO; weight only on the banner", () => {
@@ -365,15 +366,15 @@ Significância: 0.1
     const { nb, compiled } = worldOf(text);
     assert.equal(nb.issues.length, 0);
     assert.match(nb.taxonomySource, /channel → abstract/);
-    assert.match(nb.entitiesSource, /CORRUPCAO\.\{/);
+    assert.match(nb.entitiesSource, /@corrupcao\.\{/);
     assert.match(nb.entitiesSource, /tags: channel/);
     assert.match(nb.entitiesSource, /state=0/);
-    assert.equal(nb.extras.CORRUPCAO?.states, "limpo, corrompido, exposto");
-    assert.match(nb.rulesSource, /CORRUPCAO\.intent=advance/);
-    assert.match(nb.rulesSource, /CORRUPCAO\.state \+ 1/);
+    assert.equal(nb.extras["@corrupcao"]?.states, "limpo, corrompido, exposto");
+    assert.match(nb.rulesSource, /@corrupcao\.intent=advance/);
+    assert.match(nb.rulesSource, /@corrupcao\.state \+ 1/);
     assert.match(nb.rulesSource, /suborno aceito/);
     assert.match(nb.patterns, /PADRAO CORRUPCAO_DO_GUARDA/);
-    assert.match(nb.patterns, /eventos: SUBORNO, ACEITE/);
+    assert.match(nb.patterns, /eventos: @suborno, @aceite/);
     assert.match(nb.patterns, /extra: weight=0.85/);
     assert.match(nb.rulesSource, /PADRAO CORRUPCAO_DO_GUARDA/);
     assert.equal(compiled.errors.length, 0);
@@ -471,16 +472,16 @@ A espada está na caverna.
 `,
       meta: { name: "x" },
     });
-    assert.match(applied.entitiesSource, /ESPADA/);
+    assert.match(applied.entitiesSource, /@espada/);
     const cave = applyNotebookToProject({
-      entitiesSource: "JOGADOR.{ tags: agent; }\nstart()\n",
+      entitiesSource: "@jogador.{ tags: agent; }\nstart()\n",
       rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n",
       taxonomySource: "",
       extras: {},
       notebooksSource: "",
       meta: { name: "cave" },
     });
-    assert.equal(cave.entitiesSource, "JOGADOR.{ tags: agent; }\nstart()\n");
+    assert.equal(cave.entitiesSource, "@jogador.{ tags: agent; }\nstart()\n");
   });
 
   it("keeps the first caderno when Magia is added and builds a global index", () => {
@@ -494,9 +495,9 @@ O mago está na torre.
 O feitico está na torre.
 `;
     const nb = compileNotebook(text);
-    assert.match(nb.entitiesSource, /ESPADA/);
-    assert.match(nb.entitiesSource, /MAGO/);
-    assert.match(nb.entitiesSource, /FEITICO/);
+    assert.match(nb.entitiesSource, /@espada/);
+    assert.match(nb.entitiesSource, /@mago/);
+    assert.match(nb.entitiesSource, /@feitico/);
     const lib = parseCadernoLibrary(text);
     assert.equal(lib.books.length, 2);
     assert.equal(lib.books[0]?.cover.title, "A Caverna Amaldiçoada");
@@ -519,8 +520,8 @@ O feitico está na torre.
       meta: { name: "x" },
     });
     assert.equal(applied.meta.name, "A Caverna Amaldiçoada");
-    assert.match(applied.entitiesSource, /ESPADA/);
-    assert.match(applied.entitiesSource, /MAGO/);
+    assert.match(applied.entitiesSource, /@espada/);
+    assert.match(applied.entitiesSource, /@mago/);
     const notes = assistNotebook(text).notes;
     assert.ok(notes.some((note) => note === "Índice: A Caverna Amaldiçoada, Magia."));
     const grown = appendCaderno(text, "", new Date("2026-09-13T09:24:00"));
@@ -562,8 +563,8 @@ O mago está na torre.
     assert.match(joined, /CADERNO: Magia/);
     assert.match(joined, /Autora: Ana/);
     const nb = compileNotebook(joined);
-    assert.match(nb.entitiesSource, /ESPADA/);
-    assert.match(nb.entitiesSource, /MAGO/);
+    assert.match(nb.entitiesSource, /@espada/);
+    assert.match(nb.entitiesSource, /@mago/);
     const again = importCaderno(joined, "### O Feitiço\nO feitico está na torre.\n");
     assert.match(again, /CADERNO: Magia/);
     assert.match(again, /O Feitiço/);
@@ -573,7 +574,7 @@ O mago está na torre.
     assert.equal(onlyMagia.includes("A Espada"), false);
     const project = createProject("partilha", { notebooksSource: joined });
     const applied = applyNotebookToProject(project);
-    assert.match(applied.entitiesSource, /ESPADA/);
+    assert.match(applied.entitiesSource, /@espada/);
     const bundle = buildPlayBundle(applied, null);
     assert.match(bundle.project.notebooksSource, /Autora: Maria/);
     assert.ok(parseShareHash(`#play=${encodePlayHash(bundle)}`)?.play);
@@ -600,7 +601,7 @@ Ele é covarde.
     assert.equal(second.rulesSource, first.rulesSource);
     const touched = compileNotebook(base.replace("Ele é covarde.", "Ele é covarde.\nEle é um goblin."));
     assert.deepEqual(touched.dirty, ["O Goblin"]);
-    assert.match(touched.entitiesSource, /ESPADA/);
+    assert.match(touched.entitiesSource, /@espada/);
     const withPeso = compileNotebook(`### A Espada
 A espada está na caverna.
 peso: sala
@@ -637,9 +638,9 @@ Quando o jogador pega a espada:
     assert.equal(on?.source, "on: ");
     const tags = tabAfterKeyword("  tags", "entities", 6);
     assert.equal(tags?.source, "  tags: ");
-    const src = `CADERNO: A\n### X\nola\n`;
+    const src = `CADERNO: A\n### @x\nola\n`;
     const lib = parseCadernoLibrary(src);
-    const replaced = replaceBookSource(src, lib.books[0]!.id, "CADERNO: A\n### X\nola /* n */\n");
+    const replaced = replaceBookSource(src, lib.books[0]!.id, "CADERNO: A\n### @x\nola /* n */\n");
     assert.match(replaced, /ola \/\* n \*\//);
     const lined = replaceBookSource("CADERNO:\nola", parseCadernoLibrary("CADERNO:\nola").books[0]!.id, "CADERNO:\nola\n");
     assert.match(lined, /ola\n$/);
@@ -648,17 +649,17 @@ Quando o jogador pega a espada:
   it("compiles é um Agent/objeto/lugar into the motor slice without duplicating", () => {
     const text = "Alexandre é um Agent.\n";
     const nb = compileNotebook(text);
-    assert.match(nb.entitiesSource, /ALEXANDRE\.\{\n  name: Alexandre;\n  description: ;\n  tags: agent;/);
+    assert.match(nb.entitiesSource, /@alexandre\.\{\n  id: #[A-F0-9]+;\n  name: Alexandre;\n  description: ;\n  tags: agent;/);
     assert.equal(nb.entitiesSource.includes("vivo"), false);
     const quoted = compileNotebook("'Alexandre' é um Agent.\n");
-    assert.match(quoted.entitiesSource, /ALEXANDRE\.\{\n  name: Alexandre;\n  description: ;\n  tags: agent;/);
+    assert.match(quoted.entitiesSource, /@alexandre\.\{\n  id: #[A-F0-9]+;\n  name: Alexandre;\n  description: ;\n  tags: agent;/);
     const objeto = compileNotebook("A espada é um objeto.\n");
-    assert.match(objeto.entitiesSource, /ESPADA\.\{\n  name: A espada;\n  description: ;\n  tags: object;/);
+    assert.match(objeto.entitiesSource, /@espada\.\{\n  id: #[A-F0-9]+;\n  name: A espada;\n  description: ;\n  tags: object;/);
     const lugar = compileNotebook("A caverna é um lugar.\n");
-    assert.match(lugar.entitiesSource, /CAVERNA\.\{\n[\s\S]*?tags: place;/);
+    assert.match(lugar.entitiesSource, /@caverna\.\{\n[\s\S]*?tags: place;/);
     const npc = compileNotebook("O guarda é um npc.\n");
     assert.match(npc.entitiesSource, /tags: agent, vivo;/);
-    const handwritten = "JOGADOR.{ tags: agent; }\nstart()\n";
+    const handwritten = "@jogador.{ tags: agent; }\nstart()\n";
     const first = applyNotebookToProject({
       entitiesSource: handwritten,
       rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n",
@@ -667,14 +668,14 @@ Quando o jogador pega a espada:
       notebooksSource: text,
       meta: { name: "x" },
     });
-    assert.match(first.entitiesSource, /JOGADOR\./);
+    assert.match(first.entitiesSource, /@jogador\./);
     assert.match(first.entitiesSource, /# --- lume-caderno ---/);
-    assert.match(first.entitiesSource, /ALEXANDRE\./);
+    assert.match(first.entitiesSource, /@alexandre\./);
     assert.match(first.entitiesSource, /# --- \/lume-caderno ---/);
-    assert.equal(first.entitiesSource.split("ALEXANDRE.{").length - 1, 1);
+    assert.equal(first.entitiesSource.split("@alexandre.{").length - 1, 1);
     const second = applyNotebookToProject({ ...first, notebooksSource: text });
-    assert.equal(second.entitiesSource.split("ALEXANDRE.{").length - 1, 1);
-    assert.match(second.entitiesSource, /JOGADOR\./);
+    assert.equal(second.entitiesSource.split("@alexandre.{").length - 1, 1);
+    assert.match(second.entitiesSource, /@jogador\./);
     const compiled = compileProject({
       ...createProject("n1", {
         entitiesSource: first.entitiesSource,
@@ -685,11 +686,11 @@ Quando o jogador pega a espada:
       notebooksSource: text,
     });
     assert.equal(compiled.errors.length, 0);
-    assert.ok(compiled.worldModel.get("ALEXANDRE")?.tags.has("agent"));
-    assert.equal(compiled.worldModel.get("ALEXANDRE")?.tags.has("vivo"), false);
+    assert.ok(compiled.worldModel.get("@alexandre")?.tags.has("agent"));
+    assert.equal(compiled.worldModel.get("@alexandre")?.tags.has("vivo"), false);
     const cleared = applyNotebookToProject({ ...first, notebooksSource: "" });
-    assert.equal(cleared.entitiesSource.includes("ALEXANDRE"), false);
-    assert.match(cleared.entitiesSource, /JOGADOR\./);
+    assert.equal(cleared.entitiesSource.includes("@alexandre"), false);
+    assert.match(cleared.entitiesSource, /@jogador\./);
     const slice = writeCadernoSlice(handwritten, nb.entitiesSource);
     assert.equal(slice.includes(CADERNO_SLICE_START), true);
   });
@@ -698,7 +699,7 @@ Quando o jogador pega a espada:
     const nb = compileNotebook(`O Ferreiro é um agente.
 Ele é um humano.
 `);
-    assert.match(nb.entitiesSource, /FERREIRO\.\{\n[\s\S]*?tags: agent, humano, vivo;/);
+    assert.match(nb.entitiesSource, /@ferreiro\.\{\n[\s\S]*?tags: agent, humano, vivo;/);
     assert.equal(nb.entitiesSource.includes("agente;"), false);
     const agentEn = compileNotebook(`O Ferreiro é um Agent.
 Ele é um humano.
@@ -706,13 +707,13 @@ Ele é um humano.
     assert.match(agentEn.entitiesSource, /tags: agent, humano;/);
     assert.equal(agentEn.entitiesSource.includes("vivo"), false);
     const quoted = compileNotebook("'A Espada Enferrujada' é um objeto.\n");
-    assert.match(quoted.entitiesSource, /ESPADA_ENFERRUJADA\.\{\n[\s\S]*?tags: object;/);
+    assert.match(quoted.entitiesSource, /@espada_enferrujada\.\{\n[\s\S]*?tags: object;/);
     assert.match(quoted.entitiesSource, /name: A Espada Enferrujada;/);
     const quotedHumano = compileNotebook("'O Ferreiro' é um humano.\n");
-    assert.match(quotedHumano.entitiesSource, /FERREIRO\.\{\n[\s\S]*?tags: humano;/);
+    assert.match(quotedHumano.entitiesSource, /@ferreiro\.\{\n[\s\S]*?tags: humano;/);
     assert.match(quotedHumano.entitiesSource, /name: O Ferreiro;/);
     const orphan = compileNotebook("Ele é um humano.\n");
-    assert.equal(orphan.entitiesSource.includes("ELE.{"), false);
+    assert.equal(orphan.entitiesSource.includes("@ele.{"), false);
     const arma = compileNotebook(`### A Espada
 Ela é uma arma.
 `);
@@ -728,11 +729,11 @@ Ele tem 100 de vida.
 Ele tem 0 de mana.
 Ele tem 50 de ouro.
 `);
-    assert.match(nb.entitiesSource, /FERREIRO\.\{\n[\s\S]*?tags: agent, vivo;[\s\S]*?stats: destreza=8, forca=12, hp=100, mana=0, ouro=50;/);
+    assert.match(nb.entitiesSource, /@ferreiro\.\{\n[\s\S]*?tags: agent, vivo;[\s\S]*?stats: destreza=8, forca=12, hp=100, mana=0, ouro=50;/);
     const inline = compileNotebook(`A Espada é um objeto.
 Ela tem dano: 15.
 `);
-    assert.match(inline.entitiesSource, /ESPADA\.\{\n[\s\S]*?tags: object;[\s\S]*?stats: dano=15;/);
+    assert.match(inline.entitiesSource, /@espada\.\{\n[\s\S]*?tags: object;[\s\S]*?stats: dano=15;/);
     const listed = compileNotebook(`A Espada é um objeto.
 Ela tem:
   - dano: 15
@@ -758,40 +759,40 @@ Ele é dono da Forja.
 A Espada é um objeto.
 Ela pertence ao Rei.
 `);
-    assert.match(nb.entitiesSource, /FERREIRO\.\{\n[\s\S]*?softLinks: amigo=GUARDA, casado=FILHA_DO_PADEIRO, in=VILA, membro=GUILDA, pai=JOVEM_FERREIRO, rival=MERCADOR;/);
-    assert.match(nb.entitiesSource, /FORJA\.\{\n[\s\S]*?softLinks: owner=FERREIRO;/);
-    assert.match(nb.entitiesSource, /ESPADA\.\{\n[\s\S]*?softLinks: owner=REI;/);
+    assert.match(nb.entitiesSource, /@ferreiro\.\{\n[\s\S]*?softLinks: amigo=@guarda, casado=@filha_do_padeiro, in=@vila, membro=@guilda, pai=@jovem_ferreiro, rival=@mercador;/);
+    assert.match(nb.entitiesSource, /@forja\.\{\n[\s\S]*?softLinks: owner=@ferreiro;/);
+    assert.match(nb.entitiesSource, /@espada\.\{\n[\s\S]*?softLinks: owner=@rei;/);
     assert.equal(nb.entitiesSource.includes("REL_"), false);
     assert.equal(nb.entitiesSource.includes("tags: relation"), false);
-    assert.match(nb.entitiesSource, /VILA\.\{\n[\s\S]*?tags: place;/);
+    assert.match(nb.entitiesSource, /@vila\.\{\n[\s\S]*?tags: place;/);
     const alias = compileNotebook(`O Ferreiro é um agente.
 O ferreiro está na vila.
 `);
-    assert.match(alias.entitiesSource, /FERREIRO\.\{\n[\s\S]*?softLinks: in=VILA;/);
-    assert.equal(alias.entitiesSource.split("FERREIRO.{").length - 1, 1);
+    assert.match(alias.entitiesSource, /@ferreiro\.\{\n[\s\S]*?softLinks: in=@vila;/);
+    assert.equal(alias.entitiesSource.split("@ferreiro.{").length - 1, 1);
   });
 
   it("tags abstrato, informação and evento without a new runtime", () => {
     const magia = compileNotebook("A Magia é um abstrato.\n");
-    assert.match(magia.entitiesSource, /MAGIA\.\{\n[\s\S]*?tags: abstract;/);
+    assert.match(magia.entitiesSource, /@magia\.\{\n[\s\S]*?tags: abstract;/);
     assert.equal(magia.rulesSource.trim(), "");
     assert.equal(magia.entitiesSource.includes("ON:"), false);
     const segredo = compileNotebook("O Segredo do Rei é uma informação.\n");
-    assert.match(segredo.entitiesSource, /SEGREDO_DO_REI\.\{\n[\s\S]*?tags: info;/);
+    assert.match(segredo.entitiesSource, /@segredo_do_rei\.\{\n[\s\S]*?tags: info;/);
     const queda = compileNotebook(`A Queda é um evento.
 Ele acontece quando o jogador pega a espada:
   narre "O reino segura a respiração."
 `);
-    assert.match(queda.entitiesSource, /QUEDA\.\{\n[\s\S]*?tags: event;/);
-    assert.match(queda.rulesSource, /on: ESPADA/);
-    assert.match(queda.rulesSource, /JOGADOR\.intent=take/);
+    assert.match(queda.entitiesSource, /@queda\.\{\n[\s\S]*?tags: event;/);
+    assert.match(queda.rulesSource, /on: @espada/);
+    assert.match(queda.rulesSource, /@jogador\.intent=take/);
     assert.equal(queda.rulesSource.includes("WAIT"), false);
     assert.equal(queda.rulesSource.includes("TICK"), false);
     const block = compileNotebook(`A Queda é um evento.
 Ele acontece quando:
   narre "Aconteceu."
 `);
-    assert.match(block.rulesSource, /on: QUEDA/);
+    assert.match(block.rulesSource, /on: @queda/);
     assert.match(block.rulesSource, /narrativa: "Aconteceu."/);
   });
 
@@ -803,15 +804,15 @@ Ela contém:
 O Ferreiro é um agente.
 Ele carrega um martelo.
 `);
-    assert.match(nb.entitiesSource, /FORJA\.\{\n[\s\S]*?softLinks: in=VILA;/);
-    assert.match(nb.entitiesSource, /TAVERNA\.\{\n[\s\S]*?softLinks: in=VILA;/);
-    assert.match(nb.entitiesSource, /MARTELO\.\{\n[\s\S]*?softLinks: in=FERREIRO;/);
+    assert.match(nb.entitiesSource, /@forja\.\{\n[\s\S]*?softLinks: in=@vila;/);
+    assert.match(nb.entitiesSource, /@taverna\.\{\n[\s\S]*?softLinks: in=@vila;/);
+    assert.match(nb.entitiesSource, /@martelo\.\{\n[\s\S]*?softLinks: in=@ferreiro;/);
     assert.equal(nb.entitiesSource.includes("inventario"), false);
     assert.equal(nb.entitiesSource.includes("capacidade"), false);
     const inline = compileNotebook(`A Vila é um lugar.
 Ela contém a Forja.
 `);
-    assert.match(inline.entitiesSource, /FORJA\.\{\n[\s\S]*?softLinks: in=VILA;/);
+    assert.match(inline.entitiesSource, /@forja\.\{\n[\s\S]*?softLinks: in=@vila;/);
   });
 
   it("turns traits and groups into tags without a group entity", () => {
@@ -823,14 +824,14 @@ O grupo "Humanos" inclui:
   - o Ferreiro
   - o Guarda
 `);
-    assert.match(nb.entitiesSource, /FERREIRO\.\{\n[\s\S]*?tags: agent, falante, humanos, vivo;/);
-    assert.match(nb.entitiesSource, /ESPADA\.\{\n[\s\S]*?tags: equipavel, object;/);
-    assert.match(nb.entitiesSource, /GUARDA\.\{\n[\s\S]*?tags: humanos;/);
-    assert.equal(nb.entitiesSource.includes("HUMANOS.{"), false);
+    assert.match(nb.entitiesSource, /@ferreiro\.\{\n[\s\S]*?tags: agent, falante, humanos, vivo;/);
+    assert.match(nb.entitiesSource, /@espada\.\{\n[\s\S]*?tags: equipavel, object;/);
+    assert.match(nb.entitiesSource, /@guarda\.\{\n[\s\S]*?tags: humanos;/);
+    assert.equal(nb.entitiesSource.includes("@humanos.{"), false);
     assert.equal(nb.taxonomySource.includes("humanos"), false);
     const inline = compileNotebook(`O grupo "Humanos" inclui o Ferreiro.\n`);
-    assert.match(inline.entitiesSource, /FERREIRO\.\{\n[\s\S]*?tags: humanos;/);
-    assert.equal(inline.entitiesSource.includes("HUMANOS.{"), false);
+    assert.match(inline.entitiesSource, /@ferreiro\.\{\n[\s\S]*?tags: humanos;/);
+    assert.equal(inline.entitiesSource.includes("@humanos.{"), false);
   });
 
   it("compiles herda/tipo de into taxonomy and templates into missing stats/tags", () => {
@@ -838,8 +839,8 @@ O grupo "Humanos" inclui:
 A Espada herda de Arma.
 `);
     assert.match(herda.taxonomySource, /espada → arma/);
-    assert.match(herda.entitiesSource, /ESPADA\.\{\n[\s\S]*?tags: espada, object;/);
-    assert.equal(herda.entitiesSource.includes("ARMA.{"), false);
+    assert.match(herda.entitiesSource, /@espada\.\{\n[\s\S]*?tags: espada, object;/);
+    assert.equal(herda.entitiesSource.includes("@arma.{"), false);
     const tipo = compileNotebook("A Espada é um tipo de arma.\n");
     assert.match(tipo.taxonomySource, /espada → arma/);
     const nb = compileNotebook(`Template "NPC Comum":
@@ -850,8 +851,8 @@ O Ferreiro é um agente.
 O Ferreiro é um NPC Comum.
 O Ferreiro tem força: 12.
 `);
-    assert.match(nb.entitiesSource, /FERREIRO\.\{\n[\s\S]*?tags: agent, falante, vivo;[\s\S]*?stats: forca=12, hp=50;/);
-    assert.equal(nb.entitiesSource.includes("NPC_COMUM.{"), false);
+    assert.match(nb.entitiesSource, /@ferreiro\.\{\n[\s\S]*?tags: agent, falante, vivo;[\s\S]*?stats: forca=12, hp=50;/);
+    assert.equal(nb.entitiesSource.includes("@npc_comum.{"), false);
     const first = compileNotebook(`O Ferreiro é um agente.
 O Ferreiro tem força: 12.
 Template "NPC Comum":
@@ -865,7 +866,7 @@ O Ferreiro é um NPC Comum.
   });
 
   it("keeps start() outside the slice and warns W030 once if the motor slice is touched", () => {
-    const handwritten = "JOGADOR.{ tags: agent; }\nstart()\n";
+    const handwritten = "@jogador.{ tags: agent; }\nstart()\n";
     const base = applyNotebookToProject({
       entitiesSource: handwritten,
       rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n",
@@ -878,7 +879,7 @@ O Ferreiro é um NPC Comum.
     const sliceAt = base.entitiesSource.indexOf(CADERNO_SLICE_START);
     assert.ok(startAt >= 0 && sliceAt > startAt);
     assert.match(base.taxonomySource, /# kit:combat/);
-    assert.equal(extractCadernoSlice(base.entitiesSource)?.includes("ALEXANDRE"), true);
+    assert.equal(extractCadernoSlice(base.entitiesSource)?.includes("@alexandre"), true);
     const clean = applyNotebookToProjectWithIssues(base);
     assert.equal(clean.issues.some((issue) => issue.code === "W030"), false);
     const touched = applyNotebookToProjectWithIssues({
@@ -887,16 +888,59 @@ O Ferreiro é um NPC Comum.
     });
     assert.equal(touched.issues.filter((issue) => issue.code === "W030").length, 1);
     assert.equal(extractCadernoSlice(touched.project.entitiesSource)?.includes("hack"), false);
-    assert.match(touched.project.entitiesSource, /ALEXANDRE\./);
+    assert.match(touched.project.entitiesSource, /@alexandre\./);
     assert.match(touched.project.entitiesSource, /start\(\)/);
     const again = applyNotebookToProjectWithIssues(touched.project);
     assert.equal(again.issues.some((issue) => issue.code === "W030"), false);
     const onlyHand = applyNotebookToProjectWithIssues({
       ...base,
-      entitiesSource: `EXTRA.{ tags: object; }\n${base.entitiesSource}`,
+      entitiesSource: `@extra.{ tags: object; }\n${base.entitiesSource}`,
     });
     assert.equal(onlyHand.issues.some((issue) => issue.code === "W030"), false);
-    assert.match(onlyHand.project.entitiesSource, /EXTRA\./);
+    assert.match(onlyHand.project.entitiesSource, /@extra\./);
+  });
+
+  it("leaves a handwritten pad before start() and inserts outside the slice", () => {
+    const handwritten = "@jogador.{ tags: agent; }\nstart()\n";
+    const applied = applyNotebookToProject({
+      entitiesSource: handwritten,
+      rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n",
+      taxonomySource: "",
+      extras: {},
+      notebooksSource: "Alexandre é um Agent.\n",
+      meta: { name: "x" },
+    });
+    const startAt = applied.entitiesSource.indexOf("start()");
+    const sliceAt = applied.entitiesSource.indexOf(CADERNO_SLICE_START);
+    assert.ok(startAt >= 0 && sliceAt > startAt);
+    assert.match(applied.entitiesSource.slice(0, startAt), /\n\n$/);
+    const out = insertEntity(applied.entitiesSource, "@nova");
+    const novaAt = out.source.indexOf("@nova.{");
+    const start2 = out.source.indexOf("start()");
+    const slice2 = out.source.indexOf(CADERNO_SLICE_START);
+    assert.ok(novaAt >= 0 && novaAt < start2 && start2 < slice2);
+    assert.equal(extractCadernoSlice(out.source)?.includes("@nova"), false);
+    const kept = applyNotebookToProject({ ...applied, entitiesSource: out.source, notebooksSource: "Alexandre é um Agent.\n" });
+    assert.match(kept.entitiesSource, /@nova\.\{/);
+    assert.equal(extractCadernoSlice(kept.entitiesSource)?.includes("@nova"), false);
+    assert.ok(kept.entitiesSource.indexOf("@nova.{") < kept.entitiesSource.indexOf("start()"));
+    const rules = `# start\nON: start\nnarrativa: "ok"\n\n${CADERNO_SLICE_START}\non: @alexandre\n# --- /lume-caderno ---\n`;
+    const ruleOut = insertRule(rules, "nova_regra");
+    assert.ok(ruleOut.source.indexOf("# nova_regra") < ruleOut.source.indexOf(CADERNO_SLICE_START));
+    const typed = applied.entitiesSource.replace(
+      /@alexandre\.\{\n/,
+      "@alexandre.{\n@pessoa.\n",
+    );
+    const pos = typed.indexOf("@pessoa.") + "@pessoa.".length;
+    const expanded = expandEntityDecl(typed, pos);
+    assert.ok(expanded);
+    assert.match(expanded.source, /@pessoa\.\{/);
+    assert.ok(expanded.source.indexOf("@pessoa.{") < expanded.source.indexOf("start()"));
+    assert.equal(extractCadernoSlice(expanded.source)?.includes("@pessoa"), false);
+    const inPlace = expandEntityDecl("@jogador.{ tags: agent; }\n@guarda.\nstart()\n", "@jogador.{ tags: agent; }\n@guarda.".length);
+    assert.ok(inPlace);
+    assert.match(inPlace.source, /@guarda\.\{/);
+    assert.ok(inPlace.source.indexOf("@guarda.{") < inPlace.source.indexOf("start()"));
   });
 
   it("writes entity and Quando rule into the same motor slices", () => {
@@ -905,13 +949,13 @@ Quando o jogador fala com Alexandre:
   narre "Olá."
 `;
     const nb = compileNotebook(text);
-    assert.match(nb.entitiesSource, /ALEXANDRE\.\{\n[\s\S]*?tags: agent;/);
+    assert.match(nb.entitiesSource, /@alexandre\.\{\n[\s\S]*?tags: agent;/);
     assert.equal(nb.entitiesSource.includes("COM_ALEXANDRE"), false);
-    assert.match(nb.rulesSource, /on: ALEXANDRE/);
-    assert.match(nb.rulesSource, /JOGADOR\.intent=talk/);
+    assert.match(nb.rulesSource, /on: @alexandre/);
+    assert.match(nb.rulesSource, /@jogador\.intent=talk/);
     assert.match(nb.rulesSource, /narrativa: "Olá."/);
     const applied = applyNotebookToProject({
-      entitiesSource: "JOGADOR.{ tags: agent; }\nstart()\n",
+      entitiesSource: "@jogador.{ tags: agent; }\nstart()\n",
       rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n",
       taxonomySource: "",
       extras: {},
@@ -919,9 +963,9 @@ Quando o jogador fala com Alexandre:
       meta: { name: "x" },
     });
     assert.match(applied.entitiesSource, /# --- lume-caderno ---/);
-    assert.match(applied.entitiesSource, /ALEXANDRE\./);
+    assert.match(applied.entitiesSource, /@alexandre\./);
     assert.match(applied.rulesSource, /# --- lume-caderno ---/);
-    assert.match(applied.rulesSource, /on: ALEXANDRE/);
+    assert.match(applied.rulesSource, /on: @alexandre/);
     assert.match(applied.rulesSource, /# start/);
   });
 
@@ -932,10 +976,10 @@ Quando o jogador fala com Alexandre:
     assert.equal(notebooksHash(joined), notebooksHash(joined));
     assert.notEqual(notebooksHash(joined), notebooksHash(`${joined} `));
     const nb = await compileCadernoLibraryAsync(joined);
-    assert.match(nb.entitiesSource, /ALEXANDRE\./);
-    assert.match(nb.entitiesSource, /VILA\./);
+    assert.match(nb.entitiesSource, /@alexandre\./);
+    assert.match(nb.entitiesSource, /@vila\./);
     const one = await compileCadernoLibraryAsync(a);
-    assert.match(one.entitiesSource, /ALEXANDRE\./);
+    assert.match(one.entitiesSource, /@alexandre\./);
   });
 
   it("colors and tabs é um / tem / está and the N11 words", () => {
@@ -974,7 +1018,7 @@ Quando o jogador tem a espada:
   narre "A lâmina pesa."
 `);
     assert.equal(quando.issues.length, 0, quando.issues.map((i) => i.message).join("; "));
-    assert.match(quando.rulesSource, /on: JOGADOR TEM ESPADA/);
+    assert.match(quando.rulesSource, /on: @jogador TEM @espada/);
     assert.match(quando.rulesSource, /narrativa: "A lâmina pesa."/);
     assert.equal(quando.rulesSource.includes("intent="), false);
 
@@ -985,21 +1029,21 @@ Quando o jogador pega a espada:
     narre "A luz mostra o fio."
 `);
     assert.equal(nested.issues.length, 0, nested.issues.map((i) => i.message).join("; "));
-    assert.match(nested.rulesSource, /on: ESPADA/);
-    assert.match(nested.rulesSource, /if: JOGADOR\.intent=take/);
-    assert.match(nested.rulesSource, /if: JOGADOR TEM TOCHA/);
+    assert.match(nested.rulesSource, /on: @espada/);
+    assert.match(nested.rulesSource, /if: @jogador\.intent=take/);
+    assert.match(nested.rulesSource, /if: @jogador TEM @tocha/);
 
     const nao = compileNotebook(`Quando o jogador não tem a espada:
   narre "A mão vazia."
 `);
     assert.equal(nao.issues.length, 0, nao.issues.map((i) => i.message).join("; "));
-    assert.match(nao.rulesSource, /on: JOGADOR NAO_TEM ESPADA/);
+    assert.match(nao.rulesSource, /on: @jogador NAO_TEM @espada/);
 
     const goblin = compileNotebook(`O Goblin é um agente.
 Quando o goblin tem a tocha:
   narre "A tocha treme."
 `);
-    assert.match(goblin.rulesSource, /on: GOBLIN TEM TOCHA/);
+    assert.match(goblin.rulesSource, /on: @goblin TEM @tocha/);
 
     const stats = compileNotebook(`O Ferreiro é um agente.
 Ele tem 100 de vida.
@@ -1014,8 +1058,8 @@ Quando o jogador pega a espada: /* x */
   narre "Oi."
 `);
     assert.equal(nb.issues.filter((issue) => issue.message === "Não percebi esta linha.").length, 0);
-    assert.match(nb.entitiesSource, /FERREIRO\./);
-    assert.match(nb.rulesSource, /on: ESPADA/);
+    assert.match(nb.entitiesSource, /@ferreiro\./);
+    assert.match(nb.rulesSource, /on: @espada/);
     const slash = compileNotebook(`O Ferreiro é um agente.
 Ele tem 100 de vida // lixo
 `);
@@ -1038,7 +1082,7 @@ Quando o jogador pega a espada:
       extras: nb.extras,
     }));
     const applied = applyNotebookToProjectWithIssues({
-      entitiesSource: "JOGADOR.{ tags: agent; }\nstart()\n",
+      entitiesSource: "@jogador.{ tags: agent; }\nstart()\n",
       rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n",
       taxonomySource: "",
       extras: {},
@@ -1053,19 +1097,19 @@ Quando o jogador pega a espada:
     }));
     assert.equal(hand.errors.length, 0, hand.errors.map((e) => e.message).join("; "));
     assert.equal(fromNb.errors.length, 0, fromNb.errors.map((e) => e.message).join("; "));
-    hand.worldModel.get("JOGADOR")!.stats.hp = 10;
-    fromNb.worldModel.get("JOGADOR")!.stats.hp = 10;
-    let g1 = narrative.bootGame(createGame(hand.worldModel, hand.rules, "JOGADOR", hand.taxonomy));
-    let g2 = narrative.bootGame(createGame(fromNb.worldModel, fromNb.rules, "JOGADOR", fromNb.taxonomy));
-    g1 = take(g1, "ESPADA");
-    g2 = take(g2, "ESPADA");
-    assert.equal(g1.worldModel.get("JOGADOR")?.stats.hp, g2.worldModel.get("JOGADOR")?.stats.hp);
+    hand.worldModel.get("@jogador")!.stats.hp = 10;
+    fromNb.worldModel.get("@jogador")!.stats.hp = 10;
+    let g1 = narrative.bootGame(createGame(hand.worldModel, hand.rules, "@jogador", hand.taxonomy));
+    let g2 = narrative.bootGame(createGame(fromNb.worldModel, fromNb.rules, "@jogador", fromNb.taxonomy));
+    g1 = take(g1, "@espada");
+    g2 = take(g2, "@espada");
+    assert.equal(g1.worldModel.get("@jogador")?.stats.hp, g2.worldModel.get("@jogador")?.stats.hp);
     assert.equal(g1.story.includes("mão recua"), true);
     assert.equal(g2.story.includes("mão recua"), true);
-    assert.equal(g1.worldModel.get("JOGADOR")?.stats.hp, 5);
+    assert.equal(g1.worldModel.get("@jogador")?.stats.hp, 5);
 
     const dup = applyNotebookToProjectWithIssues({
-      entitiesSource: "ALEXANDRE.{ tags: object; }\nstart()\n",
+      entitiesSource: "@alexandre.{ tags: object; }\nstart()\n",
       rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n",
       taxonomySource: "",
       extras: {},
@@ -1073,9 +1117,9 @@ Quando o jogador pega a espada:
       meta: { name: "x" },
     });
     assert.equal(dup.issues.filter((issue) => issue.code === "W031").length, 1);
-    assert.match(dup.issues[0]!.message, /ALEXANDRE/);
+    assert.match(dup.issues[0]!.message, /@alexandre/);
     const above = stripCadernoSlice(dup.project.entitiesSource);
-    assert.equal(above.includes("ALEXANDRE.{"), false);
+    assert.equal(above.includes("@alexandre.{"), false);
     assert.match(above, /start\(\)/);
     assert.match(extractCadernoSlice(dup.project.entitiesSource) ?? "", /tags: agent;/);
     const compiledDup = compileProject(createProject("dup", {
@@ -1083,8 +1127,8 @@ Quando o jogador pega a espada:
       rulesSource: dup.project.rulesSource,
     }));
     assert.equal(compiledDup.errors.some((e) => e.code === "E007"), false);
-    assert.ok(compiledDup.worldModel.get("ALEXANDRE")?.tags.has("agent"));
-    assert.equal(compiledDup.worldModel.get("ALEXANDRE")?.tags.has("object"), false);
+    assert.ok(compiledDup.worldModel.get("@alexandre")?.tags.has("agent"));
+    assert.equal(compiledDup.worldModel.get("@alexandre")?.tags.has("object"), false);
   });
 
   it("compiles Entenda aliases and project grammar; pega o pincel takes the Espada", () => {
@@ -1094,9 +1138,9 @@ Entenda "brocha" ou "trinchas" como a Espada.
 `);
     assert.equal(nb.issues.filter((issue) => issue.severity === "error").length, 0);
     assert.match(nb.entitiesSource, /aliases: pincel, brocha, trinchas/);
-    assert.equal(compiled.worldModel.get("ESPADA")?.extra?.aliases?.includes("pincel"), true);
+    assert.equal(compiled.worldModel.get("@espada")?.extra?.aliases?.includes("pincel"), true);
     assert.deepEqual(interpret("pega o pincel", compiled.worldModel), {
-      command: "intent.action.interact.take.ESPADA",
+      command: "intent.action.interact.take.@espada",
       dryRun: false,
     });
     const grammar = compileNotebook(`A Tocha é um objeto.
@@ -1110,7 +1154,7 @@ Entenda o comando "xyzzy" como novo.
       extras: grammar.extras,
     })).worldModel;
     assert.deepEqual(interpret("zuca a tocha", gWorld), {
-      command: "intent.action.interact.take.TOCHA",
+      command: "intent.action.interact.take.@tocha",
       dryRun: false,
     });
     assert.deepEqual(interpret("xyzzy", gWorld), {
@@ -1126,7 +1170,7 @@ Entenda "pega [algo] a b c d e f g h [sítio]" como take.
   it("defaults notebooksSource to empty and keeps the cave equal", () => {
     const blank = createProject("caderno");
     assert.equal(blank.notebooksSource, "");
-    const old = coerceProject({ entitiesSource: "JOGADOR.{ tags: agent; }\nstart()\n", rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n" });
+    const old = coerceProject({ entitiesSource: "@jogador.{ tags: agent; }\nstart()\n", rulesSource: "# start\nON: start\nnarrativa: \"ok\"\n" });
     assert.equal(old.notebooksSource, "");
     const cave = createExampleProject("goblin-cave");
     const before = cave.rulesSource;
@@ -1134,7 +1178,7 @@ Entenda "pega [algo] a b c d e f g h [sítio]" como take.
     assert.equal(compiled.errors.length, 0);
     assert.equal(cave.notebooksSource, "");
     assert.equal(cave.rulesSource, before);
-    const booted = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    const booted = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
     assert.match(booted.story, /./);
   });
 });
@@ -1153,14 +1197,14 @@ describe("W2 write menu shell", () => {
   it("lists the ten drawers and keys of the chosen entity", () => {
     assert.deepEqual([...FBE_DRAWERS], ["tags", "stats", "flags", "enums", "phrases", "hardLinks", "softLinks", "lists", "fuses", "struct"]);
     const host = {
-      id: "JOGADOR",
+      id: "@jogador",
       tags: new Set(["agent"]),
       stats: { hp: 10 },
       flags: { vivo: true },
       enums: {},
       phrases: { titulo: "Herói" },
       hardLinks: {},
-      softLinks: { current_location: "SALA" },
+      softLinks: { current_location: "@sala" },
       lists: {},
       fuses: {},
       struct: {},
@@ -1168,12 +1212,12 @@ describe("W2 write menu shell", () => {
     assert.deepEqual(keysOfDrawer(host, "stats"), ["hp"]);
     assert.deepEqual(keysOfDrawer(host, "tags"), ["agent"]);
     assert.deepEqual(keysOfDrawer(host, "phrases"), ["titulo"]);
-    assert.equal(entityGuess("jogador", ["SALA", "JOGADOR"]), "JOGADOR");
+    assert.equal(entityGuess("jogador", ["@sala", "@jogador"]), "@jogador");
   });
 
   it("lists existing phrases and does not persist a mutation stub", () => {
     const host = {
-      id: "JOGADOR",
+      id: "@jogador",
       tags: [],
       stats: {},
       flags: {},
@@ -1190,7 +1234,7 @@ describe("W2 write menu shell", () => {
     assert.equal(phrases.some((item) => item.insert === "Sua mão recua."), true);
     const source = "A lâmina pesa.";
     const stub = describeMutation({
-      entityId: "JOGADOR",
+      entityId: "@jogador",
       drawer: "stats",
       key: "hp",
       value: "10",
@@ -1198,7 +1242,7 @@ describe("W2 write menu shell", () => {
       line: 1,
       op: "set",
     });
-    assert.equal(stub, "JOGADOR.stats.hp=10");
+    assert.equal(stub, "@jogador.stats.hp=10");
     assert.equal(source, "A lâmina pesa.");
   });
 });
@@ -1219,7 +1263,7 @@ describe("C4 caderno by mode", () => {
 
 describe("V1 mutation wizard shell", () => {
   const host = {
-    id: "TOCHA",
+    id: "@tocha",
     tags: new Set(["object"]),
     stats: {},
     flags: {},
@@ -1233,17 +1277,17 @@ describe("V1 mutation wizard shell", () => {
   };
 
   it("refuses a flag that is not true/false and does not PUSH a comma list as one item", () => {
-    const base = { entityId: "JOGADOR", key: "vivo", quote: "x", line: 1, op: "set" as const };
+    const base = { entityId: "@jogador", key: "vivo", quote: "x", line: 1, op: "set" as const };
     assert.equal(doFromDraft({ ...base, drawer: "flags", value: "talvez" }), null);
-    assert.equal(doFromDraft({ ...base, drawer: "flags", value: "true" }), "SET_FLAG JOGADOR.vivo true");
-    assert.equal(doFromDraft({ ...base, drawer: "flags", value: "false" }), "SET_FLAG JOGADOR.vivo false");
-    assert.equal(doFromDraft({ ...base, drawer: "lists", key: "inventario", value: "A, B" }), "CLEAR JOGADOR.inventario\nPUSH JOGADOR.inventario A\nPUSH JOGADOR.inventario B");
-    assert.equal(doFromDraft({ ...base, drawer: "lists", key: "inventario", value: "A" }), "CLEAR JOGADOR.inventario\nPUSH JOGADOR.inventario A");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "set" }), "SET_STAT JOGADOR.hp 10");
+    assert.equal(doFromDraft({ ...base, drawer: "flags", value: "true" }), "SET_FLAG @jogador.vivo true");
+    assert.equal(doFromDraft({ ...base, drawer: "flags", value: "false" }), "SET_FLAG @jogador.vivo false");
+    assert.equal(doFromDraft({ ...base, drawer: "lists", key: "inventario", value: "A, B" }), "CLEAR @jogador.inventario\nPUSH @jogador.inventario A\nPUSH @jogador.inventario B");
+    assert.equal(doFromDraft({ ...base, drawer: "lists", key: "inventario", value: "A" }), "CLEAR @jogador.inventario\nPUSH @jogador.inventario A");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "set" }), "SET_STAT @jogador.hp 10");
   });
 
   it("lists link targets and a single enum state", () => {
-    assert.deepEqual(linkTargets([host, { ...host, id: "JOGADOR" }]), ["JOGADOR", "TOCHA"]);
+    assert.deepEqual(linkTargets([host, { ...host, id: "@jogador" }]), ["@jogador", "@tocha"]);
     assert.deepEqual(enumStates([host], "postura"), ["AGRESSIVO"]);
     const src = readFileSync(fileURLToPath(new URL("../../ui/WriteShell.tsx", import.meta.url)), "utf8");
     assert.match(src, /Pôr/);
@@ -1258,27 +1302,27 @@ describe("V2 doFromDraft set and unset", () => {
 ### O Jogador
 O jogador está na sala.
 `;
-    const corpo = doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "corpo", value: "10", quote: "O jogador está na sala.", line: 3, op: "set" });
-    const ferramenta = doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "ferramenta", value: "3", quote: "O jogador está na sala.", line: 3, op: "set" });
-    assert.equal(corpo, "SET_STAT JOGADOR.corpo 10");
-    assert.equal(ferramenta, "SET_STAT JOGADOR.ferramenta 3");
+    const corpo = doFromDraft({ entityId: "@jogador", drawer: "stats", key: "corpo", value: "10", quote: "O jogador está na sala.", line: 3, op: "set" });
+    const ferramenta = doFromDraft({ entityId: "@jogador", drawer: "stats", key: "ferramenta", value: "3", quote: "O jogador está na sala.", line: 3, op: "set" });
+    assert.equal(corpo, "SET_STAT @jogador.corpo 10");
+    assert.equal(ferramenta, "SET_STAT @jogador.ferramenta 3");
     let src = addAnnotation(prose, { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: corpo! });
     src = addAnnotation(src, { id: "a2", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: ferramenta! });
     const compiled = compileNotebook(src);
     assert.match(compiled.entitiesSource, /corpo=10/);
     assert.match(compiled.entitiesSource, /ferramenta=3/);
-    const listDo = doFromDraft({ entityId: "JOGADOR", drawer: "lists", key: "inventario", value: "espada, tocha", quote: "O jogador está na sala.", line: 3, op: "set" });
-    assert.equal(listDo?.includes("PUSH JOGADOR.inventario espada, tocha"), false);
+    const listDo = doFromDraft({ entityId: "@jogador", drawer: "lists", key: "inventario", value: "espada, tocha", quote: "O jogador está na sala.", line: 3, op: "set" });
+    assert.equal(listDo?.includes("PUSH @jogador.inventario espada, tocha"), false);
     const listed = addAnnotation(prose, { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: listDo! });
     assert.match(compileNotebook(listed).entitiesSource, /inventario=\[espada, tocha\]/);
   });
 
   it("removes a tag, unsets a flag, and clears a list, and keeps the cave equal", () => {
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "tags", key: "vivo", value: "", quote: "x", line: 1, op: "unset" }), "REMOVE_TAG JOGADOR vivo");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "flags", key: "chefe", value: "true", quote: "x", line: 1, op: "unset" }), "SET_FLAG JOGADOR.chefe false");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "unset" }), null);
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "lists", key: "inventario", value: "", quote: "x", line: 1, op: "unset" }), "CLEAR JOGADOR.inventario");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "lists", key: "inventario", value: "espada", quote: "x", line: 1, op: "unset" }), "REMOVE JOGADOR.inventario espada");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "tags", key: "vivo", value: "", quote: "x", line: 1, op: "unset" }), "REMOVE_TAG @jogador vivo");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "flags", key: "chefe", value: "true", quote: "x", line: 1, op: "unset" }), "SET_FLAG @jogador.chefe false");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "unset" }), null);
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "lists", key: "inventario", value: "", quote: "x", line: 1, op: "unset" }), "CLEAR @jogador.inventario");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "lists", key: "inventario", value: "espada", quote: "x", line: 1, op: "unset" }), "REMOVE @jogador.inventario espada");
     const cave = createExampleProject("goblin-cave");
     assert.equal(compileProject(cave).errors.length, 0);
   });
@@ -1296,7 +1340,7 @@ O jogador tem 10 de vida.
 ### O Jogador
 O jogador está na sala.
 `,
-      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT JOGADOR.hp 10" },
+      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT @jogador.hp 10" },
     );
     assert.equal(stripAnotacoesSlice(bound).includes("SET_STAT"), false);
     assert.match(bound, /lume-anotacoes/);
@@ -1322,17 +1366,17 @@ Quando o jogador pega a espada:
         book: "book-0",
         heading: "A Espada",
         quote: 'narre "Sua mão recua."',
-        do: "SET_STAT JOGADOR.hp 10",
+        do: "SET_STAT @jogador.hp 10",
       },
     );
     const compiled = compileNotebook(src);
-    assert.match(compiled.rulesSource, /SET_STAT JOGADOR\.hp 10/);
+    assert.match(compiled.rulesSource, /SET_STAT @jogador\.hp 10/);
     const missing = addAnnotation(
       `CADERNO:
 ### A Espada
 A espada está na sala.
 `,
-      { id: "a1", book: "book-0", heading: "A Espada", quote: "frase que não existe", do: "SET_STAT JOGADOR.hp 10" },
+      { id: "a1", book: "book-0", heading: "A Espada", quote: "frase que não existe", do: "SET_STAT @jogador.hp 10" },
     );
     const warned = compileNotebook(missing);
     assert.equal(warned.issues.some((issue) => issue.message === "Não percebi esta linha."), true);
@@ -1345,8 +1389,8 @@ A espada está na sala.
 A lâmina pesa.
 `;
     const anns = [
-      { id: "a1", book: "book-0", heading: "A Espada", quote: "A lâmina pesa.", do: "SET_STAT JOGADOR.hp 10" },
-      { id: "a2", book: "book-0", heading: "A Espada", quote: "A lâmina pesa.", do: "ADD_TAG JOGADOR vivo" },
+      { id: "a1", book: "book-0", heading: "A Espada", quote: "A lâmina pesa.", do: "SET_STAT @jogador.hp 10" },
+      { id: "a2", book: "book-0", heading: "A Espada", quote: "A lâmina pesa.", do: "ADD_TAG @jogador vivo" },
     ];
     const marks = marksOnPage(prose, anns);
     assert.deepEqual(marks.get(3), ["¹", "²"]);
@@ -1357,8 +1401,8 @@ A lâmina pesa.
 A lâmina pesa.
 `;
     const word = [
-      { id: "a1", book: "book-0", heading: "A Espada", quote: "lâmina", do: "SET_STAT JOGADOR.hp 10" },
-      { id: "a2", book: "book-0", heading: "A Espada", quote: "lâmina", do: "ADD_TAG JOGADOR vivo" },
+      { id: "a1", book: "book-0", heading: "A Espada", quote: "lâmina", do: "SET_STAT @jogador.hp 10" },
+      { id: "a2", book: "book-0", heading: "A Espada", quote: "lâmina", do: "ADD_TAG @jogador vivo" },
     ];
     const wordHits = markHitsOnPage(blade, word);
     assert.equal(wordHits.get(3)?.[0]?.column, "A lâmina pesa.".indexOf("lâmina"));
@@ -1367,7 +1411,7 @@ A lâmina pesa.
     const editor = readFileSync(fileURLToPath(new URL("../../ui/NotebookEditor.tsx", import.meta.url)), "utf8");
     assert.match(editor, /paintMarks/);
     assert.equal(editor.includes("marks.get(i + 1)") && editor.includes("{i + 1}"), true);
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "set" }), "SET_STAT JOGADOR.hp 10");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "set" }), "SET_STAT @jogador.hp 10");
     const noted = `CADERNO:
 ### A Espada
 A lâmina pesa. /* fria */
@@ -1378,7 +1422,7 @@ A lâmina pesa. /* fria */
 A lâmina pesa.
 A lâmina pesa.
 # --- lume-anotacoes ---
-1 {"id":"a1","book":"book-0","heading":"A Espada","quote":"A lâmina pesa.","do":"SET_STAT JOGADOR.hp 10"}
+1 {"id":"a1","book":"book-0","heading":"A Espada","quote":"A lâmina pesa.","do":"SET_STAT @jogador.hp 10"}
 # --- /lume-anotacoes ---
 `;
     const err = compileNotebook(two);
@@ -1402,29 +1446,29 @@ describe("W4 prose triggers", () => {
     const tok = tokenAt(source, at);
     assert.equal(tok.token, "espada");
     const hits = proseTriggers(source, at, {
-      entities: [{ id: "ESPADA", name: "A Espada Enferrujada" }],
+      entities: [{ id: "@espada", name: "A Espada Enferrujada" }],
       phrases: [{ id: "n1", label: "pegar", insert: "A lâmina da espada reluz." }],
-      annotations: [{ quote: "A lâmina pesa.", do: "SET_STAT JOGADOR.hp 10" }],
+      annotations: [{ quote: "A lâmina pesa.", do: "SET_STAT @jogador.hp 10" }],
     });
-    assert.equal(hits.some((hit) => hit.kind === "entity" && hit.entityId === "ESPADA"), true);
+    assert.equal(hits.some((hit) => hit.kind === "entity" && hit.entityId === "@espada"), true);
     assert.equal(hits.some((hit) => hit.kind === "phrase" && hit.insert?.includes("reluz")), true);
     const kw = completeAt("Quando", "notebook", 6, { entityIds: [], tags: [], statKeys: [], linkKeys: [], propKeywords: [] });
     assert.equal(kw.items.some((item) => item.label === "Quando"), true);
     const startKw = completeAt("", "notebook", 0, { entityIds: [], tags: [], statKeys: [], linkKeys: [], propKeywords: [] });
     assert.equal(startKw.items.some((item) => item.insert === "start"), true);
     assert.equal(startKw.items.some((item) => item.insert === "start()"), false);
-    assert.deepEqual(proseTriggers("Quando", 6, { entities: [{ id: "ESPADA", name: "Espada" }] }), []);
-    assert.deepEqual(proseTriggers("es", 2, { entities: [{ id: "ESPADA", name: "Espada" }] }), []);
+    assert.deepEqual(proseTriggers("Quando", 6, { entities: [{ id: "@espada", name: "Espada" }] }), []);
+    assert.deepEqual(proseTriggers("es", 2, { entities: [{ id: "@espada", name: "Espada" }] }), []);
   });
 
   it("matches an existing annotation quote and does not treat Se as a trigger", () => {
     const source = "A lâmina pesa na mão.";
     const at = source.indexOf("lâmina") + "lâmina".length;
     const hits = proseTriggers(source, at, {
-      annotations: [{ quote: "A lâmina pesa.", do: "ADD_TAG JOGADOR vivo" }],
+      annotations: [{ quote: "A lâmina pesa.", do: "ADD_TAG @jogador vivo" }],
     });
-    assert.equal(hits.some((hit) => hit.kind === "annotation" && hit.detail === "ADD_TAG JOGADOR vivo"), true);
-    assert.deepEqual(proseTriggers("Se", 2, { entities: [{ id: "SALA", name: "Sala" }] }), []);
+    assert.equal(hits.some((hit) => hit.kind === "annotation" && hit.detail === "ADD_TAG @jogador vivo"), true);
+    assert.deepEqual(proseTriggers("Se", 2, { entities: [{ id: "@sala", name: "Sala" }] }), []);
   });
 });
 
@@ -1435,14 +1479,14 @@ describe("W5 authorship timeline", () => {
 ### O Jogador
 O jogador está na sala.
 `,
-      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT JOGADOR.hp 10" },
+      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT @jogador.hp 10" },
     );
     const src = addAnnotation(first, {
       id: "a2",
       book: "book-0",
       heading: "O Jogador",
       quote: "O jogador está na sala.",
-      do: "SET_STAT JOGADOR.hp 20",
+      do: "SET_STAT @jogador.hp 20",
     });
     const entries = authorshipTimeline(src);
     assert.equal(entries.length, 2);
@@ -1454,7 +1498,7 @@ O jogador está na sala.
     assert.match(stats1?.after ?? "", /hp=10/);
     assert.match(stats2?.before ?? "", /hp=10/);
     assert.match(stats2?.after ?? "", /hp=20/);
-    assert.equal(entries[0]?.after?.id, "JOGADOR");
+    assert.equal(entries[0]?.after?.id, "@jogador");
     assert.match(snapDrawer(entries[0]?.after, "stats"), /hp=10/);
     assert.match(snapDrawer(entries[1]?.after, "stats"), /hp=20/);
     assert.equal(FBE_DRAWERS.length, 10);
@@ -1467,7 +1511,7 @@ O jogador está na sala.
 ### O Jogador
 O jogador está na sala.
 `,
-      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT JOGADOR.hp 10" },
+      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT @jogador.hp 10" },
     );
     assert.match(compileNotebook(src).entitiesSource, /hp=10/);
     const gone = removeAnnotation(src, "a1");
@@ -1475,15 +1519,15 @@ O jogador está na sala.
     assert.equal(/hp=10/.test(compileNotebook(gone).entitiesSource), false);
     const cave = createExampleProject("goblin-cave");
     assert.equal(authorshipTimeline(cave.notebooksSource ?? "").length, 0);
-    assert.equal(authorshipBaseWorld(cave.notebooksSource ?? "").has("JOGADOR") || authorshipBaseWorld(cave.notebooksSource ?? "").size >= 0, true);
+    assert.equal(authorshipBaseWorld(cave.notebooksSource ?? "").has("@jogador") || authorshipBaseWorld(cave.notebooksSource ?? "").size >= 0, true);
     const compiled = compileProject(cave);
     assert.equal(compiled.errors.length, 0);
   });
 });
 
 describe("V4 write preview world", () => {
-  it("applies SET_STAT onto JOGADOR from entities, not only the caderno", () => {
-    const motor = `JOGADOR.{
+  it("applies SET_STAT onto @jogador from entities, not only the caderno", () => {
+    const motor = `@jogador.{
   name: Jogador;
   description: ;
   tags: agent;
@@ -1502,11 +1546,11 @@ describe("V4 write preview world", () => {
 ### Sala
 A pedra brilha.
 `,
-      { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT JOGADOR.corpo 10" },
+      { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT @jogador.corpo 10" },
     );
     assert.equal(authorshipTimeline(bound)[0]?.after, null);
     const entries = authorshipTimeline(bound, motor);
-    assert.equal(entries[0]?.after?.id, "JOGADOR");
+    assert.equal(entries[0]?.after?.id, "@jogador");
     assert.match(snapDrawer(entries[0]?.after, "stats"), /corpo=10/);
     assert.equal(entries[0]?.diffs.find((item) => item.drawer === "stats")?.changed, true);
     const cave = createExampleProject("goblin-cave");
@@ -1519,9 +1563,9 @@ A pedra brilha.
 });
 
 describe("T1 create and destroy entity", () => {
-  it("creates TOCHA then destroys it, and keeps the cave equal", () => {
+  it("creates @tocha then destroys it, and keeps the cave equal", () => {
     const created = doFromDraft({
-      entityId: "TOCHA",
+      entityId: "@tocha",
       drawer: "tags",
       key: "object",
       value: "",
@@ -1531,7 +1575,7 @@ describe("T1 create and destroy entity", () => {
       kind: "world",
     });
     const killed = doFromDraft({
-      entityId: "TOCHA",
+      entityId: "@tocha",
       drawer: "tags",
       key: "",
       value: "",
@@ -1540,21 +1584,21 @@ describe("T1 create and destroy entity", () => {
       op: "unset",
       kind: "world",
     });
-    assert.equal(created, "CREATE TOCHA.object");
-    assert.equal(killed, "DESTROY TOCHA");
+    assert.equal(created, "CREATE @tocha.object");
+    assert.equal(killed, "DESTROY @tocha");
     const prose = `CADERNO:
 ### Sala
 A tocha brilha.
 `;
     const born = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "tocha", do: created! });
     const entries = authorshipTimeline(born);
-    assert.equal(entries[0]?.after?.id, "TOCHA");
+    assert.equal(entries[0]?.after?.id, "@tocha");
     assert.match(snapDrawer(entries[0]?.after, "tags"), /object/);
-    assert.match(compileNotebook(born).entitiesSource, /TOCHA/);
+    assert.match(compileNotebook(born).entitiesSource, /@tocha/);
     const gone = addAnnotation(born, { id: "a2", book: "book-0", heading: "Sala", quote: "tocha", do: killed! });
     const afterKill = authorshipTimeline(gone);
     assert.equal(afterKill[1]?.after, null);
-    assert.equal(/TOCHA/.test(compileNotebook(gone).entitiesSource), false);
+    assert.equal(/@tocha/.test(compileNotebook(gone).entitiesSource), false);
     const cave = createExampleProject("goblin-cave");
     assert.equal(compileProject(cave).errors.length, 0);
     const src = readFileSync(fileURLToPath(new URL("../../ui/WriteShell.tsx", import.meta.url)), "utf8");
@@ -1636,7 +1680,7 @@ Quando o jogador é marcado como "combate":
 
 describe("T4 entity history", () => {
   it("lists every mutation of an entity with line refs, and keeps the cave equal", () => {
-    const motor = `JOGADOR.{
+    const motor = `@jogador.{
   name: Jogador;
   description: ;
   tags: agent;
@@ -1654,24 +1698,24 @@ describe("T4 entity history", () => {
 ### Sala
 A pedra brilha.
 `;
-    let src = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT JOGADOR.hp 10" });
-    src = addAnnotation(src, { id: "a2", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT JOGADOR.hp 20" });
-    src = addAnnotation(src, { id: "a3", book: "book-0", heading: "Sala", quote: "pedra", do: "ADD_TAG JOGADOR ferido" });
-    const hist = entityHistory(authorshipTimeline(src, motor), "JOGADOR");
+    let src = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT @jogador.hp 10" });
+    src = addAnnotation(src, { id: "a2", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT @jogador.hp 20" });
+    src = addAnnotation(src, { id: "a3", book: "book-0", heading: "Sala", quote: "pedra", do: "ADD_TAG @jogador ferido" });
+    const hist = entityHistory(authorshipTimeline(src, motor), "@jogador");
     assert.equal(hist.length, 3);
     assert.match(snapDrawer(hist[0]?.after, "stats"), /hp=10/);
     assert.equal(/hp=20/.test(snapDrawer(hist[0]?.after, "stats") ?? ""), false);
     assert.match(snapDrawer(hist[1]?.after, "stats"), /hp=20/);
     assert.match(hist[1]?.diffs.find((item) => item.drawer === "stats")?.before ?? "", /hp=10/);
     assert.equal(changedSnaps(hist[2]!).some((snap) => snap.drawer === "tags"), true);
-    const born = addAnnotation(prose, { id: "t1", book: "book-0", heading: "Sala", quote: "pedra", do: "CREATE TOCHA.object" });
-    const gone = addAnnotation(born, { id: "t2", book: "book-0", heading: "Sala", quote: "pedra", do: "DESTROY TOCHA" });
-    const torch = entityHistory(authorshipTimeline(gone), "TOCHA");
+    const born = addAnnotation(prose, { id: "t1", book: "book-0", heading: "Sala", quote: "pedra", do: "CREATE @tocha.object" });
+    const gone = addAnnotation(born, { id: "t2", book: "book-0", heading: "Sala", quote: "pedra", do: "DESTROY @tocha" });
+    const torch = entityHistory(authorshipTimeline(gone), "@tocha");
     assert.equal(torch.length, 2);
-    assert.equal(torch[0]?.after?.id, "TOCHA");
+    assert.equal(torch[0]?.after?.id, "@tocha");
     assert.equal(torch[1]?.after, null);
     const cave = createExampleProject("goblin-cave");
-    assert.equal(entityHistory(authorshipTimeline(cave.notebooksSource ?? "", cave.entitiesSource), "JOGADOR").length, 0);
+    assert.equal(entityHistory(authorshipTimeline(cave.notebooksSource ?? "", cave.entitiesSource), "@jogador").length, 0);
     const preview = readFileSync(fileURLToPath(new URL("../../ui/WritePreview.tsx", import.meta.url)), "utf8");
     assert.match(preview, /entityHistory/);
     assert.match(preview, /Histórico/);
@@ -1694,7 +1738,7 @@ O jogador tem 10 de vida.
 ### O Jogador
 O jogador está na sala.
 `,
-      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT JOGADOR.hp 10" },
+      { id: "a1", book: "book-0", heading: "O Jogador", quote: "O jogador está na sala.", do: "SET_STAT @jogador.hp 10" },
     );
     assert.match(handwritten.entitiesSource, /hp=10/);
     assert.match(compileNotebook(bound).entitiesSource, /hp=10/);
@@ -1709,12 +1753,12 @@ O jogador está na sala.
 describe("D close ambiguity", () => {
   it("applies D1–D12 without beating or changing the cave", () => {
     const ref = readFileSync(fileURLToPath(new URL("../../../ide-guide/lib/syntax-ref.ts", import.meta.url)), "utf8");
-    assert.match(ref, /current_location=PICO_SERPENTE/);
+    assert.match(ref, /current_location=@pico_serpente/);
     assert.equal(/local_atual/.test(ref), false);
     assert.match(ref, /CREATE ID\.tag/);
-    assert.equal(/JOGADOR\.vida-1/.test(ref), false);
-    assert.equal(doFromDraft({ entityId: "TOCHA", drawer: "tags", key: "stats", value: "", quote: "x", line: 1, op: "set", kind: "world" }), null);
-    assert.equal(doFromDraft({ entityId: "TOCHA", drawer: "tags", key: "object", value: "", quote: "x", line: 1, op: "set", kind: "world" }), "CREATE TOCHA.object");
+    assert.equal(/@jogador\.vida-1/.test(ref), false);
+    assert.equal(doFromDraft({ entityId: "@tocha", drawer: "tags", key: "stats", value: "", quote: "x", line: 1, op: "set", kind: "world" }), null);
+    assert.equal(doFromDraft({ entityId: "@tocha", drawer: "tags", key: "object", value: "", quote: "x", line: 1, op: "set", kind: "world" }), "CREATE @tocha.object");
     const fenced = `CADERNO:
 ## regras
 ### Tocha
@@ -1722,14 +1766,14 @@ Quando o jogador é marcado como "combate":
   narre "O ferro canta."
 ## /regras
 `;
-    assert.equal(/TOCHA/.test(compileNotebook(fenced).entitiesSource), false);
+    assert.equal(/@tocha/.test(compileNotebook(fenced).entitiesSource), false);
     assert.match(compileNotebook(fenced).rulesSource, /combate/);
     const two = `CADERNO:
 ### Sala
 xxA lâmina pesa.
 A lâmina pesa.
 `;
-    const hit = rebindAnnotation(two, { id: "a1", book: "book-0", heading: "Sala", quote: "A lâmina pesa.", do: "SET_STAT JOGADOR.hp 10", column: 2 });
+    const hit = rebindAnnotation(two, { id: "a1", book: "book-0", heading: "Sala", quote: "A lâmina pesa.", do: "SET_STAT @jogador.hp 10", column: 2 });
     assert.equal("error" in hit, false);
     if (!("error" in hit)) assert.equal(hit.line, 3);
     const shell = readFileSync(fileURLToPath(new URL("../../ui/WriteShell.tsx", import.meta.url)), "utf8");
@@ -1742,7 +1786,7 @@ A lâmina pesa.
     assert.equal(existsSync(fileURLToPath(new URL("../../ui/WriteTimeline.tsx", import.meta.url))), false);
     const painted = highlightSource("#combate", "notebook");
     assert.equal(painted[0]?.some((span) => span.cls === "syn-tag"), true);
-    const slash = highlightSource("on: JOGADOR // nota", "rules");
+    const slash = highlightSource("on: @jogador // nota", "rules");
     assert.equal(slash[0]?.some((span) => span.cls === "syn-err"), true);
     const cave = createExampleProject("goblin-cave");
     assert.equal(compileProject(cave).errors.length, 0);
@@ -1755,30 +1799,30 @@ describe("F1 flags and lists form", () => {
 ### Sala
 A pedra brilha.
 `;
-    const flagOn = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FLAG JOGADOR.chefe true" });
+    const flagOn = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FLAG @jogador.chefe true" });
     assert.match(compileNotebook(flagOn).entitiesSource, /chefe=true/);
-    const flagOff = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FLAG JOGADOR.chefe false" });
+    const flagOff = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FLAG @jogador.chefe false" });
     assert.match(compileNotebook(flagOff).entitiesSource, /chefe=false/);
     const listed = addAnnotation(prose, {
       id: "a1",
       book: "book-0",
       heading: "Sala",
       quote: "pedra",
-      do: "CLEAR JOGADOR.bolso\nPUSH JOGADOR.bolso a\nCLEAR JOGADOR.inv\nPUSH JOGADOR.inv x\nPUSH JOGADOR.inv y",
+      do: "CLEAR @jogador.bolso\nPUSH @jogador.bolso a\nCLEAR @jogador.inv\nPUSH @jogador.inv x\nPUSH @jogador.inv y",
     });
     const emitted = compileNotebook(listed).entitiesSource;
     assert.match(emitted, /bolso=\[a\]/);
     assert.match(emitted, /inv=\[x, y\]/);
-    const bare = compileEntityFile("X.{ tags: object; flags: chefe; }");
+    const bare = compileEntityFile("@x.{ tags: object; flags: chefe; }");
     assert.ok(bare.errors.length > 0);
-    const oldList = compileEntityFile("X.{ tags: object; lists: inventario=A, B; }");
+    const oldList = compileEntityFile("@x.{ tags: object; lists: inventario=A, B; }");
     assert.ok(oldList.errors.length > 0);
-    const ok = compileEntityFile("X.{ tags: object; flags: chefe=true, vivo=false; lists: inventario=[A, B], bolso=[]; }");
+    const ok = compileEntityFile("@x.{ tags: object; flags: chefe=true, vivo=false; lists: inventario=[A, B], bolso=[]; }");
     assert.equal(ok.errors.length, 0, ok.errors.map((e) => e.message).join("\n"));
-    assert.equal(ok.worldModel.get("X")?.flags.chefe, true);
-    assert.equal(ok.worldModel.get("X")?.flags.vivo, false);
-    assert.deepEqual(ok.worldModel.get("X")?.lists.inventario, ["A", "B"]);
-    assert.deepEqual(ok.worldModel.get("X")?.lists.bolso, []);
+    assert.equal(ok.worldModel.get("@x")?.flags.chefe, true);
+    assert.equal(ok.worldModel.get("@x")?.flags.vivo, false);
+    assert.deepEqual(ok.worldModel.get("@x")?.lists.inventario, ["A", "B"]);
+    assert.deepEqual(ok.worldModel.get("@x")?.lists.bolso, []);
     const cave = createExampleProject("goblin-cave");
     assert.equal(compileProject(cave).errors.length, 0);
   });
@@ -1786,26 +1830,26 @@ A pedra brilha.
 
 describe("F2 fuse form", () => {
   it("accepts N or N>alvo, refuses junk, and keeps the cave equal", () => {
-    assert.equal(doFromDraft({ entityId: "BOMBA", drawer: "fuses", key: "estouro", value: "3>BOOM", quote: "x", line: 1, op: "set" }), "SET_FUSE BOMBA.estouro 3>BOOM");
-    assert.equal(doFromDraft({ entityId: "BOMBA", drawer: "fuses", key: "estouro", value: "3.BOOM", quote: "x", line: 1, op: "set" }), "SET_FUSE BOMBA.estouro 3>BOOM");
-    assert.equal(doFromDraft({ entityId: "BOMBA", drawer: "fuses", key: "estouro", value: "3", quote: "x", line: 1, op: "set" }), "SET_FUSE BOMBA.estouro 3");
-    assert.equal(doFromDraft({ entityId: "BOMBA", drawer: "fuses", key: "estouro", value: "sacsacas", quote: "x", line: 1, op: "set" }), null);
+    assert.equal(doFromDraft({ entityId: "@bomba", drawer: "fuses", key: "estouro", value: "3>@boom", quote: "x", line: 1, op: "set" }), "SET_FUSE @bomba.estouro 3>@boom");
+    assert.equal(doFromDraft({ entityId: "@bomba", drawer: "fuses", key: "estouro", value: "3.@boom", quote: "x", line: 1, op: "set" }), "SET_FUSE @bomba.estouro 3>@boom");
+    assert.equal(doFromDraft({ entityId: "@bomba", drawer: "fuses", key: "estouro", value: "3", quote: "x", line: 1, op: "set" }), "SET_FUSE @bomba.estouro 3");
+    assert.equal(doFromDraft({ entityId: "@bomba", drawer: "fuses", key: "estouro", value: "sacsacas", quote: "x", line: 1, op: "set" }), null);
     const prose = `CADERNO:
 ### Sala
 A pedra brilha.
 `;
-    const armed = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FUSE BOMBA.estouro 3>BOOM" });
-    assert.match(compileNotebook(armed).entitiesSource, /estouro=3>BOOM/);
-    const junk = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FUSE BOMBA.estouro sacsacas" });
+    const armed = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FUSE @bomba.estouro 3>@boom" });
+    assert.match(compileNotebook(armed).entitiesSource, /estouro=3>@boom/);
+    const junk = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_FUSE @bomba.estouro sacsacas" });
     const compiled = compileNotebook(junk);
     assert.equal(/sacsacas/.test(compiled.entitiesSource), false);
     assert.ok(compiled.issues.some((issue) => issue.message.includes("Não percebi")));
-    const bad = compileEntityFile("BOMBA.{ tags: object; fuses: estouro=sacsacas; }");
+    const bad = compileEntityFile("@bomba.{ tags: object; fuses: estouro=sacsacas; }");
     assert.ok(bad.errors.length > 0);
-    const motor = compileEntityFile("BOMBA.{ tags: object; fuses: estouro=3>BOOM; }\nBOOM.{ tags: event; }");
+    const motor = compileEntityFile("@bomba.{ tags: object; fuses: estouro=3>@boom; }\n@boom.{ tags: event; }");
     assert.equal(motor.errors.length, 0, motor.errors.map((e) => e.message).join("\n"));
     const shell = readFileSync(fileURLToPath(new URL("../../ui/WriteShell.tsx", import.meta.url)), "utf8");
-    assert.match(shell, /3>BOOM/);
+    assert.match(shell, /3>@boom/);
     const cave = createExampleProject("goblin-cave");
     assert.equal(compileProject(cave).errors.length, 0);
   });
@@ -1813,19 +1857,19 @@ A pedra brilha.
 
 describe("F3 link targets", () => {
   it("accepts ID or #A8F2, refuses junk, and keeps the cave equal", () => {
-    const ids = ["JOGADOR", "SALA"];
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "softLinks", key: "alvo", value: "SALA", quote: "x", line: 1, op: "set" }, ids), "SET_LINK JOGADOR.softLinks.alvo SALA");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "hardLinks", key: "reliquia", value: "#A8F2", quote: "x", line: 1, op: "set" }, ids), "SET_LINK JOGADOR.hardLinks.reliquia #A8F2");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "softLinks", key: "alvo", value: "mo", quote: "x", line: 1, op: "set" }, ids), null);
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "softLinks", key: "alvo", value: "hello world", quote: "x", line: 1, op: "set" }), null);
-    const bad = compileEntityFile("X.{ tags: object; softLinks: alvo=hello world; }");
+    const ids = ["@jogador", "@sala"];
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "softLinks", key: "alvo", value: "@sala", quote: "x", line: 1, op: "set" }, ids), "SET_LINK @jogador.softLinks.alvo @sala");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "hardLinks", key: "reliquia", value: "#A8F2", quote: "x", line: 1, op: "set" }, ids), "SET_LINK @jogador.hardLinks.reliquia #A8F2");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "softLinks", key: "alvo", value: "mo", quote: "x", line: 1, op: "set" }, ids), null);
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "softLinks", key: "alvo", value: "hello world", quote: "x", line: 1, op: "set" }), null);
+    const bad = compileEntityFile("@x.{ tags: object; softLinks: alvo=hello world; }");
     assert.ok(bad.errors.length > 0);
-    const ok = compileEntityFile("X.{ tags: object; softLinks: alvo=JOGADOR; }\nJOGADOR.{ tags: agent; }");
+    const ok = compileEntityFile("@x.{ tags: object; softLinks: alvo=@jogador; }\n@jogador.{ tags: agent; }");
     assert.equal(ok.errors.length, 0, ok.errors.map((e) => e.message).join("\n"));
     const junk = addAnnotation(`CADERNO:
 ### Sala
 A pedra brilha.
-`, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_LINK JOGADOR.softLinks.alvo hello world" });
+`, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_LINK @jogador.softLinks.alvo hello world" });
     const compiled = compileNotebook(junk);
     assert.ok(compiled.issues.some((issue) => issue.message.includes("Não percebi")));
     assert.equal(/hello world/.test(compiled.entitiesSource), false);
@@ -1838,26 +1882,26 @@ A pedra brilha.
 
 describe("F4 stat form", () => {
   it("accepts number or gauge, refuses texto, and keeps the cave equal", () => {
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "set" }), "SET_STAT JOGADOR.hp 10");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "10,5", quote: "x", line: 1, op: "set" }), "SET_STAT JOGADOR.hp 10.5");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "10[0..100]", quote: "x", line: 1, op: "set" }), "SET_STAT JOGADOR.hp 10[0..100]");
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "dez", quote: "x", line: 1, op: "set" }), null);
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "stats", key: "hp", value: "", quote: "x", line: 1, op: "set" }), null);
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "10", quote: "x", line: 1, op: "set" }), "SET_STAT @jogador.hp 10");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "10,5", quote: "x", line: 1, op: "set" }), "SET_STAT @jogador.hp 10.5");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "10[0..100]", quote: "x", line: 1, op: "set" }), "SET_STAT @jogador.hp 10[0..100]");
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "dez", quote: "x", line: 1, op: "set" }), null);
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "stats", key: "hp", value: "", quote: "x", line: 1, op: "set" }), null);
     const prose = `CADERNO:
 ### Sala
 A pedra brilha.
 `;
-    const numbered = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT JOGADOR.hp 10" });
+    const numbered = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT @jogador.hp 10" });
     assert.match(compileNotebook(numbered).entitiesSource, /hp=10/);
-    const gauged = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT JOGADOR.hp 10[0..100]" });
+    const gauged = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT @jogador.hp 10[0..100]" });
     assert.match(compileNotebook(gauged).entitiesSource, /hp=10\[0\.\.100\]/);
-    const junk = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT JOGADOR.hp dez" });
+    const junk = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "pedra", do: "SET_STAT @jogador.hp dez" });
     const compiled = compileNotebook(junk);
     assert.ok(compiled.issues.some((issue) => issue.message.includes("Não percebi")));
     assert.equal(/hp=dez/.test(compiled.entitiesSource), false);
-    const bad = compileEntityFile("X.{ tags: object; stats: hp=dez; }");
+    const bad = compileEntityFile("@x.{ tags: object; stats: hp=dez; }");
     assert.ok(bad.errors.length > 0);
-    const ok = compileEntityFile("X.{ tags: object; stats: hp=10[0..100], mp=3; }");
+    const ok = compileEntityFile("@x.{ tags: object; stats: hp=10[0..100], mp=3; }");
     assert.equal(ok.errors.length, 0, ok.errors.map((e) => e.message).join("\n"));
     const shell = readFileSync(fileURLToPath(new URL("../../ui/WriteShell.tsx", import.meta.url)), "utf8");
     assert.match(shell, /10\[0\.\.100\]/);
@@ -1873,16 +1917,16 @@ describe("F5 named do and lowercase rules", () => {
 Quando o jogador pega a espada:
   Narre "ok."
 `);
-    assert.match(nb.rulesSource, /\non: ESPADA/);
+    assert.match(nb.rulesSource, /\non: @espada/);
     assert.equal(nb.rulesSource.includes("ON:"), false);
-    assert.equal(doFromDraft({ entityId: "JOGADOR", drawer: "struct", key: "k", value: "v", quote: "x", line: 1, op: "set" }), null);
-    const vocab = collectVocabulary({ worldModel: compileEntityFile("JOGADOR.{ tags: agent; }").worldModel });
+    assert.equal(doFromDraft({ entityId: "@jogador", drawer: "struct", key: "k", value: "v", quote: "x", line: 1, op: "set" }), null);
+    const vocab = collectVocabulary({ worldModel: compileEntityFile("@jogador.{ tags: agent; }").worldModel });
     const doit = completeAt("do: ", "rules", 4, vocab);
     assert.equal(doit.ctx.slot, "do-verb");
     assert.ok(doit.items.some((item) => item.label === "SET_FLAG"));
     assert.ok(doit.items.some((item) => item.label === "CREATE"));
     assert.ok(doit.items.some((item) => item.label === "PUSH"));
-    assert.equal(doit.items.some((item) => item.label === "JOGADOR"), false);
+    assert.equal(doit.items.some((item) => item.label === "@jogador"), false);
     assert.equal(doit.items.some((item) => item.label === "STRUCT"), false);
     assert.equal(doit.items.some((item) => item.label === "TICK"), false);
     const tab = tabAfterKeyword("ON", "rules", 2);

@@ -46,13 +46,13 @@ export const ENTITY_SECTIONS = [
  * Feature-Based Entity (FBE).
  *
  * Quad-IDs:
- * 1. `systemId` — UUID de máquina, imutável (camada System ID). Na DSL, `id:`.
- * 2. `slug` / `id` — HumanSlug, chave do WorldModel e identidade DSL (`DRAGAO_ANCIAO`).
- *    O matcher, as regras e `world.get("JOGADOR")` usam o slug — um só `findMatchingRule`.
- * 3. `shortCode` — código compacto `#A8F2` (gerado, estável por slug).
+ * 1. `systemId` — UUID de máquina, imutável (camada System ID). Gerado; não se escreve na DSL.
+ * 2. `slug` / `id` — HumanSlug, chave do WorldModel (`@pessoa`).
+ *    O matcher, as regras e `world.get("@pessoa")` usam o slug — um só `findMatchingRule`.
+ * 3. `shortCode` — código compacto `#A8F2` (gerado, estável por slug). Na DSL, `id:`.
  * 4. `templateId` — protótipo opcional para SPAWN.
  *
- * `id` permanece o HumanSlug para o matcher, query, regras e `world.get("JOGADOR")`.
+ * `id` permanece o HumanSlug para o matcher, query, regras e `world.get("@pessoa")`.
  * A gaveta `extra` não faz parte do modelo base; o plugin entity-extras usa-a
  * só para metadados de apresentação (voice/aliases).
  */

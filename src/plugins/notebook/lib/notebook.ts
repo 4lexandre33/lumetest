@@ -2,7 +2,7 @@ import { intentLeaf, pathOfLeaf } from "./verbs.ts";
 import { lineWarning } from "../../vocab/lib/grammar.ts";
 import { VOCAB_ENTITY_ID, VOCAB_LOCALE } from "../../vocab/lib/tokens.ts";
 import type { GrammarLine } from "../../vocab/types.ts";
-import { formatFuseValue, formatStatInput, isLinkTarget } from "../../narrative-engine/lib/world-model.ts";
+import { formatFuseValue, formatStatInput, isLinkTarget, shortCodeFromSlug } from "../../narrative-engine/lib/world-model.ts";
 import { compileNotebookCached, resetNotebookCache } from "./cache.ts";
 import {
   applyNamedDoToDraft,
@@ -191,6 +191,24 @@ export function slugOf(name: string): string {
     .replace(/[^\p{L}\p{N}]+/gu, "_")
     .replace(/^_|_$/g, "");
   return folded.toUpperCase();
+}
+
+export const PLAYER_ID = "@jogador";
+
+function isPlayerName(raw: string): boolean {
+  const t = raw.trim();
+  if (t === PLAYER_ID || t === "@jogador" || t === "@JOGADOR") return true;
+  const folded = fold(stripArticle(t));
+  return folded === "jogador" || folded === "jogadora";
+}
+
+export function entityIdOf(raw: string): string {
+  const t = raw.trim();
+  if (!t) return t;
+  if (t === "start") return t;
+  if (isPlayerName(t)) return PLAYER_ID;
+  const slug = slugOf(t);
+  return slug ? `@${slug.toLowerCase()}` : slug;
 }
 
 function stripHeadingNumber(title: string): string {
@@ -398,6 +416,7 @@ function emitDraft(draft: Draft): string {
     .join(", ");
   const lines = [
     `${draft.id}.{`,
+    `  id: ${shortCodeFromSlug(draft.id)};`,
     `  name: ${draft.name};`,
     `  description: ${draft.extra.description ?? ""};`,
     `  tags: ${tags};`,
@@ -437,7 +456,7 @@ function emitRule(rule: RuleDraft): string {
 
 function parseHpSe(folded: string): string | null {
   const m = folded.match(/menos de\s+(\d+)\s+de vida/);
-  return m ? `JOGADOR.hp<${m[1]}` : null;
+  return m ? `${PLAYER_ID}.hp<${m[1]}` : null;
 }
 
 function parsePossessPhrase(rest: string): { negated: boolean; subject: string; item: string } | null {
@@ -540,11 +559,11 @@ export function compileNotebookFresh(text: string): NotebookCompile {
     const name = fallbackName ?? stripHeadingNumber(rawName).trim();
     const id =
       forcedId ??
-      (fold(stripArticle(rawName)) === "jogador" || rawName === "JOGADOR" ? "JOGADOR" : slugOf(name));
+      (isPlayerName(rawName) ? PLAYER_ID : entityIdOf(name));
     let draft = drafts.get(id);
     if (!draft) {
-      draft = blankDraft(id, id === "JOGADOR" ? "Jogador" : name);
-      if (id === "JOGADOR") draft.tags.add("agent");
+      draft = blankDraft(id, id === PLAYER_ID ? "Jogador" : name);
+      if (id === PLAYER_ID) draft.tags.add("agent");
       drafts.set(id, draft);
       order.push(id);
     }
@@ -557,7 +576,7 @@ export function compileNotebookFresh(text: string): NotebookCompile {
     const trimmed = raw.trim();
     const folded = fold(trimmed);
     if (folded === "ela" || folded === "ele" || folded === "isso" || folded === "isto") return currentId;
-    if (folded === "o jogador" || folded === "jogador" || folded === "a jogadora") return "JOGADOR";
+    if (folded === "o jogador" || folded === "jogador" || folded === "a jogadora") return PLAYER_ID;
     const hit = lookupName(trimmed);
     if (hit === AMBIG) {
       if (line != null) {
@@ -571,7 +590,7 @@ export function compileNotebookFresh(text: string): NotebookCompile {
       return null;
     }
     if (hit) return hit;
-    const id = slugOf(trimmed);
+    const id = entityIdOf(trimmed);
     return id || null;
   };
 
@@ -629,7 +648,7 @@ export function compileNotebookFresh(text: string): NotebookCompile {
   for (const h of headings) {
     if (h.level !== 3 || !liveAt(h.line)) continue;
     if (headingSectionKind(h) === "story") continue;
-    let id = slugOf(h.title);
+    let id = entityIdOf(h.title);
     const of = ofPhrase(h.title);
     if (of) {
       const found = lookupName(of);
@@ -1287,14 +1306,14 @@ export function compileNotebookFresh(text: string): NotebookCompile {
         return true;
       }
       ensure(objectName, objectName, objectId);
-      ensure("JOGADOR");
+      ensure(PLAYER_ID);
       if (parent) addDo(parent, chainVerb(objectId, false));
       ruleSerial += 1;
       pushFrame(
         {
           id: `r_${leaf}_${objectId.toLowerCase()}_${ruleSerial}`,
           on: objectId,
-          ifs: [`JOGADOR.intent=${leaf}`],
+          ifs: [`${PLAYER_ID}.intent=${leaf}`],
           dos: [],
           narrative: "",
         },
@@ -1322,12 +1341,12 @@ export function compileNotebookFresh(text: string): NotebookCompile {
         return true;
       }
       closeAt(indent);
-      ensure("JOGADOR");
+      ensure(PLAYER_ID);
       ruleSerial += 1;
       pushFrame(
         {
           id: `r_hp_${ruleSerial}`,
-          on: "JOGADOR",
+          on: PLAYER_ID,
           ifs: [hp],
           dos: [],
           narrative: "",
@@ -1438,7 +1457,7 @@ export function compileNotebookFresh(text: string): NotebookCompile {
         currentId = null;
         continue;
       }
-      const id = idByLine.get(lineNo) ?? slugOf(title);
+      const id = idByLine.get(lineNo) ?? entityIdOf(title);
       const draft = ensure(title, title, id);
       currentId = draft.id;
       if (sectionKind === "place" || sectionKind === "object" || sectionKind === "agent") markKind(draft, sectionKind);

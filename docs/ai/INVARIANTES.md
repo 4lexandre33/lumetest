@@ -18,7 +18,7 @@ Se um pedido chocar com isto, **recusar a parte ilegal** e fazer o resto no idio
 ## Idioma
 
 11. Não copiar Elm: nada de `INTENT(open_door)`, `MODIFY(health, -10)`, `TIME(after 10 seconds)`.
-12. Idioma Lume: `JOGADOR.hp-10`, `$.hp-JOGADOR.force`, `IF: JOGADOR.intent=attack`, `DO: EMIT x`, `DO: WAIT 3.FUSE`, `DO: TICK`, `DO: THEN CORREDOR`, `DO: LIVE`, `DO: LIVE GOBLIN`. `intent.a; intent.b` é o mesmo execute.
+12. Idioma Lume: `@jogador.hp-10`, `$.hp-@jogador.force`, `IF: @jogador.intent=attack`, `DO: EMIT x`, `DO: WAIT 3.FUSE`, `DO: TICK`, `DO: THEN @corredor`, `DO: LIVE`, `DO: LIVE @goblin`. `intent.a; intent.b` é o mesmo execute.
 
 ## Arquitetura
 

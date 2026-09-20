@@ -8,7 +8,7 @@ export const EXAMPLE_CATALOG: ExampleMeta[] = [
     name: "Caverna do Goblin",
     genre: "Aventura",
     blurb: "Tocha, escuridão, um goblin que não devia ser acordado.",
-    teaches: "Tags, taxonomia, stats, links, IF, JOGADOR.intent.",
+    teaches: "Tags, taxonomia, stats, links, IF, @jogador.intent.",
   },
   {
     id: "planetarium",
@@ -19,13 +19,13 @@ export const EXAMPLE_CATALOG: ExampleMeta[] = [
   },
 ];
 
-const GOBLIN_ENTITIES = `JOGADOR.{
+const GOBLIN_ENTITIES = `@jogador.{
 tags: agent;
 stats: fear=0, courage=1;
-links: current_location=ENTRADA;
+links: current_location=@entrada;
 }
 
-ENTRADA.{
+@entrada.{
 tags: place;
 stats: ;
 links: ;
@@ -33,47 +33,47 @@ name: Boca da caverna;
 description: A pedra fria da entrada.
 }
 
-TRILHA.{
+@trilha.{
 tags: place;
 stats: ;
 links: ;
 name: Trilha da floresta;
 }
 
-CAVERNA.{
+@caverna.{
 tags: place, dark;
 stats: ;
 links: ;
 name: Caverna;
 }
 
-GOBLIN.{
+@goblin.{
 tags: goblin, sleeping;
 stats: ;
-links: current_location=CAVERNA;
+links: current_location=@caverna;
 name: Goblin;
 }
 
-ISQUEIRO.{
+@isqueiro.{
 tags: object;
 stats: illumination=2;
-links: current_location=JOGADOR;
+links: current_location=@jogador;
 name: Isqueiro;
 description: Um isqueiro gasto.
 }
 
-TOCHA.{
+@tocha.{
 tags: object;
 stats: illumination=7;
-links: current_location=ENTRADA;
+links: current_location=@entrada;
 name: Tocha;
 description: Uma tocha no chão.
 }
 
-OURO.{
+@ouro.{
 tags: object, quest_item;
 stats: ;
-links: current_location=CAVERNA, guarded_by=GOBLIN;
+links: current_location=@caverna, guarded_by=@goblin;
 name: Saco de ouro;
 }
 
@@ -82,42 +82,42 @@ start()
 
 const GOBLIN_RULES = `# start
 ON: start
-narrativa: "A boca da caverna se abre à sua frente. A {TOCHA.name} está no chão, ao lado de um isqueiro gasto."
+narrativa: "A boca da caverna se abre à sua frente. A {@tocha.name} está no chão, ao lado de um isqueiro gasto."
 
 # escuro demais
 ON: *.place.dark
-IF: JOGADOR.!current_location=$
-IF: *.object.current_location=JOGADOR.illumination<6
+IF: @jogador.!current_location=$
+IF: *.object.current_location=@jogador.illumination<6
 narrativa: "Está escuro demais para entrar aí."
 
 # entrar com luz
-ON: CAVERNA.!explored
-IF: *.object.current_location=JOGADOR.illumination>5
-DO: JOGADOR.current_location=CAVERNA.fear+2
-    CAVERNA.explored
-narrativa: "Você entra, {JOGADOR.fear>4? o coração disparado | com coragem}. Um ronco horrível ecoa."
+ON: @caverna.!explored
+IF: *.object.current_location=@jogador.illumination>5
+DO: @jogador.current_location=@caverna.fear+2
+    @caverna.explored
+narrativa: "Você entra, {@jogador.fear>4? o coração disparado | com coragem}. Um ronco horrível ecoa."
 
 # cutucar goblin
-ON: GOBLIN.sleeping
-DO: GOBLIN.-sleeping
-    JOGADOR.fear=9
+ON: @goblin.sleeping
+DO: @goblin.-sleeping
+    @jogador.fear=9
 narrativa: "Nunca se deve cutucar a onça com vara curta."
 
 # atacar goblin
-ON: GOBLIN.sleeping
-IF: JOGADOR.intent=attack
-DO: GOBLIN.-sleeping
-    JOGADOR.fear=9
+ON: @goblin.sleeping
+IF: @jogador.intent=attack
+DO: @goblin.-sleeping
+    @jogador.fear=9
 narrativa: "Nunca se deve cutucar a onça com vara curta."
 
 # falar com goblin
-ON: GOBLIN.sleeping
-IF: JOGADOR.intent=talk
+ON: @goblin.sleeping
+IF: @jogador.intent=talk
 narrativa: "O goblin ronca. Melhor não cutucá-lo."
 
 # comunicar com goblin
-ON: GOBLIN.sleeping
-IF: JOGADOR.intent=communicate
+ON: @goblin.sleeping
+IF: @jogador.intent=communicate
 narrativa: "O goblin ronca. Melhor não cutucá-lo."
 
 # goblin acordado
@@ -126,49 +126,49 @@ narrativa: "O goblin olha para você. Não deveria ter acordado."
 
 # atacar goblin acordado
 ON: *.monster.!sleeping
-IF: JOGADOR.intent=attack
+IF: @jogador.intent=attack
 narrativa: "O goblin olha para você. Não deveria ter acordado."
 
 # falar com goblin acordado
 ON: *.monster.!sleeping
-IF: JOGADOR.intent=talk
+IF: @jogador.intent=talk
 narrativa: "O goblin rosna. Não parece de conversa."
 
 # comunicar com goblin acordado
 ON: *.monster.!sleeping
-IF: JOGADOR.intent=communicate
+IF: @jogador.intent=communicate
 narrativa: "O goblin rosna. Não parece de conversa."
 
 # pegar objeto
-ON: *.object.!current_location=JOGADOR
-DO: $.current_location=JOGADOR
+ON: *.object.!current_location=@jogador
+DO: $.current_location=@jogador
 narrativa: "Você pega {$.name}."
 
 # pegar com intent
-ON: *.object.!current_location=JOGADOR
-IF: JOGADOR.intent=take
-DO: $.current_location=JOGADOR
+ON: *.object.!current_location=@jogador
+IF: @jogador.intent=take
+DO: $.current_location=@jogador
 narrativa: "Você pega {$.name}."
 
 # andar
 ON: *.place
-DO: JOGADOR.current_location=$
+DO: @jogador.current_location=$
 narrativa: "Você vai para {$.name}."
 
 # andar com intent
 ON: *.place
-IF: JOGADOR.intent=move
-DO: JOGADOR.current_location=$
+IF: @jogador.intent=move
+DO: @jogador.current_location=$
 narrativa: "Você vai para {$.name}."
 `;
 
-const PLANET_ENTITIES = `JOGADOR.{
+const PLANET_ENTITIES = `@jogador.{
 tags: agent;
 stats: ;
-links: current_location=CUPOULA;
+links: current_location=@cupoula;
 }
 
-CUPOULA.{
+@cupoula.{
 tags: place, morta;
 stats: ;
 links: ;
@@ -176,39 +176,39 @@ name: Cúpula;
 description: A cúpula do planetário. Sem luz.
 }
 
-SALA_CARTAS.{
+@sala_cartas.{
 tags: place;
 stats: ;
 links: ;
 name: Sala das cartas;
 }
 
-ASTRONOMA.{
+@astronoma.{
 tags: agent;
 stats: ;
-links: current_location=CUPOULA;
+links: current_location=@cupoula;
 name: Astrônoma;
 description: Não levanta a luneta.
 }
 
-ZELADOR.{
+@zelador.{
 tags: agent;
 stats: ;
-links: current_location=SALA_CARTAS;
+links: current_location=@sala_cartas;
 name: Zelador;
 }
 
-CARTA.{
+@carta.{
 tags: carta;
 stats: ;
-links: current_location=SALA_CARTAS;
+links: current_location=@sala_cartas;
 name: Carta do céu;
 }
 
-LENTE.{
+@lente.{
 tags: lente;
 stats: ;
-links: current_location=SALA_CARTAS;
+links: current_location=@sala_cartas;
 name: Lente;
 }
 
@@ -217,67 +217,67 @@ start()
 
 const PLANET_RULES = `# start
 ON: start
-narrativa: "A sessão das nove não começou. A {ASTRONOMA.name} não levanta a luneta. 'A cúpula está morta. Traga a carta. Traga a lente.'"
+narrativa: "A sessão das nove não começou. A {@astronoma.name} não levanta a luneta. 'A cúpula está morta. Traga a carta. Traga a lente.'"
 
 # astrônoma ciclo
-ON: ASTRONOMA
+ON: @astronoma
 narrativa: "{Ela não se vira. 'A carta. A lente.' | 'Sem as duas, a cúpula continua morta.' | Ela já disse o que precisava.}"
 
 # falar com astrônoma
-ON: ASTRONOMA
-IF: JOGADOR.intent=talk
+ON: @astronoma
+IF: @jogador.intent=talk
 narrativa: "{Ela não se vira. 'A carta. A lente.' | 'Sem as duas, a cúpula continua morta.' | Ela já disse o que precisava.}"
 
 # comunicar com astrônoma
-ON: ASTRONOMA
-IF: JOGADOR.intent=communicate
+ON: @astronoma
+IF: @jogador.intent=communicate
 narrativa: "{Ela não se vira. 'A carta. A lente.' | 'Sem as duas, a cúpula continua morta.' | Ela já disse o que precisava.}"
 
 # zelador ciclo
-ON: ZELADOR
+ON: @zelador
 narrativa: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' | 'Não peço a chave. A cúpula é que pede.' | Ele já varreu o suficiente.}"
 
 # falar com zelador
-ON: ZELADOR
-IF: JOGADOR.intent=talk
+ON: @zelador
+IF: @jogador.intent=talk
 narrativa: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' | 'Não peço a chave. A cúpula é que pede.' | Ele já varreu o suficiente.}"
 
 # comunicar com zelador
-ON: ZELADOR
-IF: JOGADOR.intent=communicate
+ON: @zelador
+IF: @jogador.intent=communicate
 narrativa: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' | 'Não peço a chave. A cúpula é que pede.' | Ele já varreu o suficiente.}"
 
 # acender cúpula
-ON: CUPOULA.morta
-IF: CARTA.current_location=JOGADOR
-IF: LENTE.current_location=JOGADOR
-DO: CUPOULA.-morta
-narrativa: "A {ASTRONOMA.name} encaixa a {LENTE.name} na luneta. O céu da {CUPOULA.name} acende sobre vocês."
+ON: @cupoula.morta
+IF: @carta.current_location=@jogador
+IF: @lente.current_location=@jogador
+DO: @cupoula.-morta
+narrativa: "A {@astronoma.name} encaixa a {@lente.name} na luneta. O céu da {@cupoula.name} acende sobre vocês."
 
-ON: CUPOULA.morta
+ON: @cupoula.morta
 narrativa: "A cúpula continua morta. Falta a carta e a lente."
 
-ON: *.object.!current_location=JOGADOR
-DO: $.current_location=JOGADOR
+ON: *.object.!current_location=@jogador
+DO: $.current_location=@jogador
 narrativa: "Você pega {$.name}."
 
 # pegar com intent
-ON: *.object.!current_location=JOGADOR
-IF: JOGADOR.intent=take
-DO: $.current_location=JOGADOR
+ON: *.object.!current_location=@jogador
+IF: @jogador.intent=take
+DO: $.current_location=@jogador
 narrativa: "Você pega {$.name}."
 
-ON: *.relic.current_location=JOGADOR
+ON: *.relic.current_location=@jogador
 narrativa: "A relíquia {$.name} brilha na palma. Ainda é um objeto — e a cúpula precisa dela."
 
 ON: *.place
-DO: JOGADOR.current_location=$
+DO: @jogador.current_location=$
 narrativa: "Você vai para {$.name}."
 
 # andar com intent
 ON: *.place
-IF: JOGADOR.intent=move
-DO: JOGADOR.current_location=$
+IF: @jogador.intent=move
+DO: @jogador.current_location=$
 narrativa: "Você vai para {$.name}."
 `;
 
@@ -293,7 +293,7 @@ relic → object
 `,
       rulesSource: PLANET_RULES,
       extras: {},
-      settings: { playerEntityId: "JOGADOR", debug: true },
+      settings: { playerEntityId: "@jogador", debug: true },
     });
   }
   return createProject("Caverna do Goblin", {
@@ -305,6 +305,6 @@ monster → agent
 `,
     rulesSource: GOBLIN_RULES,
     extras: {},
-    settings: { playerEntityId: "JOGADOR", debug: true },
+    settings: { playerEntityId: "@jogador", debug: true },
   });
 }

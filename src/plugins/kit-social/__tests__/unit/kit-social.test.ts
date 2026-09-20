@@ -53,11 +53,11 @@ describe("Social kit", () => {
 
   it("applies once; talk raises mood and affinity; tell raises affinity; attack lowers mood", () => {
     let project = narrative.createProject("kit-social-room", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; name: Sala; }
-GUARDA.{ tags: agent; stats: mood=1; links: current_location=SALA, rel=REL_JOGADOR_GUARDA; name: Guarda; }
-REL_JOGADOR_GUARDA.{ tags: relation, acquaintance; stats: affinity=40; links: from=JOGADOR, to=GUARDA; }
-LORE.{ tags: memory, topic; name: rumor; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; name: Sala; }
+@guarda.{ tags: agent; stats: mood=1; links: current_location=@sala, rel=@rel_jogador_guarda; name: Guarda; }
+@rel_jogador_guarda.{ tags: relation, acquaintance; stats: affinity=40; links: from=@jogador, to=@guarda; }
+@lore.{ tags: memory, topic; name: rumor; }
 start()
 `,
       taxonomySource: "",
@@ -71,9 +71,9 @@ narrativa: "ok"
     assert.equal((project.taxonomySource.match(/# kit:social/g) ?? []).length, 1);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    assert.ok(query("*.relation", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "REL_JOGADOR_GUARDA"));
-    assert.ok(query("*.memory", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "LORE"));
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    assert.ok(query("*.relation", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@rel_jogador_guarda"));
+    assert.ok(query("*.memory", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@lore"));
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
 
     const run = (cmd: string) => {
       const result = executeIntent(cmd, game, q, interactWith);
@@ -82,28 +82,28 @@ narrativa: "ok"
       return result;
     };
 
-    run("intent.action.interact.talk.GUARDA");
-    assert.equal(game.worldModel.get("GUARDA")?.stats.mood, 2);
-    assert.equal(game.worldModel.get("REL_JOGADOR_GUARDA")?.stats.affinity, 41);
+    run("intent.action.interact.talk.@guarda");
+    assert.equal(game.worldModel.get("@guarda")?.stats.mood, 2);
+    assert.equal(game.worldModel.get("@rel_jogador_guarda")?.stats.affinity, 41);
     assert.ok(game.story.includes("aquece"));
 
-    run("intent.action.interact.tell.GUARDA.LORE");
-    assert.equal(game.worldModel.get("GUARDA")?.stats.mood, 2);
-    assert.equal(game.worldModel.get("REL_JOGADOR_GUARDA")?.stats.affinity, 42);
+    run("intent.action.interact.tell.@guarda.@lore");
+    assert.equal(game.worldModel.get("@guarda")?.stats.mood, 2);
+    assert.equal(game.worldModel.get("@rel_jogador_guarda")?.stats.affinity, 42);
     assert.ok(game.story.includes("guarda o que ouviu"));
 
     // catalog attack pool is monsters; kit rule is ON: *.agent
-    game = attackAgent(game, "GUARDA");
-    assert.equal(game.worldModel.get("GUARDA")?.stats.mood, 1);
+    game = attackAgent(game, "@guarda");
+    assert.equal(game.worldModel.get("@guarda")?.stats.mood, 1);
     assert.ok(game.story.includes("golpe"));
   });
 
   it("without mood does not mutate; missing rel is skipped", () => {
     let project = narrative.createProject("kit-social-mute", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; name: Sala; }
-GOBLIN.{ tags: agent; links: current_location=SALA; name: Goblin; }
-NPC.{ tags: agent; stats: mood=4; links: current_location=SALA; name: Npc; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; name: Sala; }
+@goblin.{ tags: agent; links: current_location=@sala; name: Goblin; }
+@npc.{ tags: agent; stats: mood=4; links: current_location=@sala; name: Npc; }
 start()
 `,
       taxonomySource: "",
@@ -115,24 +115,24 @@ narrativa: "ok"
     project = kit.apply(project);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
 
-    const mute = executeIntent("intent.action.interact.talk.GOBLIN", game, q, interactWith);
+    const mute = executeIntent("intent.action.interact.talk.@goblin", game, q, interactWith);
     assert.equal(mute.executed, true);
-    assert.equal(mute.game.worldModel.get("GOBLIN")?.stats.mood, undefined);
+    assert.equal(mute.game.worldModel.get("@goblin")?.stats.mood, undefined);
 
-    const skipRel = executeIntent("intent.action.interact.talk.NPC", mute.game, q, interactWith);
+    const skipRel = executeIntent("intent.action.interact.talk.@npc", mute.game, q, interactWith);
     assert.equal(skipRel.executed, true);
-    assert.equal(skipRel.game.worldModel.get("NPC")?.stats.mood, 5);
+    assert.equal(skipRel.game.worldModel.get("@npc")?.stats.mood, 5);
   });
 
   it("mood=0 talk does not raise mood; author rule still wins", () => {
     let project = narrative.createProject("kit-social-author", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; name: Sala; }
-GUARDA.{ tags: agent; stats: mood=0; links: current_location=SALA, rel=REL_JOGADOR_GUARDA; name: Guarda; }
-REL_JOGADOR_GUARDA.{ tags: relation, enemy; stats: affinity=-2; links: from=JOGADOR, to=GUARDA; }
-CHEFE.{ tags: agent; stats: mood=3; links: current_location=SALA; name: Chefe; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; name: Sala; }
+@guarda.{ tags: agent; stats: mood=0; links: current_location=@sala, rel=@rel_jogador_guarda; name: Guarda; }
+@rel_jogador_guarda.{ tags: relation, enemy; stats: affinity=-2; links: from=@jogador, to=@guarda; }
+@chefe.{ tags: agent; stats: mood=3; links: current_location=@sala; name: Chefe; }
 start()
 `,
       taxonomySource: "",
@@ -141,32 +141,32 @@ ON: start
 narrativa: "ok"
 
 # chefe
-ON: CHEFE
-IF: JOGADOR.intent=talk
+ON: @chefe
+IF: @jogador.intent=talk
 narrativa: "O chefe já te conhece."
 `,
     });
     project = kit.apply(project);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
 
-    let result = executeIntent("intent.action.interact.talk.GUARDA", game, q, interactWith);
+    let result = executeIntent("intent.action.interact.talk.@guarda", game, q, interactWith);
     assert.equal(result.executed, true);
-    assert.equal(result.game.worldModel.get("GUARDA")?.stats.mood, 0);
-    assert.equal(result.game.worldModel.get("REL_JOGADOR_GUARDA")?.stats.affinity, -2);
+    assert.equal(result.game.worldModel.get("@guarda")?.stats.mood, 0);
+    assert.equal(result.game.worldModel.get("@rel_jogador_guarda")?.stats.affinity, -2);
     assert.ok(result.game.story.includes("silêncio"));
     game = result.game;
 
-    result = executeIntent("intent.action.interact.talk.CHEFE", game, q, interactWith);
+    result = executeIntent("intent.action.interact.talk.@chefe", game, q, interactWith);
     assert.equal(result.executed, true);
     assert.ok(result.game.story.includes("conhece"));
-    assert.equal(result.game.worldModel.get("CHEFE")?.stats.mood, 3);
+    assert.equal(result.game.worldModel.get("@chefe")?.stats.mood, 3);
   });
 
   it("keeps author taxonomy children and still marks the kit", () => {
     let project = narrative.createProject("kit-social-merge", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
+      entitiesSource: `@jogador.{ tags: agent; }
 start()
 `,
       taxonomySource: "relation → information\ncustom → object\n",

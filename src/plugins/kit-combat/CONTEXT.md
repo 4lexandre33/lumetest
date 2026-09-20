@@ -14,10 +14,10 @@ NarrativeEngine (para o autor compilar o projecto)
 
 ## Idioma
 ```
-GOBLIN.{ tags: agent, hostile, mortal; stats: hp=3, force=1, mood=0; }
-JOGADOR.{ tags: agent; stats: hp=10, force=1; }
+@goblin.{ tags: agent, hostile, mortal; stats: hp=3, force=1, mood=0; }
+@jogador.{ tags: agent; stats: hp=10, force=1; }
 
-DO: $.hp-JOGADOR.force
+DO: $.hp-@jogador.force
 DO: $.dead
     EMIT morte
 ```
@@ -31,7 +31,7 @@ Léxico NLP (`kill` / `atacar` / `bater`) vive em `nlp`, não aqui.
 - Não alterar `findMatchingRule`
 - Não migrar Caverna/Planetário
 - Não Joules, ângulo, massa, Three.js, loop 20 Hz
-- Não MODIFY Elm — `$.hp-JOGADOR.force` no parser de DO
+- Não MODIFY Elm — `$.hp-@jogador.force` no parser de DO
 - Não segundo matcher
 
 ## Fora de âmbito

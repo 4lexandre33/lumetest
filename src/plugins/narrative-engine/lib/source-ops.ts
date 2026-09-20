@@ -1,7 +1,10 @@
 import { compileRuleFile } from "./rule-engine.ts";
-import { blankEntityBlock, compileEntityFile } from "./world-model.ts";
+import { blankEntityBlock, canonicalEntityId, compileEntityFile, isCanonicalEntityId, isSystemEntityId } from "./world-model.ts";
 
 export type SourceRange = { startLine: number; endLine: number };
+
+/** Same marker the caderno writes; engine does not import notebook. */
+const CADERNO_SLICE_OPEN = "# --- lume-caderno ---";
 
 export function lineColumnFromOffset(source: string, offset: number): { line: number; column: number } {
   const clamped = Math.max(0, Math.min(offset, source.length));
@@ -29,12 +32,12 @@ export function offsetOfLine(source: string, line: number): number {
 }
 
 export function isValidEntityId(id: string): boolean {
-  return /^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(id);
+  return isCanonicalEntityId(id) || isSystemEntityId(id);
 }
 
 export function uniqueId(base: string, taken: Iterable<string>): string {
   const set = new Set(taken);
-  if (!set.has(base) && isValidEntityId(base)) return base;
+  if (!set.has(base)) return base;
   let i = 2;
   while (set.has(`${base}_${i}`)) i += 1;
   return `${base}_${i}`;
@@ -46,7 +49,7 @@ export function locateEntityBlock(source: string, id: string): SourceRange | nul
     const trimmed = lines[i]!.trim();
     if (trimmed.startsWith("/*") || trimmed.startsWith(".") || trimmed.startsWith("#")) continue;
     const head = trimmed.split(/[.\s{(]/)[0];
-    if (head === id) {
+    if (head === id || canonicalEntityId(head) === canonicalEntityId(id)) {
       if (trimmed.includes("{") && !trimmed.includes("}")) {
         let end = i;
         while (end + 1 < lines.length && !lines[end]!.includes("}")) end += 1;
@@ -67,11 +70,39 @@ export function locateRuleBlock(source: string, id: string): SourceRange | null 
   return { startLine: rule.startLine, endLine: rule.startLine + rule.source.split("\n").length - 1 };
 }
 
-export function insertEntity(source: string, id = "NOVA"): { source: string; id: string; line: number } {
+/** Offset of the handwritten pad: before `start()`, else before the caderno slice, else EOF. */
+export function handwrittenInsertAt(source: string): number {
+  const sliceAt = source.indexOf(CADERNO_SLICE_OPEN);
+  const regionEnd = sliceAt >= 0 ? sliceAt : source.length;
+  const region = source.slice(0, regionEnd);
+  const m = /(^|\n)start\(\)[ \t]*(?:\n|$)/.exec(region);
+  if (!m) return regionEnd;
+  return m.index + (m[1] === "\n" ? 1 : 0);
+}
+
+export function inCadernoSlice(source: string, offset: number): boolean {
+  const start = source.indexOf(CADERNO_SLICE_OPEN);
+  if (start < 0) return false;
+  return offset >= start;
+}
+
+function joinParts(left: string, block: string, right: string): string {
+  const l = left.replace(/\n+$/, "");
+  const r = right.replace(/^\n+/, "");
+  const mid = block.replace(/\n+$/, "") + "\n";
+  if (!l && !r) return mid;
+  if (!l) return `${mid}\n${r}`.replace(/\n+$/, "\n");
+  if (!r) return `${l}\n\n${mid}`;
+  return `${l}\n\n${mid}\n${r}`;
+}
+
+export function insertEntity(source: string, id = "@nova"): { source: string; id: string; line: number } {
   const taken = compileEntityFile(source).worldModel.keys();
-  const nextId = uniqueId(id, taken);
+  const seed = isCanonicalEntityId(id) ? id : canonicalEntityId(id);
+  const nextId = uniqueId(seed, taken);
   const block = blankEntityBlock(nextId) + "\n";
-  const next = source.endsWith("\n") || source === "" ? source + block : source + "\n" + block;
+  const at = handwrittenInsertAt(source);
+  const next = joinParts(source.slice(0, at), block, source.slice(at));
   const loc = locateEntityBlock(next, nextId);
   return { source: next, id: nextId, line: loc?.startLine ?? 1 };
 }
@@ -79,10 +110,41 @@ export function insertEntity(source: string, id = "NOVA"): { source: string; id:
 export function insertRule(source: string, id = "nova_regra"): { source: string; id: string; line: number } {
   const taken = compileRuleFile(source).rules.map((r) => r.id);
   const nextId = uniqueId(id, taken);
-  const block = `\n# ${nextId}\non: ${nextId}\nnarrativa: "…"`;
-  const next = source + (source.endsWith("\n") ? "" : "\n") + block;
+  const block = `# ${nextId}\non: ${nextId}\nnarrativa: "…"`;
+  const at = handwrittenInsertAt(source);
+  const next = joinParts(source.slice(0, at), block + "\n", source.slice(at));
   const loc = locateRuleBlock(next, nextId);
   return { source: next, id: nextId, line: loc?.startLine ?? 1 };
+}
+
+/** `@id.` / `start.` / `start` at `pos` → block. Inside the caderno slice, the block goes to the handwritten pad. */
+export function expandEntityDecl(source: string, pos: number): { source: string; caret: number } | null {
+  const lineStart = source.lastIndexOf("\n", pos - 1) + 1;
+  const before = source.slice(lineStart, pos);
+  const m = before.trim().match(/^(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)\.$/u);
+  if (!m) {
+    if (!/^start$/i.test(before.trim())) return null;
+    return { source: source.slice(0, pos) + "()" + source.slice(pos), caret: pos + 2 };
+  }
+  const id = m[1]!;
+  const indent = before.match(/^\s*/)?.[0] ?? "";
+  const from = lineStart + indent.length;
+  if (id.toLowerCase() === "start" || id.toLowerCase() === "@start") {
+    const next = source.slice(0, from) + "start()" + source.slice(pos);
+    return { source: next, caret: from + "start()".length };
+  }
+  const block = blankEntityBlock(id);
+  const nameAt = block.indexOf("name: ");
+  const caretOff = nameAt >= 0 ? nameAt + "name: ".length : block.length;
+  if (inCadernoSlice(source, from)) {
+    const stripped = source.slice(0, from) + source.slice(pos);
+    const at = handwrittenInsertAt(stripped);
+    const next = joinParts(stripped.slice(0, at), block + "\n", stripped.slice(at));
+    const insertedAt = next.indexOf(block);
+    return { source: next, caret: (insertedAt >= 0 ? insertedAt : at) + caretOff };
+  }
+  const next = source.slice(0, from) + block + source.slice(pos);
+  return { source: next, caret: from + caretOff };
 }
 
 export function deleteEntityBlock(source: string, id: string): string | null {

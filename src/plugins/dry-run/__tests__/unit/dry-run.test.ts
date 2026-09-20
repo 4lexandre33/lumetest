@@ -60,7 +60,7 @@ describe("Dry-run", () => {
 
   it("reports the winner and story without mutating the live game", () => {
     const project = narrative.createProject("porta", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; name: Porta; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; name: Porta; }
 start()
 `,
       rulesSource: `# start
@@ -68,8 +68,8 @@ ON: start
 narrativa: "ok"
 
 # abrir
-ON: PORTA
-DO: PORTA.aberta
+ON: @porta
+DO: @porta.aberta
 narrativa: "A porta cede."
 `,
     });
@@ -77,21 +77,21 @@ narrativa: "A porta cede."
     assert.equal(compiled.errors.length, 0);
     const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
     const before = fingerprint(game);
-    const report = dryRun.dryRun(game, "PORTA");
+    const report = dryRun.dryRun(game, "@porta");
     assert.equal(report.matched, true);
     assert.equal(report.ruleId, "abrir");
     assert.equal(report.wouldMutate, true);
     assert.ok(report.candidates.some((c) => c.ruleId === "abrir"));
     assert.match(report.story, /cede/);
-    assert.deepEqual(report.worldDiff.changed.find((c) => c.id === "PORTA")?.tagsAdded, ["aberta"]);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), false);
+    assert.deepEqual(report.worldDiff.changed.find((c) => c.id === "@porta")?.tagsAdded, ["aberta"]);
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), false);
     assert.deepEqual(fingerprint(game), before);
   });
 
   it("puts CREATE and DESTROY in the diff and leaves the original world intact", () => {
     const project = narrative.createProject("fumo", {
-      entitiesSource: `SALA.{ tags: place; stats: ; links: ; }
-TRAVA.{ tags: object; stats: ; links: current_location=SALA; }
+      entitiesSource: `@sala.{ tags: place; stats: ; links: ; }
+@trava.{ tags: object; stats: ; links: current_location=@sala; }
 start()
 `,
       rulesSource: `# start
@@ -99,28 +99,28 @@ ON: start
 narrativa: "ok"
 
 # fumaca
-ON: SALA
-DO: CREATE FUMACA.event.current_location=$
-    DESTROY TRAVA
+ON: @sala
+DO: CREATE @fumaca.event.current_location=$
+    DESTROY @trava
 narrativa: "fuma"
 `,
     });
     const compiled = narrative.compileProject(project);
     const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    const report = dryRun.dryRun(game, "SALA");
-    assert.deepEqual(report.worldDiff.created, ["FUMACA"]);
-    assert.deepEqual(report.worldDiff.destroyed, ["TRAVA"]);
-    assert.equal(game.worldModel.has("TRAVA"), true);
-    assert.equal(game.worldModel.has("FUMACA"), false);
-    const played = narrative.interact(game, "SALA");
-    assert.equal(played.worldModel.has("FUMACA"), true);
-    assert.equal(played.worldModel.has("TRAVA"), false);
-    assert.equal(game.worldModel.has("TRAVA"), true);
+    const report = dryRun.dryRun(game, "@sala");
+    assert.deepEqual(report.worldDiff.created, ["@fumaca"]);
+    assert.deepEqual(report.worldDiff.destroyed, ["@trava"]);
+    assert.equal(game.worldModel.has("@trava"), true);
+    assert.equal(game.worldModel.has("@fumaca"), false);
+    const played = narrative.interact(game, "@sala");
+    assert.equal(played.worldModel.has("@fumaca"), true);
+    assert.equal(played.worldModel.has("@trava"), false);
+    assert.equal(game.worldModel.has("@trava"), true);
   });
 
   it("reports no match without writing history or ruleCounts", () => {
     const project = narrative.createProject("nada", {
-      entitiesSource: `PEDRA.{ tags: object; stats: ; links: ; name: Pedra; }
+      entitiesSource: `@pedra.{ tags: object; stats: ; links: ; name: Pedra; }
 start()
 `,
       rulesSource: `# start
@@ -131,7 +131,7 @@ narrativa: "ok"
     const compiled = narrative.compileProject(project);
     const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
     const before = fingerprint(game);
-    const report = dryRun.dryRun(game, "PEDRA");
+    const report = dryRun.dryRun(game, "@pedra");
     assert.equal(report.matched, false);
     assert.equal(report.ruleId, null);
     assert.equal(report.wouldMutate, false);
@@ -147,8 +147,8 @@ narrativa: "ok"
       seen.push(evt.data.eventId);
     });
     const project = narrative.createProject("efeitos", {
-      entitiesSource: `BOTAO.{ tags: object; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: ; }
+      entitiesSource: `@botao.{ tags: object; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -156,10 +156,10 @@ ON: start
 narrativa: "ok"
 
 # tocar
-ON: BOTAO
+ON: @botao
 DO: EMIT acordou
-    KNOW JOGADOR.BOTAO
-    BOTAO.usado
+    KNOW @jogador.@botao
+    @botao.usado
 narrativa: "soa"
 
 # eco
@@ -168,22 +168,22 @@ narrativa: "eco"
 `,
     });
     const compiled = narrative.compileProject(project);
-    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR"));
-    const report = dryRun.dryRun(game, "BOTAO");
+    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador"));
+    const report = dryRun.dryRun(game, "@botao");
     assert.deepEqual(
       report.effects.map((e) => e.verb),
       ["emit", "know"],
     );
-    assert.deepEqual(report.worldDiff.changed.find((c) => c.id === "BOTAO")?.tagsAdded, ["usado"]);
+    assert.deepEqual(report.worldDiff.changed.find((c) => c.id === "@botao")?.tagsAdded, ["usado"]);
     assert.equal(game.worldModel.has("acordou"), false);
-    assert.equal(game.worldModel.get("JOGADOR")?.tags.has(knowledgeTag("BOTAO")), false);
+    assert.equal(game.worldModel.get("@jogador")?.tags.has(knowledgeTag("@botao")), false);
     assert.equal(game.history.some((b) => b.triggerId === "acordou"), false);
     await Promise.resolve();
     assert.equal(seen.length, 0);
 
-    const played = narrative.interact(game, "BOTAO");
+    const played = narrative.interact(game, "@botao");
     assert.equal(played.worldModel.has("acordou"), true);
-    assert.equal(played.worldModel.get("JOGADOR")?.tags.has(knowledgeTag("BOTAO")), true);
+    assert.equal(played.worldModel.get("@jogador")?.tags.has(knowledgeTag("@botao")), true);
     await Promise.resolve();
     assert.equal(seen.includes("acordou"), true);
   });
@@ -192,19 +192,19 @@ narrativa: "eco"
     const project = createExampleProject("goblin-cave");
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
     const before = fingerprint(game);
-    const report = dryRun.dryRun(game, "GOBLIN");
+    const report = dryRun.dryRun(game, "@goblin");
     assert.equal(report.matched, true);
-    assert.ok(report.worldDiff.changed.find((c) => c.id === "GOBLIN")?.tagsRemoved.includes("sleeping"));
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("sleeping"), true);
+    assert.ok(report.worldDiff.changed.find((c) => c.id === "@goblin")?.tagsRemoved.includes("sleeping"));
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("sleeping"), true);
     assert.deepEqual(fingerprint(game), before);
 
-    const played = narrative.interact(game, "GOBLIN");
-    assert.equal(played.worldModel.get("GOBLIN")?.tags.has("sleeping"), false);
-    assert.equal(played.worldModel.get("JOGADOR")?.stats.fear, 9);
-    const predictedFear = report.worldDiff.changed.find((c) => c.id === "JOGADOR")?.stats.find((s) => s.key === "fear");
+    const played = narrative.interact(game, "@goblin");
+    assert.equal(played.worldModel.get("@goblin")?.tags.has("sleeping"), false);
+    assert.equal(played.worldModel.get("@jogador")?.stats.fear, 9);
+    const predictedFear = report.worldDiff.changed.find((c) => c.id === "@jogador")?.stats.find((s) => s.key === "fear");
     assert.equal(predictedFear?.to, 9);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("sleeping"), true);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("sleeping"), true);
   });
 });

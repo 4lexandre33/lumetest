@@ -19,7 +19,7 @@ describe('Project Cloud Capabilities', () => {
     assert.ok(cloudService);
 
     const testProject = createProject('Cloud Capability Test', {
-      entitiesSource: 'HERO.{\ntags: agent;\n}\nstart()\n',
+      entitiesSource: '@hero.{\ntags: agent;\n}\nstart()\n',
       rulesSource: '# start\nON: start\nnarrativa: "Início"\n',
       taxonomySource: 'hero -> agent'
     });
@@ -58,7 +58,7 @@ describe('Project Cloud Capabilities', () => {
     await cloudService.saveProject(project);
 
     // Make changes and save version 2
-    project.entitiesSource = 'WARRIOR.{\ntags: agent;\n}\nstart()\n';
+    project.entitiesSource = '@warrior.{\ntags: agent;\n}\nstart()\n';
     await cloudService.saveProject(project);
 
     const versions = await historyService.listVersions(project.meta.id);

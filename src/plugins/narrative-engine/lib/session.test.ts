@@ -9,23 +9,23 @@ import { createExampleProject } from "./examples.ts";
 describe("session seed and replay", () => {
   it("stores seed on createGame and keeps it across rewind", () => {
     const project = createProject("seed", {
-      entitiesSource: `JOGADOR.{ tags: agent; }\nPORTA.{ tags: object; }\nstart()\n`,
+      entitiesSource: `@jogador.{ tags: agent; }\n@porta.{ tags: object; }\nstart()\n`,
       rulesSource: `# start
 ON: start
 narrativa: "ok"
 
 # porta
-ON: PORTA
+ON: @porta
 narrativa: "abre"
 `,
     });
     const compiled = compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = bootGame(
-      createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy, compiled.patterns, { seed: "s-7" }),
+      createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy, compiled.patterns, { seed: "s-7" }),
     );
     assert.equal(game.seed, "s-7");
-    game = interactWith(game, "PORTA");
+    game = interactWith(game, "@porta");
     game = rewindTo(game, 0);
     assert.equal(game.seed, "s-7");
     assert.equal(game.history[0]?.triggerId, "start");
@@ -33,28 +33,28 @@ narrativa: "abre"
 
   it("replays export JSON to the same stories", () => {
     const project = createProject("sessao", {
-      entitiesSource: `JOGADOR.{ tags: agent; }\nA.{ tags: object; }\nB.{ tags: object; }\nstart()\n`,
+      entitiesSource: `@jogador.{ tags: agent; }\n@a.{ tags: object; }\n@b.{ tags: object; }\nstart()\n`,
       rulesSource: `# start
 ON: start
 narrativa: "ok"
 
 # a
-ON: A
+ON: @a
 narrativa: "um"
 
 # b
-ON: B
+ON: @b
 narrativa: "dois"
 `,
     });
     const compiled = compileProject(project);
-    let game = bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy, [], { seed: "abc" }));
-    game = interactWith(game, "A");
-    game = interactWith(game, "B");
+    let game = bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy, [], { seed: "abc" }));
+    game = interactWith(game, "@a");
+    game = interactWith(game, "@b");
     const session = exportSession(game);
     assert.equal(session.seed, "abc");
-    assert.deepEqual(session.triggerIds, ["start", "A", "B"]);
-    const replayed = replaySession(session, compiled.rules, "JOGADOR", compiled.taxonomy, compiled.patterns);
+    assert.deepEqual(session.triggerIds, ["start", "@a", "@b"]);
+    const replayed = replaySession(session, compiled.rules, "@jogador", compiled.taxonomy, compiled.patterns);
     assert.equal(replayed.seed, "abc");
     assert.deepEqual(
       replayed.history.map((b) => b.story),
@@ -64,22 +64,22 @@ narrativa: "dois"
 
   it("records Skein branches after rewind and keeps the cave equal", () => {
     let tree = emptySkein();
-    tree = recordPath(tree, ["start", "A", "B"]);
-    tree = recordPath(tree, ["start", "A", "C"]);
+    tree = recordPath(tree, ["start", "@a", "@b"]);
+    tree = recordPath(tree, ["start", "@a", "C"]);
     assert.equal(tree.children[0]?.triggerId, "start");
-    assert.equal(tree.children[0]?.children[0]?.triggerId, "A");
+    assert.equal(tree.children[0]?.children[0]?.triggerId, "@a");
     assert.deepEqual(
       tree.children[0]?.children[0]?.children.map((n) => n.triggerId),
-      ["B", "C"],
+      ["@b", "C"],
     );
     const merged = mergeSkein(tree, recordPath(emptySkein(), ["start", "D"]));
-    assert.ok(merged.children[0]?.children.some((n) => n.triggerId === "A"));
+    assert.ok(merged.children[0]?.children.some((n) => n.triggerId === "@a"));
     assert.ok(merged.children[0]?.children.some((n) => n.triggerId === "D"));
 
     const cave = createExampleProject("goblin-cave");
     const compiled = compileProject(cave);
     assert.equal(compiled.errors.length, 0);
-    const game = bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    const game = bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
     assert.equal(game.seed, "");
   });
 });

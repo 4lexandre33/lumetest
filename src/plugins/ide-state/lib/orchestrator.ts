@@ -220,6 +220,7 @@ export function createIdeZustandStore(
       writeAnnotationId: null,
       writePortrait: false,
       writeLine: null,
+      showRef: false,
 
       hydrate: () => {
         const draft = readSessionDraft();
@@ -427,6 +428,10 @@ export function createIdeZustandStore(
 
       startGuide: () => set({ screen: 'guide' }),
 
+      openReference: () => set({ showRef: true }),
+
+      closeReference: () => set({ showRef: false }),
+
       dismissOnboarding: () => {
         if (get().settings.onboarding !== 'pending') return;
         const settings = { ...get().settings, onboarding: 'skipped' as const };
@@ -507,7 +512,7 @@ export function createIdeZustandStore(
       setPlayerId: (id) => {
         const { project } = get();
         if (!project) return;
-        project.settings.playerEntityId = id.trim() || 'JOGADOR';
+        project.settings.playerEntityId = id.trim() || '@jogador';
         set({ project: { ...project } });
         get().recompile();
         get().persist();
@@ -717,7 +722,7 @@ export function createIdeZustandStore(
       insertEntity: () => {
         const { project } = get();
         if (!project) return null;
-        const out = insertEntity(project.entitiesSource, 'NOVA');
+        const out = insertEntity(project.entitiesSource, '@nova');
         set({
           project: { ...project, entitiesSource: out.source },
           tab: 'entities',

@@ -26,4 +26,5 @@ export interface IdeGuideService {
   getSyntaxReference(): RefSection[];
   getSection(id: string): RefSection | null;
   searchReference(query: string): RefSection[];
+  getGuideMarkdown(): string;
 }

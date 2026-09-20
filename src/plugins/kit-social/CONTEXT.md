@@ -14,11 +14,11 @@ NarrativeEngine (para o autor compilar o projecto)
 
 ## Idioma
 ```
-GUARDA.{ tags: agent; stats: mood=1; links: rel=REL_JOGADOR_GUARDA; }
-REL_JOGADOR_GUARDA.{ tags: relation, acquaintance; stats: affinity=40; links: from=JOGADOR, to=GUARDA; }
-LORE.{ tags: memory; }
+@guarda.{ tags: agent; stats: mood=1; links: rel=@rel_jogador_guarda; }
+@rel_jogador_guarda.{ tags: relation, acquaintance; stats: affinity=40; links: from=@jogador, to=@guarda; }
+@lore.{ tags: memory; }
 
-DO: KNOW GUARDA.LORE
+DO: KNOW @guarda.@lore
 ```
 Stat `mood` no agente (opt-in: sem `mood` as regras sociais não casam). Entidade `relation` com `from`/`to` e `affinity`. Link `rel` no agente aponta para a relação com o jogador. `memory → information`. Autor escreve `KNOW` no facto; o kit não é KnowledgeEngine.
 

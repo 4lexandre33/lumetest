@@ -1,5 +1,5 @@
 import type { FbeDrawer, MutationDraft } from "./write-menu.ts";
-import { FBE_DRAWERS, flagBit, isKnownLinkTarget, listItems } from "./write-menu.ts";
+import { FBE_DRAWERS, flagBit, isKnownLinkTarget, listItems, emitEntityId } from "./write-menu.ts";
 import { formatFuseValue, formatStatInput, isLinkTarget } from "../../narrative-engine/lib/world-model.ts";
 
 export const ANOTACOES_SLICE_START = "# --- lume-anotacoes ---";
@@ -184,7 +184,7 @@ export function doLines(doText: string): string[] {
 }
 
 export function doFromDraft(draft: MutationDraft, knownIds?: readonly string[]): string | null {
-  const id = draft.entityId.trim();
+  const id = emitEntityId(draft.entityId, knownIds);
   if (!id) return null;
   const key = draft.key.trim();
   const value = draft.value.trim();
@@ -222,14 +222,20 @@ export function doFromDraft(draft: MutationDraft, knownIds?: readonly string[]):
       return key && value ? `SET_PHRASE ${id}.${key} ${value}` : null;
     case "hardLinks":
       if (unset) return key ? `UNLINK ${id}.${key}` : null;
-      if (!key || !value || !isLinkTarget(value)) return null;
-      if (knownIds && !isKnownLinkTarget(value, knownIds)) return null;
-      return `SET_LINK ${id}.hardLinks.${key} ${value.trim()}`;
+      if (!key || !value) return null;
+      const dest = emitEntityId(value, knownIds);
+      if (!dest || !isLinkTarget(dest)) return null;
+      if (knownIds && !isKnownLinkTarget(dest, knownIds)) return null;
+      return `SET_LINK ${id}.hardLinks.${key} ${dest}`;
     case "softLinks":
       if (unset) return key ? `UNLINK ${id}.${key}` : null;
-      if (!key || !value || !isLinkTarget(value)) return null;
-      if (knownIds && !isKnownLinkTarget(value, knownIds)) return null;
-      return `SET_LINK ${id}.softLinks.${key} ${value.trim()}`;
+      if (!key || !value) return null;
+      {
+        const dest = emitEntityId(value, knownIds);
+        if (!dest || !isLinkTarget(dest)) return null;
+        if (knownIds && !isKnownLinkTarget(dest, knownIds)) return null;
+        return `SET_LINK ${id}.softLinks.${key} ${dest}`;
+      }
     case "lists": {
       if (!key) return null;
       const items = listItems(value);
@@ -252,7 +258,7 @@ export function doFromDraft(draft: MutationDraft, knownIds?: readonly string[]):
 }
 
 function takePath(rest: string): { id: string; parts: string[]; value: string } | null {
-  const m = rest.trim().match(/^(\$|#[0-9A-Fa-f]{4}|[\p{L}_][\p{L}\p{N}\p{M}_]*)((?:\.[#\p{L}_][\p{L}\p{N}\p{M}_]*)*)(?:\s+([\s\S]+))?$/u);
+  const m = rest.trim().match(/^(\$|#[0-9A-Fa-f]{4}|@[\p{L}_][\p{L}\p{N}\p{M}_]*|[\p{L}_][\p{L}\p{N}\p{M}_]*)((?:\.(?:@?[#\p{L}_][\p{L}\p{N}\p{M}_]*))*)(?:\s+([\s\S]+))?$/u);
   if (!m) return null;
   const parts = (m[2] ?? "").split(".").filter(Boolean);
   return { id: m[1]!, parts, value: (m[3] ?? "").trim() };

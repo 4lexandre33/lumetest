@@ -35,6 +35,7 @@ export function slowRulesNote(count: number, threshold = RULE_SLOW_THRESHOLD): s
 
 function prettyId(id: string): string {
   const words = id
+    .replace(/^@/, "")
     .replace(/^FUSE_/, "")
     .split("_")
     .filter(Boolean)
@@ -99,7 +100,7 @@ function parseEntities(source: string): { id: string; tags: Set<string>; name: s
   const out: { id: string; tags: Set<string>; name: string }[] = [];
   const blocks = source.split(/\n\n+/);
   for (const block of blocks) {
-    const head = block.match(/^([A-Z][A-Z0-9_]*)\.\{/m);
+    const head = block.match(/^(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)\.\{/mu);
     if (!head) continue;
     const tagsLine = block.match(/tags:\s*([^;]*);/);
     const nameLine = block.match(/name:\s*([^;]*);/);
@@ -132,7 +133,7 @@ function describeDos(dos: readonly string[]): string[] {
       bits.push(`dano ${hp[1]}`);
       continue;
     }
-    const tag = line.match(/^[A-Z][A-Z0-9_]*\.([a-z][\p{L}\p{N}_]*)$/u);
+    const tag = line.match(/^@?[\p{L}_][\p{L}\p{N}\p{M}_]*\.([a-z][\p{L}\p{N}_]*)$/u);
     if (tag) {
       bits.push(`tag ${tag[1]}`);
       continue;
@@ -229,8 +230,8 @@ export function assistNotebook(text: string, world?: AssistWorld): NotebookAssis
   if (live) {
     const seen = new Set<string>();
     const consider = [
-      ...entities.filter((entity) => entity.tags.has("vivo") && entity.id !== "JOGADOR"),
-      ...worldList(world).filter((entity) => hasTag(entity, "vivo") && entity.id !== "JOGADOR"),
+      ...entities.filter((entity) => entity.tags.has("vivo") && entity.id !== "@jogador"),
+      ...worldList(world).filter((entity) => hasTag(entity, "vivo") && entity.id !== "@jogador"),
     ];
     for (const entity of consider) {
       if (seen.has(entity.id)) continue;
@@ -242,7 +243,7 @@ export function assistNotebook(text: string, world?: AssistWorld): NotebookAssis
   }
 
   for (const entity of entities) {
-    if (entity.id === "JOGADOR") continue;
+    if (entity.id === "@jogador") continue;
     if (entity.tags.has("vivo") && !rules.some((rule) => rule.on === entity.id)) {
       notes.push(`O ${nounOf(entity.id)} é vivo e não tem reacção.`);
     }

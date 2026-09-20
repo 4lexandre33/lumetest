@@ -18,13 +18,13 @@ describe('Language Tools Parity (Legacy vs Plugin)', () => {
   });
 
   it('maintains 100% parity on syntax highlighting and autocomplete', () => {
-    const entitySrc = 'MAGE.{\n  tags: agent;\n  stats: mp=100;\n}';
+    const entitySrc = '@mage.{\n  tags: agent;\n  stats: mp=100;\n}';
     const legacyTokens = legacyEngine.highlightSource(entitySrc, 'entities');
     const pluginTokens = pluginLangTools.highlightSource(entitySrc, 'entities');
 
     assert.deepEqual(pluginTokens, legacyTokens);
 
-    const ruleSrc = 'ON: MAGE\nIF: MAGE.mp>=10\nDO: MAGE.mp-10';
+    const ruleSrc = 'ON: @mage\nIF: @mage.mp>=10\nDO: @mage.mp-10';
     const legacyRuleTokens = legacyEngine.highlightSource(ruleSrc, 'rules');
     const pluginRuleTokens = pluginLangTools.highlightSource(ruleSrc, 'rules');
 
@@ -32,8 +32,8 @@ describe('Language Tools Parity (Legacy vs Plugin)', () => {
 
     // Autocomplete parity
     const vocab = legacyEngine.collectVocabulary({});
-    const completionsLegacy = legacyEngine.completeAt('MAGE.{\n  tags: ', 'entities', 16, vocab);
-    const completionsPlugin = pluginLangTools.completeAt('MAGE.{\n  tags: ', 'entities', 16, vocab);
+    const completionsLegacy = legacyEngine.completeAt('@mage.{\n  tags: ', 'entities', 16, vocab);
+    const completionsPlugin = pluginLangTools.completeAt('@mage.{\n  tags: ', 'entities', 16, vocab);
 
     assert.deepEqual(completionsPlugin, completionsLegacy);
   });

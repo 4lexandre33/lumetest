@@ -115,9 +115,9 @@ function needlesOf(world: WorldModel, allowed: Set<string> | null): { id: string
   const out: { id: string; aliases: string[] }[] = [];
   for (const entity of world.values()) {
     if (allowed && !allowed.has(entity.id)) continue;
-    const aliases = new Set<string>([fold(entity.id)]);
-    const named = entity.name || entity.extra?.name;
-    if (typeof named === "string" && named.trim()) aliases.add(fold(named.trim()));
+    const aliases = new Set<string>([fold(entity.id.replace(/^@/, ""))]);
+    if (typeof entity.name === "string" && entity.name.trim()) aliases.add(fold(entity.name.trim()));
+    if (typeof entity.extra?.name === "string" && entity.extra.name.trim()) aliases.add(fold(entity.extra.name.trim()));
     const extraAliases = entity.extra?.aliases;
     if (typeof extraAliases === "string") {
       for (const alias of extraAliases.split(",")) {

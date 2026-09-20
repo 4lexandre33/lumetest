@@ -13,7 +13,7 @@ export function WritePreview() {
   const setWriteFocus = useIdeStore((s) => s.setWriteFocus);
   const text = project?.notebooksSource ?? "";
   const entitiesSource = project?.entitiesSource ?? "";
-  const playerId = project?.settings.playerEntityId || "JOGADOR";
+  const playerId = project?.settings.playerEntityId || "@jogador";
   const entries = useMemo(() => authorshipTimeline(text, entitiesSource), [text, entitiesSource]);
   const selected = entries.find((item) => item.annotation.id === writeAnnotationId) ?? null;
   const player = useMemo(() => authorshipBaseWorld(text, entitiesSource).get(playerId) ?? null, [text, entitiesSource, playerId]);

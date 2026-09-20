@@ -54,7 +54,7 @@ A IA consulta esta tabela **antes** de grep. Uma linha basta.
 | classificar CONSTRAINT etc. | rule-semantics | `rule-semantics/lib/classify.ts` |
 | parse `intent.action…` | intent-engine | `lib/parser.ts`, `lib/catalog.ts` |
 | resolver / autocomplete contextual | intent-engine | `lib/resolver.ts`, `lib/complete.ts` |
-| execute, JOGADOR.intent, limpeza | intent-engine | `lib/adapter.ts` |
+| execute, @jogador.intent, limpeza | intent-engine | `lib/adapter.ts` |
 | perceive / cognize sem mutar | intent-engine | `lib/present.ts` |
 | botão do preview → comando | intent-engine | `lib/choice.ts` |
 | RuleEffects registry | narrative-engine | `lib/rule-effects.ts` |
@@ -76,4 +76,4 @@ A IA consulta esta tabela **antes** de grep. Uma linha basta.
 | `THEN` | chain |
 | `LIVE` | life |
 | `intent.action.` `intent.perceive.` `intent.cognize.` | intent-engine catalog/parser |
-| `JOGADOR.intent=` | adapter + matcher (já existe) |
+| `@jogador.intent=` | adapter + matcher (já existe) |

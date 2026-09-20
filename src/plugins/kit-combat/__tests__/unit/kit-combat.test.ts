@@ -47,10 +47,10 @@ describe("Combat kit", () => {
 
   it("applies once; attack subtracts force from hp; hp<=0 tags dead and EMITs morte", () => {
     let project = narrative.createProject("kit-combat-room", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: hp=10, force=2; links: current_location=SALA; }
-SALA.{ tags: place; name: Sala; }
-GOBLIN.{ tags: agent, hostile, mortal; stats: hp=3, force=1, mood=0; links: current_location=SALA; name: Goblin; }
-ESPADA.{ tags: weapon; name: Espada; }
+      entitiesSource: `@jogador.{ tags: agent; stats: hp=10, force=2; links: current_location=@sala; }
+@sala.{ tags: place; name: Sala; }
+@goblin.{ tags: agent, hostile, mortal; stats: hp=3, force=1, mood=0; links: current_location=@sala; name: Goblin; }
+@espada.{ tags: weapon; name: Espada; }
 start()
 `,
       taxonomySource: "",
@@ -64,32 +64,32 @@ narrativa: "ok"
     assert.equal((project.taxonomySource.match(/# kit:combat/g) ?? []).length, 1);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    assert.ok(query("*.hostile", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "GOBLIN"));
-    assert.ok(query("*.mortal", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "GOBLIN"));
-    assert.ok(query("*.weapon", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "ESPADA"));
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    assert.ok(query("*.hostile", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@goblin"));
+    assert.ok(query("*.mortal", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@goblin"));
+    assert.ok(query("*.weapon", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@espada"));
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
 
-    game = attackHostile(game, "GOBLIN");
-    assert.equal(game.worldModel.get("GOBLIN")?.stats.hp, 1);
-    assert.equal(game.worldModel.get("GOBLIN")?.stats.mood, -1);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("dead"), false);
+    game = attackHostile(game, "@goblin");
+    assert.equal(game.worldModel.get("@goblin")?.stats.hp, 1);
+    assert.equal(game.worldModel.get("@goblin")?.stats.mood, -1);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("dead"), false);
     assert.ok(game.story.includes("golpe"));
 
-    game = attackHostile(game, "GOBLIN");
-    assert.equal(game.worldModel.get("GOBLIN")?.stats.hp, -1);
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("dead"), false);
+    game = attackHostile(game, "@goblin");
+    assert.equal(game.worldModel.get("@goblin")?.stats.hp, -1);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("dead"), false);
 
-    game = interactWith(game, "GOBLIN");
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("dead"), true);
+    game = interactWith(game, "@goblin");
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("dead"), true);
     assert.ok(game.worldModel.get("morte")?.tags.has("event"));
     assert.ok(game.story.includes("cai") || game.history.some((b) => /cai/.test(b.story)));
   });
 
   it("without hp or hostile does not mutate", () => {
     let project = narrative.createProject("kit-combat-mute", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: force=1; }
-CIVIL.{ tags: agent; stats: hp=4; name: Civil; }
-FANTASMA.{ tags: hostile; name: Fantasma; }
+      entitiesSource: `@jogador.{ tags: agent; stats: force=1; }
+@civil.{ tags: agent; stats: hp=4; name: Civil; }
+@fantasma.{ tags: hostile; name: Fantasma; }
 start()
 `,
       taxonomySource: "",
@@ -101,17 +101,17 @@ narrativa: "ok"
     project = kit.apply(project);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = attackHostile(game, "CIVIL");
-    assert.equal(game.worldModel.get("CIVIL")?.stats.hp, 4);
-    game = attackHostile(game, "FANTASMA");
-    assert.equal(game.worldModel.get("FANTASMA")?.stats.hp, undefined);
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = attackHostile(game, "@civil");
+    assert.equal(game.worldModel.get("@civil")?.stats.hp, 4);
+    game = attackHostile(game, "@fantasma");
+    assert.equal(game.worldModel.get("@fantasma")?.stats.hp, undefined);
   });
 
   it("author attack still wins", () => {
     let project = narrative.createProject("kit-combat-author", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: force=1; }
-CHEFE.{ tags: agent, hostile, mortal; stats: hp=5; name: Chefe; }
+      entitiesSource: `@jogador.{ tags: agent; stats: force=1; }
+@chefe.{ tags: agent, hostile, mortal; stats: hp=5; name: Chefe; }
 start()
 `,
       taxonomySource: "",
@@ -120,23 +120,23 @@ ON: start
 narrativa: "ok"
 
 # chefe
-ON: CHEFE
-IF: JOGADOR.intent=attack
+ON: @chefe
+IF: @jogador.intent=attack
 narrativa: "O chefe bloqueia."
 `,
     });
     project = kit.apply(project);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = attackHostile(game, "CHEFE");
-    assert.equal(game.worldModel.get("CHEFE")?.stats.hp, 5);
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = attackHostile(game, "@chefe");
+    assert.equal(game.worldModel.get("@chefe")?.stats.hp, 5);
     assert.ok(game.story.includes("bloqueia"));
   });
 
   it("keeps author taxonomy children and still marks the kit", () => {
     let project = narrative.createProject("kit-combat-merge", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
+      entitiesSource: `@jogador.{ tags: agent; }
 start()
 `,
       taxonomySource: "weapon → object\ncustom → object\n",

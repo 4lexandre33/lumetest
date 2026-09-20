@@ -29,7 +29,7 @@ describe('Narrative Engine Event Emissions', () => {
 
     const project = engineService.createProject('Event Test Project', {
       id: 'project-async-event-test',
-      entitiesSource: 'PLAYER.{\ntags: agent;\nstats: ;\nlinks: ;\n}\nstart()\n'
+      entitiesSource: '@player.{\ntags: agent;\nstats: ;\nlinks: ;\n}\nstart()\n'
     });
 
     const result = await engineService.compileProjectAsync(project);
@@ -55,18 +55,18 @@ describe('Narrative Engine Event Emissions', () => {
     const project = engineService.createProject('Gameplay Events Project', {
       id: 'proj-game-events',
       entitiesSource: `
-ALCHEMIST.{
+@alchemist.{
 tags: agent;
 stats: mana=10;
-links: current_location=LAB;
+links: current_location=@lab;
 }
-CRYSTAL.{
+@crystal.{
 tags: object;
 stats: ;
-links: current_location=LAB;
+links: current_location=@lab;
 name: Cristal;
 }
-LAB.{
+@lab.{
 tags: place;
 stats: ;
 links: ;
@@ -80,8 +80,8 @@ ON: start
 narrativa: "Início"
 
 # touch
-ON: CRYSTAL
-DO: ALCHEMIST.mana+5
+ON: @crystal
+DO: @alchemist.mana+5
 narrativa: "O cristal pulsa com energia!"
 `
     });
@@ -90,9 +90,9 @@ narrativa: "O cristal pulsa com energia!"
     const game = await engineService.createGameAsync(compiled.worldModel, compiled.rules, project.settings.playerEntityId);
 
     assert.ok(createdGameEvent);
-    assert.equal(createdGameEvent.projectId, 'JOGADOR');
+    assert.equal(createdGameEvent.projectId, '@jogador');
 
-    const nextState = await engineService.interactAsync(game, 'CRYSTAL');
+    const nextState = await engineService.interactAsync(game, '@crystal');
 
     assert.ok(beatEvent);
     assert.equal(beatEvent.turn, 1);

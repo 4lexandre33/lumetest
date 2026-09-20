@@ -1,5 +1,6 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createCore, Core } from '../../../../core/index.ts';
 import { IDE_GUIDE_MANIFEST, createIdeGuidePlugin } from '../../index.ts';
 import type { IdeGuideService } from '../../types.ts';
@@ -59,5 +60,55 @@ describe('IDE Guide Plugin', () => {
     assert.ok(guideService.searchReference('current_location').some((s) => s.id === 'bloco' || s.id === 'start'));
     assert.ok(guideService.searchReference('CREATE ID.tag').some((s) => s.id === 'bloco' || s.id === 'escrita'));
     assert.ok(guideService.searchReference('Modo Escrita').some((s) => s.id === 'escrita'));
+  });
+
+  it("G9 Rever guia markdown lists every method with examples", () => {
+    const md = guideService.getGuideMarkdown();
+    assert.match(md, /^# Lume — guia da linguagem/m);
+    assert.match(md, /## Editor de entidades/);
+    assert.match(md, /## Caderno \(língua humana\)/);
+    assert.match(md, /## Todos os métodos do editor de regras/);
+    assert.match(md, /## WAIT · TICK · LIVE e irmãos/);
+    for (const verb of [
+      "ADD_TAG",
+      "REMOVE_TAG",
+      "SET_STAT",
+      "ADD_STAT",
+      "MUL_STAT",
+      "SET_FLAG",
+      "SET_ENUM",
+      "SET_LINK",
+      "SET_PHRASE",
+      "UNLINK",
+      "CLEAR_LINK",
+      "SET_FUSE",
+      "PUSH",
+      "POP",
+      "REMOVE",
+      "CLEAR",
+      "ADD_UNIQUE",
+      "CREATE",
+      "DESTROY",
+      "SPAWN",
+      "WAIT",
+      "TICK",
+      "LIVE",
+    ]) {
+      assert.ok(md.includes(verb), `missing ${verb}`);
+    }
+    assert.match(md, /Quando o jogador pega a espada/);
+    assert.match(md, /é um Agent/);
+    assert.match(md, /@pessoa\./);
+    assert.ok(guideService.getSection("editor"));
+    assert.ok(guideService.getSection("caderno"));
+    assert.ok(guideService.getSection("metodos"));
+    assert.ok(guideService.getSection("efeitos"));
+    assert.ok(guideService.searchReference("narre").some((s) => s.id === "caderno"));
+    assert.ok(guideService.searchReference("ADD_UNIQUE").some((s) => s.id === "metodos"));
+    const ui = readFileSync(new URL("../../../ide-ui/lib/components/IdeApp.tsx", import.meta.url), "utf8");
+    assert.match(ui, /Rever guia/);
+    const ref = readFileSync(new URL("../../../ide-ui/lib/components/Reference.tsx", import.meta.url), "utf8");
+    assert.match(ref, /lume-guia\.md/);
+    assert.match(ref, /downloadGuideMarkdown/);
   });
 });

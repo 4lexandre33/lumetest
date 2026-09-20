@@ -190,7 +190,7 @@ Estas regras existem para a IA **parar**. Detalhe em [INVARIANTES.md](INVARIANTE
 
 1. **Não segundo motor de regras.** Um `findMatchingRule`. Sempre.
 2. **Não mudar o match** para classificar semântica. Semântica é rótulo.
-3. **Não copiar Elm/Allegory** (`INTENT(open_door)`, `MODIFY(...)`). Idioma Lume: `JOGADOR.intent=attack`, `JOGADOR.hp-10`.
+3. **Não copiar Elm/Allegory** (`INTENT(open_door)`, `MODIFY(...)`). Idioma Lume: `@jogador.intent=attack`, `@jogador.hp-10`.
 4. **Não plugin por categoria semântica** (nada de ConstraintEngine).
 5. **Não categoria FEAR/FLEE/ATTACK.** Compor primitivas.
 6. **Não a IA decidir o que a regra faz em runtime.**

@@ -81,7 +81,8 @@ export class IdeStatePlugin implements IPlugin {
           lastNotice: s.lastNotice,
           writeAnnotationId: s.writeAnnotationId,
           writePortrait: s.writePortrait,
-          writeLine: s.writeLine
+          writeLine: s.writeLine,
+          showRef: s.showRef
         };
       },
 

@@ -28,9 +28,9 @@ describe("Knowledge", () => {
 
   it("KNOW writes cognition on the agent and does not mutate INFORMATION", () => {
     const project = narrative.createProject("know", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: ; links: current_location=SALA; }
-LORE.{ tags: information; stats: ; links: current_location=SALA; name: Pergaminho; }
-SALA.{ tags: place; stats: ; links: ; }
+      entitiesSource: `@jogador.{ tags: agent; stats: ; links: current_location=@sala; }
+@lore.{ tags: information; stats: ; links: current_location=@sala; name: Pergaminho; }
+@sala.{ tags: place; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -38,23 +38,23 @@ ON: start
 narrativa: "ok"
 
 # ler
-ON: LORE
-DO: KNOW JOGADOR.LORE
+ON: @lore
+DO: KNOW @jogador.@lore
 narrativa: "leu"
 `,
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(
-      narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy),
+      narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy),
     );
-    const loreBefore = game.worldModel.get("LORE")!;
-    game = narrative.interact(game, "LORE");
-    assert.equal(knowledge.knows(game.worldModel, "JOGADOR", "LORE"), true);
-    assert.deepEqual(knowledge.factsFor(game.worldModel, "JOGADOR"), ["LORE"]);
-    assert.ok(game.worldModel.get("LORE")?.tags.has("information"));
-    assert.equal(game.worldModel.get("LORE")?.links.current_location, loreBefore.links.current_location);
-    assert.equal(game.worldModel.get("JOGADOR")?.tags.has("information"), false);
-    assert.equal(knowledge.knows(game.worldModel, "JOGADOR", "SALA"), false);
+    const loreBefore = game.worldModel.get("@lore")!;
+    game = narrative.interact(game, "@lore");
+    assert.equal(knowledge.knows(game.worldModel, "@jogador", "@lore"), true);
+    assert.deepEqual(knowledge.factsFor(game.worldModel, "@jogador"), ["@lore"]);
+    assert.ok(game.worldModel.get("@lore")?.tags.has("information"));
+    assert.equal(game.worldModel.get("@lore")?.links.current_location, loreBefore.links.current_location);
+    assert.equal(game.worldModel.get("@jogador")?.tags.has("information"), false);
+    assert.equal(knowledge.knows(game.worldModel, "@jogador", "@sala"), false);
   });
 });

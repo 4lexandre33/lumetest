@@ -23,7 +23,7 @@ describe('Project Cloud Parity (Persistence vs Plugin)', () => {
 
   it('maintains 100% parity across save, list, load and delete operations', async () => {
     const testProject = createProject('Parity Test Project', {
-      entitiesSource: 'JOGADOR.{\ntags: agent;\nstats: hp=100;\nlinks: current_location=SALA;\n}\nSALA.{\ntags: place;\n}\nstart()\n',
+      entitiesSource: '@jogador.{\ntags: agent;\nstats: hp=100;\nlinks: current_location=@sala;\n}\n@sala.{\ntags: place;\n}\nstart()\n',
       rulesSource: '# start\nON: start\nnarrativa: "Bem-vindo ao teste de paridade"\n',
       taxonomySource: 'goblin -> monster\nmonster -> agent'
     });

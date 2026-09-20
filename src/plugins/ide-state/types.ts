@@ -57,6 +57,7 @@ export interface IdeStateSnapshot {
   writeAnnotationId: string | null;
   writePortrait: boolean;
   writeLine: number | null;
+  showRef: boolean;
 }
 
 export interface IdeStoreActions {
@@ -75,6 +76,8 @@ export interface IdeStoreActions {
   importNotebooks: (incoming: string) => void;
   startGuide: () => void;
   skipGuide: () => void;
+  openReference: () => void;
+  closeReference: () => void;
   dismissOnboarding: () => void;
   setEntities: (source: string) => void;
   setTaxonomy: (source: string) => void;

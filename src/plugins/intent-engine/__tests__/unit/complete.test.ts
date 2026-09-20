@@ -18,7 +18,7 @@ describe("applySuggestion", () => {
 
   it("completes a leaf without a trailing dot", () => {
     assert.equal(applySuggestion("intent.action.", "wait"), "intent.action.wait");
-    assert.equal(applySuggestion("intent.action.move.", "CAVERNA"), "intent.action.move.CAVERNA");
+    assert.equal(applySuggestion("intent.action.move.", "@caverna"), "intent.action.move.@caverna");
     assert.equal(applySuggestion("intent.perceive.observe.", "local"), "intent.perceive.observe.local");
   });
 });

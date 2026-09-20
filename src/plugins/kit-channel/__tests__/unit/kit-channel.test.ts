@@ -50,12 +50,12 @@ describe("Channel kit", () => {
 
   it("applies once; THEN and intent=advance bump state; author wins", () => {
     let project = narrative.createProject("kit-channel-room", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; name: Sala; }
-CIDADE.{ tags: place; name: Cidade; }
-GUARDA.{ tags: agent; links: current_location=SALA; name: Guarda; }
-CORRUPCAO.{ tags: channel, economia; stats: state=0; name: Corrupção; }
-POLITICA.{ tags: politica; stats: state=0; name: Política; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; name: Sala; }
+@cidade.{ tags: place; name: Cidade; }
+@guarda.{ tags: agent; links: current_location=@sala; name: Guarda; }
+@corrupcao.{ tags: channel, economia; stats: state=0; name: Corrupção; }
+@politica.{ tags: politica; stats: state=0; name: Política; }
 start()
 `,
       taxonomySource: "",
@@ -64,20 +64,20 @@ ON: start
 narrativa: "ok"
 
 # suborno
-ON: GUARDA
-IF: JOGADOR.intent=give
-DO: THEN CORRUPCAO
+ON: @guarda
+IF: @jogador.intent=give
+DO: THEN @corrupcao
 narrativa: "O guarda aceita."
 
 # corrupção específica
-ON: CORRUPCAO
-IF: CORRUPCAO.intent=advance
-DO: CORRUPCAO.corrupted
-    THEN CIDADE
+ON: @corrupcao
+IF: @corrupcao.intent=advance
+DO: @corrupcao.corrupted
+    THEN @cidade
 narrativa: "A guarda já não serve o mesmo senhor."
 
 # cidade
-ON: CIDADE
+ON: @cidade
 narrativa: "A cidade nota."
 `,
     });
@@ -86,30 +86,30 @@ narrativa: "A cidade nota."
     assert.equal((project.taxonomySource.match(/# kit:channel/g) ?? []).length, 1);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    assert.ok(query("*.channel", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "CORRUPCAO"));
-    assert.ok(query("*.economia", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "CORRUPCAO"));
-    assert.ok(query("*.channel", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "POLITICA"));
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    assert.ok(query("*.channel", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@corrupcao"));
+    assert.ok(query("*.economia", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@corrupcao"));
+    assert.ok(query("*.channel", compiled.worldModel, "start", compiled.taxonomy).some(([id]) => id === "@politica"));
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
 
     const world = cloneWorldModel(game.worldModel);
-    world.get("JOGADOR")!.links.intent = "give";
-    game = interactWith({ ...game, worldModel: world }, "GUARDA");
-    assert.equal(game.worldModel.get("CORRUPCAO")?.stats.state, 1);
-    assert.equal(game.worldModel.get("CORRUPCAO")?.tags.has("corrupted"), false);
-    assert.ok(game.history.some((beat) => beat.triggerId === "CORRUPCAO"));
-    assert.equal(game.history.some((beat) => beat.triggerId === "CIDADE"), false);
+    world.get("@jogador")!.links.intent = "give";
+    game = interactWith({ ...game, worldModel: world }, "@guarda");
+    assert.equal(game.worldModel.get("@corrupcao")?.stats.state, 1);
+    assert.equal(game.worldModel.get("@corrupcao")?.tags.has("corrupted"), false);
+    assert.ok(game.history.some((beat) => beat.triggerId === "@corrupcao"));
+    assert.equal(game.history.some((beat) => beat.triggerId === "@cidade"), false);
 
-    game = advanceChannel(game, "CORRUPCAO");
-    assert.equal(game.worldModel.get("CORRUPCAO")?.tags.has("corrupted"), true);
-    assert.equal(game.worldModel.get("CORRUPCAO")?.stats.state, 1);
-    assert.ok(game.history.some((beat) => beat.triggerId === "CIDADE"));
+    game = advanceChannel(game, "@corrupcao");
+    assert.equal(game.worldModel.get("@corrupcao")?.tags.has("corrupted"), true);
+    assert.equal(game.worldModel.get("@corrupcao")?.stats.state, 1);
+    assert.ok(game.history.some((beat) => beat.triggerId === "@cidade"));
     assert.ok(game.story.includes("cidade") || game.history.some((b) => /cidade/i.test(b.story)));
   });
 
   it("without state does not mutate", () => {
     let project = narrative.createProject("kit-channel-mute", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
-SILENCIO.{ tags: channel; name: Silêncio; }
+      entitiesSource: `@jogador.{ tags: agent; }
+@silencio.{ tags: channel; name: Silêncio; }
 start()
 `,
       taxonomySource: "",
@@ -121,14 +121,14 @@ narrativa: "ok"
     project = kit.apply(project);
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = interactWith(game, "SILENCIO");
-    assert.equal(game.worldModel.get("SILENCIO")?.stats.state, undefined);
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = interactWith(game, "@silencio");
+    assert.equal(game.worldModel.get("@silencio")?.stats.state, undefined);
   });
 
   it("keeps author taxonomy children and still marks the kit", () => {
     let project = narrative.createProject("kit-channel-merge", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
+      entitiesSource: `@jogador.{ tags: agent; }
 start()
 `,
       taxonomySource: "channel → abstract\ncustom → object\n",

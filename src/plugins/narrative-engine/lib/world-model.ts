@@ -19,7 +19,7 @@ const SECTION_KEYS =
   "id|slug|shortCode|templateId|name|description|tags|stats|flags|enums|phrases|hardLinks|softLinks|links|lists|fuses|struct|voice|aliases";
 
 const SECTION_NORM: Record<string, string> = {
-  id: "systemId",
+  id: "shortCode",
   slug: "slug",
   shortcode: "shortCode",
   templateid: "templateId",
@@ -50,15 +50,17 @@ function fnv1a(text: string): number {
 }
 
 export function shortCodeFromSlug(slug: string): string {
-  const hex = fnv1a(slug.toUpperCase()).toString(16).toUpperCase().padStart(4, "0");
+  const core = slug.replace(/^@/, "").toUpperCase();
+  const hex = fnv1a(core).toString(16).toUpperCase().padStart(4, "0");
   return `#${hex.slice(-4)}`;
 }
 
 export function systemIdFromSlug(slug: string): string {
-  const a = fnv1a(`lume:${slug.toUpperCase()}`).toString(16).padStart(8, "0");
-  const b = fnv1a(`lume:${slug.toUpperCase()}#`).toString(16).padStart(8, "0");
-  const c = fnv1a(`#lume:${slug.toUpperCase()}`).toString(16).padStart(8, "0");
-  const d = fnv1a(`${slug.toUpperCase()}${slug.toUpperCase()}`).toString(16).padStart(8, "0");
+  const core = slug.replace(/^@/, "").toUpperCase();
+  const a = fnv1a(`lume:${core}`).toString(16).padStart(8, "0");
+  const b = fnv1a(`lume:${core}#`).toString(16).padStart(8, "0");
+  const c = fnv1a(`#lume:${core}`).toString(16).padStart(8, "0");
+  const d = fnv1a(`${core}${core}`).toString(16).padStart(8, "0");
   const h = (a + b + c + d).slice(0, 32);
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
@@ -121,6 +123,34 @@ export function isStartDecl(text: string): boolean {
 
 export function makeStartEntity(): Entity {
   return createEmptyEntity("start", { tags: ["hidden"] });
+}
+
+export function isSystemEntityId(id: string): boolean {
+  return id === "start" || id === "__VOCAB__";
+}
+
+export function isCanonicalEntityId(id: string): boolean {
+  return /^@[a-z][a-z0-9_]*$/.test(id);
+}
+
+export function isLegacyEntityId(id: string): boolean {
+  return /^[A-Z_][A-Z0-9_]*$/.test(id);
+}
+
+export function canonicalEntityId(raw: string): string {
+  const t = raw.trim();
+  if (t.toLowerCase() === "start" || t.toLowerCase() === "@start") return "start";
+  if (t === "__VOCAB__") return t;
+  if (t.startsWith("@")) return `@${t.slice(1).toLowerCase()}`;
+  return `@${t.toLowerCase()}`;
+}
+
+export function assertEntityId(raw: string, line = 1): string {
+  const t = raw.trim();
+  if (isSystemEntityId(t)) return t;
+  if (t === "@start") throw new ParseError(makeIssue("E040", "error", { id: t }, { file: FILE, line, column: 1 }));
+  if (isCanonicalEntityId(t)) return t;
+  throw new ParseError(makeIssue("E040", "error", { id: t || raw }, { file: FILE, line, column: 1 }));
 }
 
 export function cloneEntity(entity: Entity): Entity {
@@ -279,7 +309,7 @@ export function parseDottedEntity(line: string, startLine = 1): Entity {
   const tokens = tokenize(trimmed, { file: FILE, startLine });
   const cur = new TokenCursor(tokens);
   const idTok = cur.expect("IDENT", FILE, "esperado id de entidade");
-  const entity = createEmptyEntity(idTok.value);
+  const entity = createEmptyEntity(assertEntityId(idTok.value, startLine));
   while (cur.at("DOT")) {
     cur.consume();
     const keyTok = cur.expect("IDENT", FILE, "esperado tag, stat ou link");
@@ -364,7 +394,8 @@ export function isLinkTarget(raw: string): boolean {
   const t = unquote(raw).trim();
   if (!t) return false;
   if (/^#[0-9A-Fa-f]{4}$/.test(t)) return true;
-  return /^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(t);
+  if (isCanonicalEntityId(t) || isSystemEntityId(t)) return true;
+  return false;
 }
 
 function quoteSingle(s: string): string {
@@ -473,13 +504,13 @@ function coerceListItem(raw: string): string | number {
 }
 
 export function formatFuseValue(raw: string): string | null {
-  const m = raw.trim().match(/^(-?\d+)(?:\s*[.>:→]\s*([\p{L}_][\p{L}\p{N}\p{M}_]*))?$/u);
+  const m = raw.trim().match(/^(-?\d+)(?:\s*[.>:→]\s*(@?[\p{L}_][\p{L}\p{N}\p{M}_]*))?$/u);
   if (!m) return null;
   return m[2] ? `${m[1]}>${m[2]}` : m[1]!;
 }
 
 function parseFuse(raw: string, line: number): TickFuse {
-  const m = raw.trim().match(/^(-?\d+)(?:\s*[>→:]\s*([\p{L}_][\p{L}\p{N}\p{M}_]*))?$/u);
+  const m = raw.trim().match(/^(-?\d+)(?:\s*[>→:]\s*(@?[\p{L}_][\p{L}\p{N}\p{M}_]*))?$/u);
   if (!m) fail(`fuse inválido: ${raw}`, line);
   return { remaining: Number(m[1]), targetId: m[2] ?? "" };
 }
@@ -612,7 +643,7 @@ export function preprocessEntityFile(source: string): { defs: EntityDef[] } {
       i += 1;
       continue;
     }
-    const block = trimmed.match(/^([\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{(.*)$/u);
+    const block = trimmed.match(/^(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{(.*)$/u);
     if (block) {
       const id = block[1]!;
       const startLine = i + 1;
@@ -656,8 +687,8 @@ export function preprocessEntityFile(source: string): { defs: EntityDef[] } {
 export function parseEntityLine(source: string, startLine = 1): Entity {
   const trimmed = source.trim();
   if (isStartDecl(trimmed)) return makeStartEntity();
-  const block = trimmed.match(/^([\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{([\s\S]*)\}\s*$/u);
-  if (block) return parseBlockEntity(block[1]!, block[2] ?? "", startLine);
+  const block = trimmed.match(/^(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\.\s*\{([\s\S]*)\}\s*$/u);
+  if (block) return parseBlockEntity(assertEntityId(block[1]!, startLine), block[2] ?? "", startLine);
   return parseDottedEntity(source, startLine);
 }
 
@@ -683,6 +714,7 @@ export function compileEntityFile(source: string): { worldModel: WorldModel; err
       else errors.push(makeIssue("E000", "error", { detail: err instanceof Error ? err.message : String(err) }, { file: FILE, line: def.startLine, column: 1 }));
     }
   }
+  if (!worldModel.has("start")) worldModel.set("start", makeStartEntity());
   for (const entity of worldModel.values()) {
     for (const [key, target] of Object.entries(entity.links)) {
       if (!isLiveLinkTarget(target)) continue;
@@ -859,8 +891,11 @@ export function serializeEntityBlock(entity: Entity): string {
 }
 
 export function blankEntityBlock(id: string): string {
-  if (id.toLowerCase() === "start") return "start()";
-  return `${id}.{
+  if (id.toLowerCase() === "start" || id.toLowerCase() === "@start") return "start()";
+  const canonical = isCanonicalEntityId(id) ? id : canonicalEntityId(id);
+  const code = shortCodeFromSlug(canonical);
+  return `${canonical}.{
+  id: ${code};
   name: ;
   description: ;
   tags: ;

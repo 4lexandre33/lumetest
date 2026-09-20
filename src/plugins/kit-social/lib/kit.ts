@@ -13,14 +13,14 @@ ${CATEGORY_LINES}
 
 export const SOCIAL_RULES = `# talk cold
 ON: *.agent
-IF: JOGADOR.intent=talk
+IF: @jogador.intent=talk
 IF: $.mood=0
 SEMANTIC: agency
 narrativa: "{$.name} encara-te em silêncio."
 
 # talk social
 ON: *.agent
-IF: JOGADOR.intent=talk
+IF: @jogador.intent=talk
 IF: $.mood>=0
 DO: $.mood+1
     (link $.rel).affinity+1
@@ -29,14 +29,14 @@ narrativa: "{$.name} aquece um pouco."
 
 # communicate cold
 ON: *.agent
-IF: JOGADOR.intent=communicate
+IF: @jogador.intent=communicate
 IF: $.mood=0
 SEMANTIC: agency
 narrativa: "{$.name} encara-te em silêncio."
 
 # communicate social
 ON: *.agent
-IF: JOGADOR.intent=communicate
+IF: @jogador.intent=communicate
 IF: $.mood>=0
 DO: $.mood+1
     (link $.rel).affinity+1
@@ -45,7 +45,7 @@ narrativa: "{$.name} aquece um pouco."
 
 # tell social
 ON: *.agent
-IF: JOGADOR.intent=tell
+IF: @jogador.intent=tell
 IF: $.mood>=0
 DO: (link $.rel).affinity+1
 SEMANTIC: cognition
@@ -53,7 +53,7 @@ narrativa: "{$.name} guarda o que ouviu."
 
 # attack mood
 ON: *.agent
-IF: JOGADOR.intent=attack
+IF: @jogador.intent=attack
 IF: $.mood>=0
 DO: $.mood - 1
 SEMANTIC: agency

@@ -50,7 +50,7 @@ export type CreateGameOptions = { seed?: string };
 export function createGame(
   worldModel: WorldModel,
   rules: readonly Rule[],
-  playerEntityId = "JOGADOR",
+  playerEntityId = "@jogador",
   taxonomy: CompiledTaxonomy = EMPTY_TAXONOMY,
   patterns: readonly SiftPattern[] = [],
   options: CreateGameOptions = {},

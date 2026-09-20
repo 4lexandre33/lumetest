@@ -2,7 +2,7 @@
 
 import type { VocabDescriptor, VocabFlag, VocabPronoun } from "../types.ts";
 
-export const PLAYER_REF = "JOGADOR";
+export const PLAYER_REF = "@jogador";
 
 export type LanguageSeed = {
   raw: string;

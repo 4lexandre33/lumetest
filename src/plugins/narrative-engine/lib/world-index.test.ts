@@ -9,10 +9,10 @@ import { applyChannelKit } from "../../kit-channel/lib/kit.ts";
 describe("world index and dialogue dead-ends", () => {
   it("lists rooms objects agents rules tags channels and patterns", () => {
     const project = createProject("idx", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; }
-CHAVE.{ tags: object; links: current_location=SALA; }
-ECONOMIA.{ tags: channel; stats: state=0; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; }
+@chave.{ tags: object; links: current_location=@sala; }
+@economia.{ tags: channel; stats: state=0; }
 start()
 `,
       rulesSource: `# start
@@ -29,27 +29,27 @@ nome: Vitória
     const compiled = compileProject(project);
     assert.equal(compiled.errors.length, 0);
     const index = buildWorldIndex(compiled.worldModel, compiled.rules, compiled.patterns, compiled.taxonomy);
-    assert.deepEqual(index.places, ["SALA"]);
-    assert.deepEqual(index.objects, ["CHAVE"]);
-    assert.deepEqual(index.agents, ["JOGADOR"]);
+    assert.deepEqual(index.places, ["@sala"]);
+    assert.deepEqual(index.objects, ["@chave"]);
+    assert.deepEqual(index.agents, ["@jogador"]);
     assert.ok(index.rules.some((r) => r.id === "start"));
     assert.ok(index.tags.includes("place"));
-    assert.deepEqual(index.channels, ["ECONOMIA"]);
+    assert.deepEqual(index.channels, ["@economia"]);
     assert.deepEqual(index.patterns, ["vitoria"]);
     const md = formatWorldIndex(index);
     assert.match(md, /## Salas/);
-    assert.match(md, /- SALA/);
+    assert.match(md, /- @sala/);
     assert.match(md, /## Padrões/);
   });
 
   it("warns on topic without ask, missing conv, one-state channel, vivo without reaction", () => {
     const project = createProject("becos", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; }
-SEGREDO.{ tags: topic; }
-NPC.{ tags: agent; links: conv=FANTASMA; }
-ECONOMIA.{ tags: channel; stats: state=0; }
-GOBLIN.{ tags: agent, vivo; links: current_location=SALA; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; }
+@segredo.{ tags: topic; }
+@npc.{ tags: agent; links: conv=@fantasma; }
+@economia.{ tags: channel; stats: state=0; }
+@goblin.{ tags: agent, vivo; links: current_location=@sala; }
 start()
 `,
       rulesSource: `# start
@@ -57,7 +57,7 @@ ON: start
 narrativa: "ok"
 
 # channel one
-ON: ECONOMIA
+ON: @economia
 narrativa: "um estado"
 `,
       taxonomySource: `topic → information
@@ -66,22 +66,22 @@ channel → abstract
     });
     const compiled = compileProject(project);
     const issues = validateWorld(compiled.worldModel, compiled.rules, compiled.taxonomy);
-    assert.ok(issues.some((i) => i.code === "W010" && i.message.includes("SEGREDO")));
-    assert.ok(issues.some((i) => i.code === "W011" && i.message.includes("FANTASMA")));
-    assert.ok(issues.some((i) => i.code === "W012" && i.message.includes("ECONOMIA")));
-    assert.ok(issues.some((i) => i.code === "W013" && i.message.includes("GOBLIN")));
-    assert.equal(compiled.worldModel.get("SEGREDO")?.tags.has("topic"), true);
+    assert.ok(issues.some((i) => i.code === "W010" && i.message.includes("@segredo")));
+    assert.ok(issues.some((i) => i.code === "W011" && i.message.includes("@fantasma")));
+    assert.ok(issues.some((i) => i.code === "W012" && i.message.includes("@economia")));
+    assert.ok(issues.some((i) => i.code === "W013" && i.message.includes("@goblin")));
+    assert.equal(compiled.worldModel.get("@segredo")?.tags.has("topic"), true);
   });
 
   it("is silent when ask conv channel and vivo are covered", () => {
     let project = createProject("ok", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; }
-SEGREDO.{ tags: topic; }
-NO.{ tags: information; }
-NPC.{ tags: agent; links: conv=NO; }
-ECONOMIA.{ tags: channel; stats: state=0; }
-GOBLIN.{ tags: agent, vivo; links: current_location=SALA; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; }
+@segredo.{ tags: topic; }
+@no.{ tags: information; }
+@npc.{ tags: agent; links: conv=@no; }
+@economia.{ tags: channel; stats: state=0; }
+@goblin.{ tags: agent, vivo; links: current_location=@sala; }
 start()
 `,
       rulesSource: `# start
@@ -89,12 +89,12 @@ ON: start
 narrativa: "ok"
 
 # ask secret
-ON: SEGREDO
-IF: JOGADOR.intent=ask
+ON: @segredo
+IF: @jogador.intent=ask
 narrativa: "conta"
 
 # goblin
-ON: GOBLIN
+ON: @goblin
 narrativa: "grita"
 `,
       taxonomySource: `topic → information

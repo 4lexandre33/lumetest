@@ -10,53 +10,53 @@ import type { AgencyService } from "../../types.ts";
 
 describe("Agency", () => {
   it("maps INTENT args onto catalog commands", () => {
-    assert.deepEqual(commandFromEffectArgs(["GOBLIN", "attack", "JOGADOR"]), {
-      actor: "GOBLIN",
-      command: "intent.action.interact.attack.JOGADOR",
+    assert.deepEqual(commandFromEffectArgs(["@goblin", "attack", "@jogador"]), {
+      actor: "@goblin",
+      command: "intent.action.interact.attack.@jogador",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "move", "CAVERNA"]), {
-      actor: "JOGADOR",
-      command: "intent.action.move.CAVERNA",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "move", "@caverna"]), {
+      actor: "@jogador",
+      command: "intent.action.move.@caverna",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "observe", "local"]), {
-      actor: "JOGADOR",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "observe", "local"]), {
+      actor: "@jogador",
       command: "intent.perceive.observe.local",
     });
-    assert.deepEqual(commandFromEffectArgs(["GOBLIN", "intent", "action", "wait"]), {
-      actor: "GOBLIN",
+    assert.deepEqual(commandFromEffectArgs(["@goblin", "intent", "action", "wait"]), {
+      actor: "@goblin",
       command: "intent.action.wait",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "go", "SALA"]), {
-      actor: "JOGADOR",
-      command: "intent.action.go.SALA",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "go", "@sala"]), {
+      actor: "@jogador",
+      command: "intent.action.go.@sala",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "look"]), {
-      actor: "JOGADOR",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "look"]), {
+      actor: "@jogador",
       command: "intent.action.look",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "inventory"]), {
-      actor: "JOGADOR",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "inventory"]), {
+      actor: "@jogador",
       command: "intent.action.inventory",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "drop", "ESPADA"]), {
-      actor: "JOGADOR",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "drop", "ESPADA"]), {
+      actor: "@jogador",
       command: "intent.action.interact.drop.ESPADA",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "put", "ESPADA", "CAIXA"]), {
-      actor: "JOGADOR",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "put", "ESPADA", "CAIXA"]), {
+      actor: "@jogador",
       command: "intent.action.interact.put.ESPADA.CAIXA",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "ask", "GOBLIN", "CHAVE"]), {
-      actor: "JOGADOR",
-      command: "intent.action.interact.ask.GOBLIN.CHAVE",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "ask", "@goblin", "CHAVE"]), {
+      actor: "@jogador",
+      command: "intent.action.interact.ask.@goblin.CHAVE",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "tell", "GOBLIN", "CHAVE"]), {
-      actor: "JOGADOR",
-      command: "intent.action.interact.tell.GOBLIN.CHAVE",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "tell", "@goblin", "CHAVE"]), {
+      actor: "@jogador",
+      command: "intent.action.interact.tell.@goblin.CHAVE",
     });
-    assert.deepEqual(commandFromEffectArgs(["JOGADOR", "bye", "GOBLIN"]), {
-      actor: "JOGADOR",
-      command: "intent.action.interact.bye.GOBLIN",
+    assert.deepEqual(commandFromEffectArgs(["@jogador", "bye", "@goblin"]), {
+      actor: "@jogador",
+      command: "intent.action.interact.bye.@goblin",
     });
   });
 
@@ -78,10 +78,10 @@ describe("Agency", () => {
 
   it("INTENT in DO dispatches through IntentEngine with source script", () => {
     const project = narrative.createProject("agency", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: ; links: current_location=SALA; }
-SALA.{ tags: place; stats: ; links: ; }
-CAVERNA.{ tags: place; stats: ; links: ; }
-SINAL.{ tags: event; stats: ; links: ; }
+      entitiesSource: `@jogador.{ tags: agent; stats: ; links: current_location=@sala; }
+@sala.{ tags: place; stats: ; links: ; }
+@caverna.{ tags: place; stats: ; links: ; }
+@sinal.{ tags: event; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -90,34 +90,34 @@ narrativa: "ok"
 
 # mover
 ON: *.place
-DO: JOGADOR.current_location=$
+DO: @jogador.current_location=$
 narrativa: "foi a {$.name}"
 
 # sinal
-ON: SINAL
-DO: INTENT JOGADOR.move.CAVERNA
+ON: @sinal
+DO: INTENT @jogador.move.@caverna
 narrativa: "sinal"
 `,
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(
-      narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy),
+      narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy),
     );
-    game = narrative.interact(game, "SINAL");
-    assert.equal(game.worldModel.get("JOGADOR")?.links.current_location, "CAVERNA");
-    assert.equal(game.worldModel.get("JOGADOR")?.links.intent, undefined);
-    const mapped = agency.commandFromEffect(["JOGADOR", "move", "CAVERNA"]);
-    assert.equal(mapped?.command, "intent.action.move.CAVERNA");
+    game = narrative.interact(game, "@sinal");
+    assert.equal(game.worldModel.get("@jogador")?.links.current_location, "@caverna");
+    assert.equal(game.worldModel.get("@jogador")?.links.intent, undefined);
+    const mapped = agency.commandFromEffect(["@jogador", "move", "@caverna"]);
+    assert.equal(mapped?.command, "intent.action.move.@caverna");
   });
 
   it("does not execute an invalid intent from a rule", () => {
     const project = narrative.createProject("fail", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: ; links: current_location=SALA; }
-SALA.{ tags: place; stats: ; links: ; }
-GOBLIN.{ tags: agent; stats: ; links: current_location=CAVERNA; }
-CAVERNA.{ tags: place; stats: ; links: ; }
-SINAL.{ tags: event; stats: ; links: ; }
+      entitiesSource: `@jogador.{ tags: agent; stats: ; links: current_location=@sala; }
+@sala.{ tags: place; stats: ; links: ; }
+@goblin.{ tags: agent; stats: ; links: current_location=@caverna; }
+@caverna.{ tags: place; stats: ; links: ; }
+@sinal.{ tags: event; stats: ; links: ; }
 start()
 `,
       taxonomySource: "goblin → monster\nmonster → agent\n",
@@ -126,18 +126,18 @@ ON: start
 narrativa: "ok"
 
 # sinal
-ON: SINAL
-DO: INTENT JOGADOR.attack.GOBLIN
+ON: @sinal
+DO: INTENT @jogador.attack.@goblin
 narrativa: "tenta"
 `,
     });
     const compiled = narrative.compileProject(project);
     let game = narrative.bootGame(
-      narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy),
+      narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy),
     );
-    const loc = game.worldModel.get("JOGADOR")!.links.current_location;
-    game = narrative.interact(game, "SINAL");
-    assert.equal(game.worldModel.get("JOGADOR")?.links.current_location, loc);
-    assert.equal(game.worldModel.get("GOBLIN")?.links.current_location, "CAVERNA");
+    const loc = game.worldModel.get("@jogador")!.links.current_location;
+    game = narrative.interact(game, "@sinal");
+    assert.equal(game.worldModel.get("@jogador")?.links.current_location, loc);
+    assert.equal(game.worldModel.get("@goblin")?.links.current_location, "@caverna");
   });
 });

@@ -33,18 +33,18 @@ describe('Reactive Compilation & Preview Orchestration', () => {
 
     // 2. Set complete story
     const validEntities = `
-JOGADOR.{
+@jogador.{
 tags: agent;
 stats: hp=100;
-links: current_location=SALA;
+links: current_location=@sala;
 }
-BAU.{
+@bau.{
 tags: object;
 stats: gold=100;
-links: current_location=SALA;
+links: current_location=@sala;
 name: Baú Mágico;
 }
-SALA.{
+@sala.{
 tags: place;
 stats: ;
 links: ;
@@ -58,9 +58,9 @@ ON: start
 narrativa: "Começo da jornada."
 
 # open
-ON: BAU
-DO: JOGADOR.hp+20
-    BAU.gold=0
+ON: @bau
+DO: @jogador.hp+20
+    @bau.gold=0
 narrativa: "Você abriu o baú mágico!"
 `;
 
@@ -76,7 +76,7 @@ narrativa: "Você abriu o baú mágico!"
     assert.equal(s.game.history.length, 1); // boot starts with start() beat
 
     // 3. Play interaction
-    store.getState().interact('BAU');
+    store.getState().interact('@bau');
     assert.equal(store.getState().game?.history.length, 2);
     assert.match(store.getState().game?.story ?? '', /baú mágico/);
 

@@ -7,6 +7,7 @@ export function Guide() {
   const [i, setI] = useState(0);
   const skipGuide = useIdeStore((s) => s.skipGuide);
   const openExample = useIdeStore((s) => s.openExample);
+  const openReference = useIdeStore((s) => s.openReference);
   const slide = GUIDE_SLIDES[i]!;
   const last = i === GUIDE_SLIDES.length - 1;
 
@@ -35,12 +36,17 @@ export function Guide() {
           </Button>
         ) : null}
         {last ? (
-          <Button
-            variant="default"
-            onClick={() => openExample("planetarium")}
-          >
-            Abrir o planetário
-          </Button>
+          <>
+            <Button variant="outline" onClick={openReference}>
+              Rever guia
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => openExample("planetarium")}
+            >
+              Abrir o planetário
+            </Button>
+          </>
         ) : (
           <Button variant="default" onClick={() => setI(i + 1)}>
             Seguinte

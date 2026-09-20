@@ -14,7 +14,7 @@ NarrativeEngine, RuleEffects
 
 ## Idioma
 ```
-DO: WAIT 3.FUSE_PORTA
+DO: WAIT 3.@fuse_porta
 DO: TICK
 ```
 `WAIT n.id` cria/atualiza entidade `tags: process` com `remaining=n`.

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { completeAt, collectVocabulary, highlightSource, offsetOfLine, blankEntityBlock, fieldListShouldComma, underlinesFor, tabAfterKeyword, indentOnEnter, type CompletionItem, type SourceKind } from "../../../narrative-engine/lib/index.ts";
+import { completeAt, collectVocabulary, highlightSource, offsetOfLine, fieldListShouldComma, underlinesFor, tabAfterKeyword, indentOnEnter, expandEntityDecl, type CompletionItem, type SourceKind } from "../../../narrative-engine/lib/index.ts";
 import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
 import { cn } from "../utils.ts";
 
@@ -105,37 +105,12 @@ export function SourceEditor({
 
   function expandEntityTemplate(ta: HTMLTextAreaElement): boolean {
     if (kind !== "entities") return false;
-    const pos = ta.selectionStart;
-    const lineStart = value.lastIndexOf("\n", pos - 1) + 1;
-    const before = value.slice(lineStart, pos);
-    const m = before.trim().match(/^([\p{L}_][\p{L}\p{N}\p{M}_]*)\.$/u);
-    if (m) {
-      const id = m[1]!;
-      if (id.toLowerCase() === "start") {
-        const next = value.slice(0, pos - 1) + "()" + value.slice(ta.selectionEnd);
-        caretRef.current = pos + 1;
-        onChange(next);
-        requestAnimationFrame(() => placeCaret(pos + 1));
-        return true;
-      }
-      const block = blankEntityBlock(id);
-      const insert = block.slice(id.length + 1);
-      const next = value.slice(0, pos) + insert + value.slice(ta.selectionEnd);
-      const nameAt = insert.indexOf("name: ");
-      const caret = nameAt >= 0 ? pos + nameAt + "name: ".length : pos + insert.length;
-      caretRef.current = caret;
-      onChange(next);
-      requestAnimationFrame(() => placeCaret(caret));
-      return true;
-    }
-    if (/^start$/i.test(before.trim())) {
-      const next = value.slice(0, pos) + "()" + value.slice(ta.selectionEnd);
-      caretRef.current = pos + 2;
-      onChange(next);
-      requestAnimationFrame(() => placeCaret(pos + 2));
-      return true;
-    }
-    return false;
+    const out = expandEntityDecl(value, ta.selectionStart);
+    if (!out) return false;
+    caretRef.current = out.caret;
+    onChange(out.source);
+    requestAnimationFrame(() => placeCaret(out.caret));
+    return true;
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {

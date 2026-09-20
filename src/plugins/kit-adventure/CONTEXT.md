@@ -25,7 +25,7 @@ Tag `topic → information`. Convenção de estado: `falando` no agente. ConvNod
 - Não migrar Caverna/Planetário
 - Não tick, sentidos, NLP
 - Não ConversationEngine / ConvNode engine
-- Não TakeEngine — o autor ganha por especificidade (`ON: PORTA_SANGRENTA`, `ON: GOBLIN`)
+- Não TakeEngine — o autor ganha por especificidade (`ON: PORTA_SANGRENTA`, `ON: @goblin`)
 
 ## Fora de âmbito
 Contenção → spatial. Scope → senses. Catálogo de tokens `drop`/`put`/`ask`/`tell`/… → intent-engine. Humor/relação → `kit-social`.

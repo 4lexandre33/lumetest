@@ -81,7 +81,7 @@ describe('Lume EMPA Platform Final Cutover & Kernel Verification', () => {
 
     // Functional Smoke Test across decoupled plugins
     const proj = services.narrativeEngine.createProject('Final EMPA Verification', {
-      entitiesSource: 'HERO.{\ntags: agent;\n}\nstart()\n',
+      entitiesSource: '@hero.{\ntags: agent;\n}\nstart()\n',
       rulesSource: '# start\nON: start\nnarrativa: "Kernel ativo e operante."\n'
     });
 

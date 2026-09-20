@@ -39,7 +39,7 @@ describe("Vocab", () => {
   });
 
   it("template: direction, number cache, me, specials; nlp still unused", () => {
-    assert.equal(PLAYER_REF, "JOGADOR");
+    assert.equal(PLAYER_REF, "@jogador");
     assert.equal(vocab.lookup("norte")?.flags.includes("direction"), true);
     assert.equal(vocab.lookup("norte")?.direction, "norte");
     assert.equal(lookup("North")?.direction, "norte");

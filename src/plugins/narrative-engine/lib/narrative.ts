@@ -7,6 +7,7 @@ const extraKeywords: Record<string, (id: string, world: WorldModel) => string> =
 
 export function humanizeEntityId(id: string): string {
   return id
+    .replace(/^@/, "")
     .split("_")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -42,7 +43,7 @@ export function voiceOf(world: WorldModel, triggerId: string, playerId?: string)
   const raw =
     world.get(triggerId)?.extra?.voice ??
     (playerId ? world.get(playerId)?.extra?.voice : undefined) ??
-    world.get("NARRADOR")?.extra?.voice ??
+    world.get("@narrador")?.extra?.voice ??
     "";
   return raw.trim().toLowerCase();
 }

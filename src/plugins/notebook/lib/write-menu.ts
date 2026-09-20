@@ -1,7 +1,24 @@
 import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/lib/types.ts";
-import { formatStatInput, isLinkTarget } from "../../narrative-engine/lib/world-model.ts";
+import { formatStatInput, isCanonicalEntityId, isLinkTarget, canonicalEntityId } from "../../narrative-engine/lib/world-model.ts";
 
 export { FBE_DRAWERS, type FbeDrawer, isLinkTarget, formatStatInput };
+
+function foldId(raw: string): string {
+  return raw.replace(/^@/, "").toLocaleLowerCase();
+}
+
+export function emitEntityId(raw: string, knownIds?: readonly string[]): string {
+  const t = raw.trim();
+  if (!t || t === "start" || t === "$") return t;
+  if (/^#[0-9A-Fa-f]{4}$/.test(t)) return t;
+  if (knownIds) {
+    const folded = foldId(t);
+    const hit = knownIds.find((id) => foldId(id) === folded);
+    if (hit && isCanonicalEntityId(hit)) return hit;
+  }
+  if (isCanonicalEntityId(t)) return t;
+  return canonicalEntityId(t);
+}
 
 export function cadernoLive(mode: "write" | "play"): boolean {
   return mode === "write";
@@ -82,8 +99,9 @@ export function insertRegrasSection(source: string, offset: number): { source: s
 export function entityGuess(quote: string, ids: readonly string[]): string {
   const t = quote.trim();
   if (!t) return ids[0] ?? "";
-  const folded = t.toLocaleUpperCase();
-  return ids.find((id) => id === t || id.toLocaleUpperCase() === folded) ?? ids[0] ?? "";
+  const folded = foldId(t);
+  const hit = ids.find((id) => foldId(id) === folded);
+  return hit && isCanonicalEntityId(hit) ? hit : emitEntityId(t, ids);
 }
 
 export function keysOfDrawer(entity: DrawerHost | undefined, drawer: FbeDrawer): string[] {

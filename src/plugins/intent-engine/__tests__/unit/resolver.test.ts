@@ -13,7 +13,7 @@ const q: QueryFn = (matcher, world, triggerId, taxonomy) =>
 function goblinGame(): GameState {
   const compiled = compileProject(createExampleProject("goblin-cave"));
   assert.equal(compiled.errors.length, 0);
-  return createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy);
+  return createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy);
 }
 
 function movePlayer(game: GameState, place: string): GameState {
@@ -45,7 +45,7 @@ narrativa: "alguém."
     }),
   );
   assert.equal(compiled.errors.length, 0);
-  return createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy);
+  return createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy);
 }
 
 describe("Intent resolver (Query + Taxonomy)", () => {
@@ -56,7 +56,7 @@ describe("Intent resolver (Query + Taxonomy)", () => {
 
   it("at the cave mouth, take suggests the torch and omits attack", () => {
     const game = goblinGame();
-    assert.equal(game.worldModel.get("JOGADOR")?.links.current_location, "ENTRADA");
+    assert.equal(game.worldModel.get("@jogador")?.links.current_location, "@entrada");
 
     const interact = tokens("intent.action.interact.", game);
     assert.ok(interact.includes("take"));
@@ -71,77 +71,77 @@ describe("Intent resolver (Query + Taxonomy)", () => {
     assert.ok(!interact.includes("lock"));
     assert.ok(!interact.includes("unlock"));
 
-    assert.deepEqual(tokens("intent.action.interact.take.", game), ["TOCHA"]);
+    assert.deepEqual(tokens("intent.action.interact.take.", game), ["@tocha"]);
     assert.deepEqual(tokens("intent.action.interact.attack.", game), []);
-    assert.equal(resolveIntent("intent.action.interact.attack.GOBLIN", game, q).status, "TARGET_UNAVAILABLE");
+    assert.equal(resolveIntent("intent.action.interact.attack.@goblin", game, q).status, "TARGET_UNAVAILABLE");
   });
 
   it("move lists other places, not the current one", () => {
     const game = goblinGame();
     const places = tokens("intent.action.move.", game);
-    assert.deepEqual(places.slice().sort(), ["CAVERNA", "TRILHA"]);
-    assert.ok(!places.includes("ENTRADA"));
-    assert.deepEqual(tokens("intent.action.go.", game).slice().sort(), ["CAVERNA", "TRILHA"]);
+    assert.deepEqual(places.slice().sort(), ["@caverna", "@trilha"]);
+    assert.ok(!places.includes("@entrada"));
+    assert.deepEqual(tokens("intent.action.go.", game).slice().sort(), ["@caverna", "@trilha"]);
   });
 
-  it("after moving to the cave, attack suggests GOBLIN via goblin → monster", () => {
-    const game = movePlayer(goblinGame(), "CAVERNA");
+  it("after moving to the cave, attack suggests @goblin via goblin → monster", () => {
+    const game = movePlayer(goblinGame(), "@caverna");
     const interact = tokens("intent.action.interact.", game);
     assert.ok(interact.includes("attack"));
     assert.ok(interact.includes("talk"));
-    assert.deepEqual(tokens("intent.action.interact.attack.", game), ["GOBLIN"]);
+    assert.deepEqual(tokens("intent.action.interact.attack.", game), ["@goblin"]);
     assert.equal(suggestIntent("intent.action.interact.attack.", game, q)[0]?.label, "Goblin");
 
-    const resolved = resolveIntent("intent.action.interact.attack.GOBLIN", game, q);
+    const resolved = resolveIntent("intent.action.interact.attack.@goblin", game, q);
     assert.equal(resolved.status, "VALID");
-    assert.equal(resolved.resolvedArgs?.target, "GOBLIN");
+    assert.equal(resolved.resolvedArgs?.target, "@goblin");
   });
 
   it("filters operations by prefix only after applying world context", () => {
     const entrance = goblinGame();
     assert.deepEqual(tokens("intent.action.interact.t", entrance), ["take"]);
-    const cave = movePlayer(goblinGame(), "CAVERNA");
+    const cave = movePlayer(goblinGame(), "@caverna");
     assert.deepEqual(tokens("intent.action.interact.t", cave).sort(), ["take", "talk", "tell"]);
   });
 
   it("requires taxonomy inheritance for generic monster matching", () => {
-    const entities = `JOGADOR.{
+    const entities = `@jogador.{
 tags: agent;
-links: current_location=CAVERNA;
+links: current_location=@caverna;
 }
-CAVERNA.{
+@caverna.{
 tags: place;
 }
-GOBLIN.{
+@goblin.{
 tags: goblin;
-links: current_location=CAVERNA;
+links: current_location=@caverna;
 }
 `;
     const withoutTaxonomy = compileGame(entities, "");
     assert.deepEqual(tokens("intent.action.interact.attack.", withoutTaxonomy), []);
 
     const withTaxonomy = compileGame(entities, "goblin → monster\nmonster → agent\n");
-    assert.deepEqual(tokens("intent.action.interact.attack.", withTaxonomy), ["GOBLIN"]);
-    assert.ok(tokens("intent.action.interact.talk.", withTaxonomy).includes("GOBLIN"));
+    assert.deepEqual(tokens("intent.action.interact.attack.", withTaxonomy), ["@goblin"]);
+    assert.ok(tokens("intent.action.interact.talk.", withTaxonomy).includes("@goblin"));
   });
 
   it("does not pick an ambiguous goblin silently", () => {
     const game = compileGame(
-      `JOGADOR.{
+      `@jogador.{
 tags: agent;
-links: current_location=CAVERNA;
+links: current_location=@caverna;
 }
-CAVERNA.{
+@caverna.{
 tags: place;
 }
-GOBLIN_01.{
+@goblin_01.{
 tags: goblin;
-links: current_location=CAVERNA;
+links: current_location=@caverna;
 name: Goblin;
 }
-GOBLIN_02.{
+@goblin_02.{
 tags: goblin;
-links: current_location=CAVERNA;
+links: current_location=@caverna;
 name: Goblin;
 }
 `,
@@ -150,9 +150,9 @@ name: Goblin;
     const suggestions = suggestIntent("intent.action.interact.attack.", game, q);
     assert.deepEqual(
       suggestions.map((s) => s.label).sort(),
-      ["Goblin (GOBLIN_01)", "Goblin (GOBLIN_02)"],
+      ["Goblin (@goblin_01)", "Goblin (@goblin_02)"],
     );
-    const resolved = resolveIntent("intent.action.interact.attack.GOBLIN", game, q);
+    const resolved = resolveIntent("intent.action.interact.attack.@goblin", game, q);
     assert.equal(resolved.status, "AMBIGUOUS");
     assert.equal(resolved.suggestions.length, 2);
   });
@@ -161,22 +161,22 @@ name: Goblin;
     const game = goblinGame();
     const observe = tokens("intent.perceive.observe.", game);
     assert.ok(observe.includes("local"));
-    assert.ok(observe.includes("TOCHA"));
-    assert.ok(observe.includes("ENTRADA"));
-    assert.ok(!observe.includes("GOBLIN"));
+    assert.ok(observe.includes("@tocha"));
+    assert.ok(observe.includes("@entrada"));
+    assert.ok(!observe.includes("@goblin"));
     assert.equal(resolveIntent("intent.perceive.observe.local", game, q).status, "VALID");
-    assert.equal(resolveIntent("intent.perceive.observe.GOBLIN", game, q).status, "TARGET_UNAVAILABLE");
+    assert.equal(resolveIntent("intent.perceive.observe.@goblin", game, q).status, "TARGET_UNAVAILABLE");
     assert.equal(resolveIntent("intent.perceive.locate.DRAGAO", game, q).status, "UNKNOWN");
   });
 
   it("does not mutate the world and wait stays valid without arguments", () => {
     const game = goblinGame();
-    const location = game.worldModel.get("JOGADOR")?.links.current_location;
-    const torchAt = game.worldModel.get("TOCHA")?.links.current_location;
-    suggestIntent("intent.action.interact.take.TOCHA", game, q);
+    const location = game.worldModel.get("@jogador")?.links.current_location;
+    const torchAt = game.worldModel.get("@tocha")?.links.current_location;
+    suggestIntent("intent.action.interact.take.@tocha", game, q);
     const resolved = resolveIntent("intent.action.wait", game, q);
     assert.equal(resolved.status, "VALID");
-    assert.equal(game.worldModel.get("JOGADOR")?.links.current_location, location);
-    assert.equal(game.worldModel.get("TOCHA")?.links.current_location, torchAt);
+    assert.equal(game.worldModel.get("@jogador")?.links.current_location, location);
+    assert.equal(game.worldModel.get("@tocha")?.links.current_location, torchAt);
   });
 });

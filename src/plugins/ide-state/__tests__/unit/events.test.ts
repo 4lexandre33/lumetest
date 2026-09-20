@@ -51,7 +51,7 @@ describe('IDE State Event Emissions', () => {
     assert.ok(compiledEvent);
     assert.ok(gameCreatedEvent);
 
-    store.getState().setEntities('PLAYER.{\ntags: agent;\n}\nstart()\n');
+    store.getState().setEntities('@player.{\ntags: agent;\n}\nstart()\n');
     assert.ok(userEditedEvent);
     assert.equal(userEditedEvent.sourceType, 'entities');
   });

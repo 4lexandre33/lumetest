@@ -7,7 +7,7 @@
 - `lib/rule-effects.ts` — registry de verbos DO (EMIT/KNOW/INTENT/…)
 - `lib/runtime.ts` — `interactWith`, rewind
 - `lib/dry-run.ts` — `dryRunWith` (mesmo matcher, sem mutar o vivo, sem RuleEffects)
-- `lib/world-model.ts` — entidades
+- `lib/world-model.ts` — entidades; id canónico `@slug` minúsculo (E040 se faltar `@` ou houver maiúsculas); `start` injectado
 - `lib/taxonomy.ts` / `lib/query.ts`
 - `lib/beat.ts` — `lastBeat` (intent, regra, candidatos, efeitos, vivo)
 - `lib/world-index.ts` — índice + avisos de beco (topic/conv/canal/vivo)

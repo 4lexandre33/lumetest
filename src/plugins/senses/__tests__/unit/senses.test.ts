@@ -46,80 +46,80 @@ describe("Senses", () => {
 
   it("hides contents of a closed container from sight and touch, not hearing", () => {
     const world = new Map<string, SenseEntity>([
-      ["SALA", entity("SALA", {}, ["place"])],
-      ["CAIXA", entity("CAIXA", { in: "SALA" }, ["object", "container"])],
-      ["CHAVE", entity("CHAVE", { in: "CAIXA" }, ["object"])],
-      ["JOGADOR", entity("JOGADOR", { current_location: "SALA" }, ["agent"])],
+      ["@sala", entity("@sala", {}, ["place"])],
+      ["@caixa", entity("@caixa", { in: "@sala" }, ["object", "container"])],
+      ["@chave", entity("@chave", { in: "@caixa" }, ["object"])],
+      ["@jogador", entity("@jogador", { current_location: "@sala" }, ["agent"])],
     ]);
-    assert.equal(senses.canSee(world, "JOGADOR", "CAIXA"), true);
-    assert.equal(senses.canSee(world, "JOGADOR", "CHAVE"), false);
-    assert.equal(senses.canTouch(world, "JOGADOR", "CHAVE"), false);
-    assert.equal(senses.canHear(world, "JOGADOR", "CHAVE"), true);
-    assert.equal(world.get("CHAVE")?.links.in, "CAIXA");
+    assert.equal(senses.canSee(world, "@jogador", "@caixa"), true);
+    assert.equal(senses.canSee(world, "@jogador", "@chave"), false);
+    assert.equal(senses.canTouch(world, "@jogador", "@chave"), false);
+    assert.equal(senses.canHear(world, "@jogador", "@chave"), true);
+    assert.equal(world.get("@chave")?.links.in, "@caixa");
   });
 
   it("reveals contents when the container is aberta", () => {
     const world = new Map<string, SenseEntity>([
-      ["SALA", entity("SALA", {}, ["place"])],
-      ["CAIXA", entity("CAIXA", { in: "SALA" }, ["object", "container", "aberta"])],
-      ["CHAVE", entity("CHAVE", { in: "CAIXA" }, ["object"])],
-      ["JOGADOR", entity("JOGADOR", { current_location: "SALA" }, ["agent"])],
+      ["@sala", entity("@sala", {}, ["place"])],
+      ["@caixa", entity("@caixa", { in: "@sala" }, ["object", "container", "aberta"])],
+      ["@chave", entity("@chave", { in: "@caixa" }, ["object"])],
+      ["@jogador", entity("@jogador", { current_location: "@sala" }, ["agent"])],
     ]);
-    assert.equal(senses.canSee(world, "JOGADOR", "CHAVE"), true);
-    assert.equal(senses.canTouch(world, "JOGADOR", "CHAVE"), true);
+    assert.equal(senses.canSee(world, "@jogador", "@chave"), true);
+    assert.equal(senses.canTouch(world, "@jogador", "@chave"), true);
   });
 
   it("does not light a dark room from a lantern inside a closed box", () => {
     const world = new Map<string, SenseEntity>([
-      ["SALA", entity("SALA", {}, ["place", "dark"])],
-      ["CAIXA", entity("CAIXA", { in: "SALA" }, ["object", "container"])],
-      ["LANTERNA", entity("LANTERNA", { in: "CAIXA" }, ["object", "lit"], { illumination: 8 })],
-      ["JOGADOR", entity("JOGADOR", { current_location: "SALA" }, ["agent"])],
+      ["@sala", entity("@sala", {}, ["place", "dark"])],
+      ["@caixa", entity("@caixa", { in: "@sala" }, ["object", "container"])],
+      ["LANTERNA", entity("LANTERNA", { in: "@caixa" }, ["object", "lit"], { illumination: 8 })],
+      ["@jogador", entity("@jogador", { current_location: "@sala" }, ["agent"])],
     ]);
-    assert.equal(senses.scope(world, "JOGADOR").lit, false);
-    assert.equal(senses.canSee(world, "JOGADOR", "CAIXA"), false);
-    assert.equal(senses.canSee(world, "JOGADOR", "LANTERNA"), false);
-    assert.equal(senses.canTouch(world, "JOGADOR", "CAIXA"), true);
+    assert.equal(senses.scope(world, "@jogador").lit, false);
+    assert.equal(senses.canSee(world, "@jogador", "@caixa"), false);
+    assert.equal(senses.canSee(world, "@jogador", "LANTERNA"), false);
+    assert.equal(senses.canTouch(world, "@jogador", "@caixa"), true);
   });
 
   it("lights a dark room when the lantern is held", () => {
     const world = new Map<string, SenseEntity>([
-      ["SALA", entity("SALA", {}, ["place", "dark"])],
-      ["CAIXA", entity("CAIXA", { in: "SALA" }, ["object", "container"])],
-      ["LANTERNA", entity("LANTERNA", { held_by: "JOGADOR" }, ["object", "lit"], { illumination: 8 })],
-      ["JOGADOR", entity("JOGADOR", { current_location: "SALA" }, ["agent"])],
+      ["@sala", entity("@sala", {}, ["place", "dark"])],
+      ["@caixa", entity("@caixa", { in: "@sala" }, ["object", "container"])],
+      ["LANTERNA", entity("LANTERNA", { held_by: "@jogador" }, ["object", "lit"], { illumination: 8 })],
+      ["@jogador", entity("@jogador", { current_location: "@sala" }, ["agent"])],
     ]);
-    assert.equal(senses.scope(world, "JOGADOR").lit, true);
-    assert.equal(senses.canSee(world, "JOGADOR", "CAIXA"), true);
-    assert.equal(senses.canSee(world, "JOGADOR", "LANTERNA"), true);
-    assert.equal(senses.visibleTo(world, "JOGADOR").includes("JOGADOR"), false);
+    assert.equal(senses.scope(world, "@jogador").lit, true);
+    assert.equal(senses.canSee(world, "@jogador", "@caixa"), true);
+    assert.equal(senses.canSee(world, "@jogador", "LANTERNA"), true);
+    assert.equal(senses.visibleTo(world, "@jogador").includes("@jogador"), false);
   });
 
   it("does not write can_see links", () => {
     const world = new Map<string, SenseEntity>([
-      ["SALA", entity("SALA", {}, ["place"])],
-      ["JOGADOR", entity("JOGADOR", { current_location: "SALA" }, ["agent"])],
+      ["@sala", entity("@sala", {}, ["place"])],
+      ["@jogador", entity("@jogador", { current_location: "@sala" }, ["agent"])],
     ]);
-    senses.scope(world, "JOGADOR");
-    senses.visibleTo(world, "JOGADOR");
-    assert.equal(world.get("JOGADOR")?.links.can_see, undefined);
-    assert.equal(world.get("SALA")?.links.can_see, undefined);
+    senses.scope(world, "@jogador");
+    senses.visibleTo(world, "@jogador");
+    assert.equal(world.get("@jogador")?.links.can_see, undefined);
+    assert.equal(world.get("@sala")?.links.can_see, undefined);
   });
 
   it("filters take/observe by scope and still lists the cave torch", () => {
     const compiled = narrative.compileProject(createExampleProject("goblin-cave"));
     assert.equal(compiled.errors.length, 0);
-    const game = createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy);
+    const game = createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy);
     const scope = (world: typeof game.worldModel, observer: string) => senses.scope(world, observer);
-    assert.deepEqual(suggestIntent("intent.action.interact.take.", game, q, { scope }).map((s) => s.token), ["TOCHA"]);
-    assert.equal(resolveIntent("intent.action.interact.take.TOCHA", game, q, { scope }).status, "VALID");
+    assert.deepEqual(suggestIntent("intent.action.interact.take.", game, q, { scope }).map((s) => s.token), ["@tocha"]);
+    assert.equal(resolveIntent("intent.action.interact.take.@tocha", game, q, { scope }).status, "VALID");
 
     const box = narrative.compileProject(
       narrative.createProject("caixa-opaca", {
-        entitiesSource: `SALA.{ tags: place; links: ; }
-CAIXA.{ tags: object, container; links: in=SALA; }
-CHAVE.{ tags: object; links: in=CAIXA; }
-JOGADOR.{ tags: agent; links: current_location=SALA; }
+        entitiesSource: `@sala.{ tags: place; links: ; }
+@caixa.{ tags: object, container; links: in=@sala; }
+@chave.{ tags: object; links: in=@caixa; }
+@jogador.{ tags: agent; links: current_location=@sala; }
 start()
 `,
         taxonomySource: "",
@@ -128,22 +128,22 @@ ON: start
 narrativa: "ok"
 
 ON: *.object
-IF: JOGADOR.intent=take
-DO: $.current_location=JOGADOR
+IF: @jogador.intent=take
+DO: $.current_location=@jogador
 narrativa: "pega"
 `,
       }),
     );
     assert.equal(box.errors.length, 0);
-    const boxed = createGame(box.worldModel, box.rules, "JOGADOR", box.taxonomy);
+    const boxed = createGame(box.worldModel, box.rules, "@jogador", box.taxonomy);
     const boxedScope = (world: typeof boxed.worldModel, observer: string) => senses.scope(world, observer);
     const take = suggestIntent("intent.action.interact.take.", boxed, q, { scope: boxedScope }).map((s) => s.token);
-    assert.ok(take.includes("CAIXA"));
-    assert.ok(!take.includes("CHAVE"));
-    assert.equal(resolveIntent("intent.action.interact.take.CHAVE", boxed, q, { scope: boxedScope }).status, "TARGET_UNAVAILABLE");
+    assert.ok(take.includes("@caixa"));
+    assert.ok(!take.includes("@chave"));
+    assert.equal(resolveIntent("intent.action.interact.take.@chave", boxed, q, { scope: boxedScope }).status, "TARGET_UNAVAILABLE");
     const look = executeIntent("intent.perceive.observe.local", boxed, q, interactWith, { scope: boxedScope });
     assert.equal(look.executed, true);
-    assert.equal(look.game.story.includes("CHAVE"), false);
-    assert.equal(look.game.worldModel.get("CHAVE")?.links.in, "CAIXA");
+    assert.equal(look.game.story.includes("@chave"), false);
+    assert.equal(look.game.worldModel.get("@chave")?.links.in, "@caixa");
   });
 });

@@ -136,6 +136,7 @@ function displayName(world: WorldModel, id: string): string {
   const named = entity?.name || entity?.extra?.name;
   if (named) return named;
   return id
+    .replace(/^@/, "")
     .split("_")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())

@@ -18,20 +18,20 @@ import {
 describe("play bundle export and replay", () => {
   it("roundtrips hash and replays the session", () => {
     const project = createProject("partilha", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: score=3; }\nPORTA.{ tags: object; }\nstart()\n`,
+      entitiesSource: `@jogador.{ tags: agent; stats: score=3; }\n@porta.{ tags: object; }\nstart()\n`,
       rulesSource: `# start
 ON: start
 narrativa: "ok"
 
 # porta
-ON: PORTA
+ON: @porta
 narrativa: "abre"
 `,
     });
     const compiled = compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy, [], { seed: "p12" }));
-    game = interactWith(game, "PORTA");
+    let game = bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy, [], { seed: "p12" }));
+    game = interactWith(game, "@porta");
     const bundle = buildPlayBundle(project, game);
     assert.equal(bundle.kind, PLAY_KIND);
     assert.equal(bundle.score, 3);
@@ -39,7 +39,7 @@ narrativa: "abre"
     assert.ok(bundle.session);
     const parsed = parsePlayBundle(JSON.parse(JSON.stringify(bundle)));
     assert.ok(parsed);
-    const replayed = replaySession(parsed.session!, compiled.rules, "JOGADOR", compiled.taxonomy, compiled.patterns);
+    const replayed = replaySession(parsed.session!, compiled.rules, "@jogador", compiled.taxonomy, compiled.patterns);
     assert.deepEqual(
       replayed.history.map((b) => b.story),
       game.history.map((b) => b.story),
@@ -56,7 +56,7 @@ narrativa: "abre"
     const cave = createExampleProject("goblin-cave");
     const before = cave.rulesSource;
     const compiled = compileProject(cave);
-    const game = bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    const game = bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
     const bundle = buildPlayBundle(cave, game);
     assert.equal(cave.rulesSource, before);
     assert.ok(bundle.beats.length >= 1);

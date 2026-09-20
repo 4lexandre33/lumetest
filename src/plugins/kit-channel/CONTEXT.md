@@ -14,18 +14,18 @@ NarrativeEngine (para o autor compilar o projecto)
 
 ## Idioma
 ```
-CORRUPCAO.{ tags: channel, economia; stats: state=0; }
+@corrupcao.{ tags: channel, economia; stats: state=0; }
 
-ON: GUARDA
-IF: JOGADOR.intent=give
-DO: THEN CORRUPCAO
+ON: @guarda
+IF: @jogador.intent=give
+DO: THEN @corrupcao
 
-ON: CORRUPCAO
-IF: CORRUPCAO.intent=advance
-DO: CORRUPCAO.corrupted
-    THEN CIDADE
+ON: @corrupcao
+IF: @corrupcao.intent=advance
+DO: @corrupcao.corrupted
+    THEN @cidade
 ```
-Tag `channel → abstract`. Stat `state` (opt-in: sem `state` as regras do kit não casam). Query `*.channel`. Avanço: `THEN CORRUPCAO` (interact, kit faz `state+1`) ou `$.intent=advance` no canal. Autor escreve `THEN CIDADE`; o kit **não** THEN outro canal.
+Tag `channel → abstract`. Stat `state` (opt-in: sem `state` as regras do kit não casam). Query `*.channel`. Avanço: `THEN @corrupcao` (interact, kit faz `state+1`) ou `$.intent=advance` no canal. Autor escreve `THEN @cidade`; o kit **não** THEN outro canal.
 
 `economia|politica|facoes` são dados no kit; só entram no projecto com `applyChannelKit`.
 

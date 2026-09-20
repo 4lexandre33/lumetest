@@ -13,13 +13,13 @@ const q: QueryFn = (matcher, world, triggerId, taxonomy) =>
 function goblinGame(): GameState {
   const compiled = compileProject(createExampleProject("goblin-cave"));
   assert.equal(compiled.errors.length, 0);
-  return createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy);
+  return createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy);
 }
 
 function planetGame(): GameState {
   const compiled = compileProject(createExampleProject("planetarium"));
   assert.equal(compiled.errors.length, 0);
-  return createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy);
+  return createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy);
 }
 
 function movePlayer(game: GameState, place: string): GameState {
@@ -35,37 +35,37 @@ function execute(text: string, game: GameState) {
 
 describe("example opt-in intent rules", () => {
   it("talk does not wake the sleeping goblin; attack does", () => {
-    const cave = movePlayer(goblinGame(), "CAVERNA");
-    const talked = execute("intent.action.interact.talk.GOBLIN", cave);
+    const cave = movePlayer(goblinGame(), "@caverna");
+    const talked = execute("intent.action.interact.talk.@goblin", cave);
     assert.equal(talked.executed, true);
     assert.equal(talked.game.lastRule?.id, "falar_com_goblin");
-    assert.equal(talked.game.worldModel.get("GOBLIN")?.tags.has("sleeping"), true);
+    assert.equal(talked.game.worldModel.get("@goblin")?.tags.has("sleeping"), true);
     assert.match(talked.game.story, /ronca/i);
 
-    const attacked = execute("intent.action.interact.attack.GOBLIN", cave);
+    const attacked = execute("intent.action.interact.attack.@goblin", cave);
     assert.equal(attacked.executed, true);
     assert.equal(attacked.game.lastRule?.id, "atacar_goblin");
-    assert.equal(attacked.game.worldModel.get("GOBLIN")?.tags.has("sleeping"), false);
-    assert.equal(cave.worldModel.get("GOBLIN")?.tags.has("sleeping"), true);
+    assert.equal(attacked.game.worldModel.get("@goblin")?.tags.has("sleeping"), false);
+    assert.equal(cave.worldModel.get("@goblin")?.tags.has("sleeping"), true);
   });
 
   it("legacy click without intent still wakes the goblin", () => {
     const game = goblinGame();
-    const next = interactWith(game, "GOBLIN");
+    const next = interactWith(game, "@goblin");
     assert.equal(next.lastRule?.id, "cutucar_goblin");
-    assert.equal(next.worldModel.get("GOBLIN")?.tags.has("sleeping"), false);
+    assert.equal(next.worldModel.get("@goblin")?.tags.has("sleeping"), false);
   });
 
   it("take with intent uses the opt-in rule and still picks up the torch", () => {
     const game = goblinGame();
-    const result = execute("intent.action.interact.take.TOCHA", game);
+    const result = execute("intent.action.interact.take.@tocha", game);
     assert.equal(result.game.lastRule?.id, "pegar_com_intent");
-    assert.equal(result.game.worldModel.get("TOCHA")?.links.current_location, "JOGADOR");
+    assert.equal(result.game.worldModel.get("@tocha")?.links.current_location, "@jogador");
   });
 
   it("talking to the astronomer uses the opt-in talk rule", () => {
     const game = planetGame();
-    const result = execute("intent.action.interact.talk.ASTRONOMA", game);
+    const result = execute("intent.action.interact.talk.@astronoma", game);
     assert.equal(result.executed, true);
     assert.equal(result.game.lastRule?.id, "falar_com_astrônoma");
     assert.match(result.game.story, /carta|lente/i);

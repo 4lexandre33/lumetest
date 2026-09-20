@@ -14,7 +14,7 @@ NarrativeEngine, RuleEffects
 
 ## Idioma
 ```
-DO: THEN CORREDOR
+DO: THEN @corredor
 DO: THEN $
 ```
 `THEN id` chama o mesmo `interact(id)`. Não cria entidade. Não é `EMIT` (evento) nem `INTENT` (catálogo).

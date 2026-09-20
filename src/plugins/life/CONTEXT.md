@@ -15,7 +15,7 @@ NarrativeEngine, RuleEffects
 ## Idioma
 ```
 DO: LIVE
-DO: LIVE GOBLIN
+DO: LIVE @goblin
 ```
 `LIVE id` chama o mesmo `interact(id)` (id existente). `LIVE` sem args percorre entidades `tags: vivo` no mesmo sítio que o jogador (senão o trigger), ids ordenados, tecto `MAX_LIVE_PER_BEAT` (4). Exclui o jogador e o trigger. Sem `vivo` / sem `LIVE` na regra = nada (caverna intacta).
 

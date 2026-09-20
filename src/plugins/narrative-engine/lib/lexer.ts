@@ -10,6 +10,11 @@ export const ERROR_CATALOG = {
   E011: 'Tag "{tag}" não pode ser pai de si mesma',
   E012: "Ciclo na taxonomia: {chain}",
   E013: "Linha de taxonomia inválida: {detail}",
+  E040: 'Entidade "{id}" deve ser @ e minúsculas',
+  E041: "Texto usa aspas duplas: {detail}",
+  E042: "Texto precisa de aspas simples: {detail}",
+  E043: "name/description aceita um só texto: {detail}",
+  E044: "lists[{kind}] inválido: {detail}",
   W001: 'Regra "{id}" nunca pode disparar no estado inicial',
   W003: 'Entidade "{id}" não é referenciada (possivelmente órfã)',
   W010: 'Topic "{id}" sem regra ask',
@@ -202,6 +207,19 @@ export function tokenize(source: string, options: { startLine?: number; startCol
       column += raw.length;
       i = j;
       continue;
+    }
+    if (ch === "@") {
+      let j = i + 1;
+      if (j < source.length && IDENT_START.test(source[j]!)) {
+        j += 1;
+        while (j < source.length && IDENT_CONT.test(source[j]!)) j += 1;
+        const raw = source.slice(i, j);
+        push("IDENT", raw, startIndex, startLine, startCol);
+        column += raw.length;
+        i = j;
+        continue;
+      }
+      throw new ParseError(makeIssue("E000", "error", { detail: "esperado @slug minúsculo" }, { file, line: startLine, column: startCol }));
     }
     if (IDENT_START.test(ch)) {
       let j = i + 1;

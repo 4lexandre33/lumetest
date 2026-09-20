@@ -93,9 +93,9 @@ export function renderKit(inspect: HostInspect, formatVersion: number = KIT_LUME
       Plugin: "lume-* first-party | ext-* guest",
     },
     language: {
-      entities: "ID.{ tags: agent; stats: hp=10; links: current_location=SALA; }",
-      rules: "ON: PORTA\\nIF: JOGADOR.intent=open\\nDO: PORTA.aberta\\nnarrativa: \\\"A porta abre.\\\"",
-      intent: "intent.action.interact.take.TOCHA",
+      entities: "@id.{ tags: agent; stats: hp=10; links: current_location=@sala; }",
+      rules: "ON: @porta\\nIF: @jogador.intent=open\\nDO: @porta.aberta\\nnarrativa: \\\"A porta abre.\\\"",
+      intent: "intent.action.interact.take.@tocha",
       doVerbs: ["tag/stat/link", "CREATE", "DESTROY", "EMIT", "KNOW", "INTENT"],
     },
   };

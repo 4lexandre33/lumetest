@@ -3,7 +3,7 @@ import { query, entityDisplayName, inheritedTags, explainMatcher, parseMatcher, 
 import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
 import { cn } from "../utils.ts";
 
-const CHIPS = ["*.place", "*.object", "*.agent", "*.monster", "JOGADOR", "*.object.current_location=JOGADOR"];
+const CHIPS = ["*.place", "*.object", "*.agent", "*.monster", "@jogador", "*.object.current_location=@jogador"];
 
 function TagChip({ tag, inherited, onClick }: { tag: string; inherited?: boolean; onClick?: () => void }) {
   return (
@@ -162,7 +162,7 @@ export function Inspector() {
         <input
           value={inspectorQuery}
           onChange={(e) => setInspectorQuery(e.target.value)}
-          placeholder="consulta: *.place  ·  #A8F2  ·  JOGADOR.medo>4"
+          placeholder="consulta: *.place  ·  #A8F2  ·  @jogador.medo>4"
           className="h-8 w-full rounded-xs border border-border bg-surface px-2 font-mono text-sm text-fg placeholder:text-subtle"
         />
         <div className="mt-1.5 flex flex-wrap items-center gap-1">

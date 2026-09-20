@@ -12,6 +12,7 @@ export function Welcome() {
   const openExample = useIdeStore((s) => s.openExample);
   const openProject = useIdeStore((s) => s.openProject);
   const startGuide = useIdeStore((s) => s.startGuide);
+  const openReference = useIdeStore((s) => s.openReference);
   const skipGuide = useIdeStore((s) => s.skipGuide);
   const resume = useIdeStore((s) => s.resume);
   const setIdeMode = useIdeStore((s) => s.setIdeMode);
@@ -79,7 +80,7 @@ export function Welcome() {
             Histórias feitas de mundo e regras. Você descreve o que existe, o que acontece ao clicar, e o parágrafo que o leitor vê.
           </p>
         </div>
-        <button type="button" onClick={startGuide} className="flex min-h-11 items-center gap-2 text-sm text-muted hover:text-fg">
+        <button type="button" onClick={pending ? startGuide : openReference} className="flex min-h-11 items-center gap-2 text-sm text-muted hover:text-fg">
           <GraduationCap className="size-4" />
           {pending ? "Nunca usei — ver o guia" : "Rever o guia"}
         </button>

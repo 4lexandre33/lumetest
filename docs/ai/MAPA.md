@@ -85,7 +85,7 @@ Preview **não** passa por `interactAsync`. Efeitos de `DO` têm de correr em `i
 ```
 Pedido do jogador
   → IntentEngine.parse/resolve/execute
-  → (action) anota JOGADOR.intent* → NarrativeEngine.interact
+  → (action) anota @jogador.intent* → NarrativeEngine.interact
   → findMatchingRule + applyChanges + RuleEffects (EMIT/KNOW/INTENT)
   → (perceive/cognize) presentIntent, mundo intacto
   → (dry-run) mesmo matcher + applyChanges no clone; vivo intacto; efeitos listados
@@ -95,7 +95,7 @@ Pedido do jogador
   → (kit) take/drop/… e talk/ask/tell/bye — dados; autor ganha por especificidade
   → (kit-social) mood, relation, memory — dados; talk/attack só se `mood` existir
   → (kit-channel) `tags: channel` + `state`; THEN no canal; opt-in `applyChannelKit`
-  → (kit-combat) hp/force, `hostile`/`mortal`/`dead`; attack `$.hp-JOGADOR.force`; opt-in `applyCombatKit`
+  → (kit-combat) hp/force, `hostile`/`mortal`/`dead`; attack `$.hp-@jogador.force`; opt-in `applyCombatKit`
   → (kit-prose) `FUNCAO:`; `narrativa:` por voz; `Prose.recap` lê history
   → (sift) `PADRAO` sobre `history`; `game.sifted` reconstruído; banner; `lume:story-sifted`
   → (sessão) `createGame(..., { seed })`; JSON `{ seed, initialWorld, triggerIds }`; Skein
@@ -142,19 +142,19 @@ Pedido do jogador
 ## DSL (idioma Lume, não Elm)
 
 ```
-ON: PORTA
-IF: JOGADOR.intent=open
-DO: PORTA.aberta
-    CREATE FUMACA.event.current_location=$
-    DESTROY TRAVA
+ON: @porta
+IF: @jogador.intent=open
+DO: @porta.aberta
+    CREATE @fumaca.event.current_location=$
+    DESTROY @trava
     EMIT porta_aberta
-    KNOW JOGADOR.PORTA
-    INTENT GOBLIN.attack.JOGADOR
-    WAIT 3.FUSE_PORTA
+    KNOW @jogador.@porta
+    INTENT @goblin.attack.@jogador
+    WAIT 3.@fuse_porta
     TICK
-    THEN CORREDOR
+    THEN @corredor
     LIVE
-    LIVE GOBLIN
+    LIVE @goblin
 SEMANTIC: agency, constraint, transformation
 narrativa: "…"
 ```

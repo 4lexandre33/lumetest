@@ -13,7 +13,7 @@ const q: QueryFn = (matcher, world, triggerId, taxonomy) =>
 function goblinGame(): GameState {
   const compiled = compileProject(createExampleProject("goblin-cave"));
   assert.equal(compiled.errors.length, 0);
-  return createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy);
+  return createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy);
 }
 
 function npc(actor: string) {
@@ -27,59 +27,59 @@ function execute(text: string, game: GameState, options?: { source?: "player" | 
 describe("NPC and script sources", () => {
   it("keeps source and actor on the same Intent", () => {
     const game = goblinGame();
-    const npcIntent = resolveIntent("intent.perceive.observe.local", game, q, npc("GOBLIN"));
+    const npcIntent = resolveIntent("intent.perceive.observe.local", game, q, npc("@goblin"));
     assert.equal(npcIntent.intent.source, "npc");
-    assert.equal(npcIntent.intent.actor, "GOBLIN");
+    assert.equal(npcIntent.intent.actor, "@goblin");
     assert.equal(npcIntent.status, "VALID");
 
-    const scripted = resolveIntent("intent.action.interact.take.TOCHA", game, q, { source: "script", actor: "JOGADOR" });
+    const scripted = resolveIntent("intent.action.interact.take.@tocha", game, q, { source: "script", actor: "@jogador" });
     assert.equal(scripted.intent.source, "script");
-    assert.equal(scripted.intent.actor, "JOGADOR");
+    assert.equal(scripted.intent.actor, "@jogador");
     assert.equal(scripted.status, "VALID");
   });
 
   it("resolves the world from the NPC's location, not the player's", () => {
     const game = goblinGame();
-    assert.equal(game.worldModel.get("JOGADOR")?.links.current_location, "ENTRADA");
-    assert.equal(game.worldModel.get("GOBLIN")?.links.current_location, "CAVERNA");
+    assert.equal(game.worldModel.get("@jogador")?.links.current_location, "@entrada");
+    assert.equal(game.worldModel.get("@goblin")?.links.current_location, "@caverna");
 
-    assert.equal(resolveIntent("intent.action.interact.take.TOCHA", game, q, npc("GOBLIN")).status, "TARGET_UNAVAILABLE");
-    assert.equal(resolveIntent("intent.action.interact.take.OURO", game, q, npc("GOBLIN")).status, "VALID");
-    assert.equal(resolveIntent("intent.action.interact.take.OURO", game, q).status, "TARGET_UNAVAILABLE");
+    assert.equal(resolveIntent("intent.action.interact.take.@tocha", game, q, npc("@goblin")).status, "TARGET_UNAVAILABLE");
+    assert.equal(resolveIntent("intent.action.interact.take.@ouro", game, q, npc("@goblin")).status, "VALID");
+    assert.equal(resolveIntent("intent.action.interact.take.@ouro", game, q).status, "TARGET_UNAVAILABLE");
 
-    const take = suggestIntent("intent.action.interact.take.", game, q, npc("GOBLIN")).map((s) => s.token);
-    assert.deepEqual(take, ["OURO"]);
+    const take = suggestIntent("intent.action.interact.take.", game, q, npc("@goblin")).map((s) => s.token);
+    assert.deepEqual(take, ["@ouro"]);
   });
 
   it("lets an NPC observe the cave without moving the player or waking itself", () => {
     const game = goblinGame();
-    const result = execute("intent.perceive.observe.local", game, npc("GOBLIN"));
+    const result = execute("intent.perceive.observe.local", game, npc("@goblin"));
     assert.equal(result.executed, true);
     assert.equal(result.resolution.intent.source, "npc");
-    assert.equal(result.resolution.intent.actor, "GOBLIN");
+    assert.equal(result.resolution.intent.actor, "@goblin");
     assert.match(result.game.story, /Caverna/i);
     assert.match(result.game.story, /ouro/i);
     assert.doesNotMatch(result.game.story, /Boca da caverna/i);
-    assert.equal(result.game.worldModel.get("JOGADOR")?.links.current_location, "ENTRADA");
-    assert.equal(result.game.worldModel.get("GOBLIN")?.tags.has("sleeping"), true);
+    assert.equal(result.game.worldModel.get("@jogador")?.links.current_location, "@entrada");
+    assert.equal(result.game.worldModel.get("@goblin")?.tags.has("sleeping"), true);
   });
 
   it("runs a scripted player command through the same execute path", () => {
     const game = goblinGame();
-    const result = execute("intent.action.interact.take.TOCHA", game, { source: "script", actor: "JOGADOR" });
+    const result = execute("intent.action.interact.take.@tocha", game, { source: "script", actor: "@jogador" });
     assert.equal(result.executed, true);
     assert.equal(result.resolution.intent.source, "script");
-    assert.equal(result.game.worldModel.get("TOCHA")?.links.current_location, "JOGADOR");
-    assert.equal(game.worldModel.get("TOCHA")?.links.current_location, "ENTRADA");
+    assert.equal(result.game.worldModel.get("@tocha")?.links.current_location, "@jogador");
+    assert.equal(game.worldModel.get("@tocha")?.links.current_location, "@entrada");
   });
 
   it("only lets the goblin talk to the player when they share a place", () => {
     const game = goblinGame();
-    assert.equal(resolveIntent("intent.action.interact.talk.JOGADOR", game, q, npc("GOBLIN")).status, "TARGET_UNAVAILABLE");
+    assert.equal(resolveIntent("intent.action.interact.talk.@jogador", game, q, npc("@goblin")).status, "TARGET_UNAVAILABLE");
 
-    game.worldModel.get("JOGADOR")!.links.current_location = "CAVERNA";
-    const talked = resolveIntent("intent.action.interact.talk.JOGADOR", game, q, npc("GOBLIN"));
+    game.worldModel.get("@jogador")!.links.current_location = "@caverna";
+    const talked = resolveIntent("intent.action.interact.talk.@jogador", game, q, npc("@goblin"));
     assert.equal(talked.status, "VALID");
-    assert.equal(talked.resolvedArgs?.target, "JOGADOR");
+    assert.equal(talked.resolvedArgs?.target, "@jogador");
   });
 });

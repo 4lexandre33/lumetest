@@ -31,7 +31,7 @@ describe("Process", () => {
 
   it("WAIT schedules a process entity and does not fire it yet", () => {
     const project = narrative.createProject("espera", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -39,13 +39,13 @@ ON: start
 narrativa: "ok"
 
 # arma
-ON: PORTA
+ON: @porta
 DO: WAIT 3.FUSE
 narrativa: "espera"
 
 # fuse
 ON: FUSE
-DO: PORTA.aberta
+DO: @porta.aberta
     DESTROY FUSE
 narrativa: "abre"
 `,
@@ -53,18 +53,18 @@ narrativa: "abre"
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules));
-    game = narrative.interact(game, "PORTA");
+    game = narrative.interact(game, "@porta");
     assert.equal(process.isProcess(game.worldModel, "FUSE"), true);
     assert.equal(process.remaining(game.worldModel, "FUSE"), 3);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), false);
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), false);
     assert.deepEqual(process.list(game.worldModel), ["FUSE"]);
     assert.deepEqual(process.due(game.worldModel), []);
   });
 
   it("TICK decrements and fires ON when remaining hits 0", () => {
     const project = narrative.createProject("tick", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: ; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -72,40 +72,40 @@ ON: start
 narrativa: "ok"
 
 # arma
-ON: PORTA
+ON: @porta
 DO: WAIT 2.FUSE
 narrativa: "espera"
 
 # passa
-ON: JOGADOR
+ON: @jogador
 DO: TICK
 narrativa: "passa"
 
 # fuse
 ON: FUSE
-DO: PORTA.aberta
+DO: @porta.aberta
     DESTROY FUSE
 narrativa: "abre"
 `,
     });
     const compiled = narrative.compileProject(project);
-    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR"));
-    game = narrative.interact(game, "PORTA");
-    game = narrative.interact(game, "JOGADOR");
+    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador"));
+    game = narrative.interact(game, "@porta");
+    game = narrative.interact(game, "@jogador");
     assert.equal(process.remaining(game.worldModel, "FUSE"), 1);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), false);
-    game = narrative.interact(game, "JOGADOR");
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), false);
+    game = narrative.interact(game, "@jogador");
     assert.equal(game.worldModel.has("FUSE"), false);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("aberta"), true);
+    assert.equal(game.worldModel.get("@porta")?.tags.has("aberta"), true);
     assert.ok(game.history.some((beat) => beat.triggerId === "FUSE"));
     assert.match(game.history.find((beat) => beat.triggerId === "FUSE")!.story, /abre/);
   });
 
   it("remaining 0 is a daemon until DESTROY", () => {
     const project = narrative.createProject("chuva", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: wet=0; links: ; }
-CEU.{ tags: abstract; stats: ; links: ; }
-SOL.{ tags: abstract; stats: ; links: ; }
+      entitiesSource: `@jogador.{ tags: agent; stats: wet=0; links: ; }
+@ceu.{ tags: abstract; stats: ; links: ; }
+@sol.{ tags: abstract; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -113,48 +113,48 @@ ON: start
 narrativa: "ok"
 
 # comeca
-ON: JOGADOR
-IF: JOGADOR.wet=0
+ON: @jogador
+IF: @jogador.wet=0
 DO: WAIT 0.CHUVA
-    JOGADOR.wet=1
+    @jogador.wet=1
 narrativa: "nubla"
 
 # chuva
 ON: CHUVA
-DO: JOGADOR.wet+1
+DO: @jogador.wet+1
 narrativa: "chove"
 
 # passa
-ON: CEU
+ON: @ceu
 DO: TICK
 narrativa: "passa"
 
 # para
-ON: SOL
+ON: @sol
 DO: DESTROY CHUVA
 narrativa: "seca"
 `,
     });
     const compiled = narrative.compileProject(project);
-    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR"));
-    game = narrative.interact(game, "JOGADOR");
+    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador"));
+    game = narrative.interact(game, "@jogador");
     assert.equal(process.remaining(game.worldModel, "CHUVA"), 0);
-    assert.equal(game.worldModel.get("JOGADOR")?.stats.wet, 1);
-    game = narrative.interact(game, "CEU");
-    assert.equal(game.worldModel.get("JOGADOR")?.stats.wet, 2);
-    game = narrative.interact(game, "CEU");
-    assert.equal(game.worldModel.get("JOGADOR")?.stats.wet, 3);
-    game = narrative.interact(game, "SOL");
+    assert.equal(game.worldModel.get("@jogador")?.stats.wet, 1);
+    game = narrative.interact(game, "@ceu");
+    assert.equal(game.worldModel.get("@jogador")?.stats.wet, 2);
+    game = narrative.interact(game, "@ceu");
+    assert.equal(game.worldModel.get("@jogador")?.stats.wet, 3);
+    game = narrative.interact(game, "@sol");
     assert.equal(game.worldModel.has("CHUVA"), false);
-    const wet = game.worldModel.get("JOGADOR")?.stats.wet;
-    game = narrative.interact(game, "CEU");
-    assert.equal(game.worldModel.get("JOGADOR")?.stats.wet, wet);
+    const wet = game.worldModel.get("@jogador")?.stats.wet;
+    game = narrative.interact(game, "@ceu");
+    assert.equal(game.worldModel.get("@jogador")?.stats.wet, wet);
   });
 
   it("rewinds WAIT because remaining lives in the world", () => {
     const project = narrative.createProject("rewind", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: ; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -162,22 +162,22 @@ ON: start
 narrativa: "ok"
 
 # arma
-ON: PORTA
+ON: @porta
 DO: WAIT 3.FUSE
 narrativa: "espera"
 
 # passa
-ON: JOGADOR
+ON: @jogador
 DO: TICK
 narrativa: "passa"
 `,
     });
     const compiled = narrative.compileProject(project);
-    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR"));
-    game = narrative.interact(game, "PORTA");
+    let game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador"));
+    game = narrative.interact(game, "@porta");
     const afterWait = game.history.length - 1;
-    game = narrative.interact(game, "JOGADOR");
-    game = narrative.interact(game, "JOGADOR");
+    game = narrative.interact(game, "@jogador");
+    game = narrative.interact(game, "@jogador");
     assert.equal(process.remaining(game.worldModel, "FUSE"), 1);
     game = narrative.rewindTo(game, afterWait);
     assert.equal(process.remaining(game.worldModel, "FUSE"), 3);
@@ -185,8 +185,8 @@ narrativa: "passa"
 
   it("dry-run lists WAIT and TICK without scheduling", () => {
     const project = narrative.createProject("seco", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; }
-JOGADOR.{ tags: agent; stats: ; links: ; }
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; }
+@jogador.{ tags: agent; stats: ; links: ; }
 start()
 `,
       rulesSource: `# start
@@ -194,26 +194,26 @@ ON: start
 narrativa: "ok"
 
 # arma
-ON: PORTA
+ON: @porta
 DO: WAIT 2.FUSE
 narrativa: "espera"
 
 # passa
-ON: JOGADOR
+ON: @jogador
 DO: TICK
 narrativa: "passa"
 `,
     });
     const compiled = narrative.compileProject(project);
-    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR"));
-    const report = narrative.dryRun(game, "PORTA");
+    const game = narrative.bootGame(narrative.createGame(compiled.worldModel, compiled.rules, "@jogador"));
+    const report = narrative.dryRun(game, "@porta");
     assert.deepEqual(
       report.effects.map((effect) => effect.verb),
       ["wait"],
     );
     assert.equal(game.worldModel.has("FUSE"), false);
     assert.equal(report.wouldMutate, false);
-    const tickReport = narrative.dryRun(game, "JOGADOR");
+    const tickReport = narrative.dryRun(game, "@jogador");
     assert.deepEqual(
       tickReport.effects.map((effect) => effect.verb),
       ["tick"],
@@ -225,11 +225,11 @@ narrativa: "passa"
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
     let game = narrative.bootGame(
-      narrative.createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy),
+      narrative.createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy),
     );
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("sleeping"), true);
-    game = narrative.interact(game, "GOBLIN");
-    assert.equal(game.worldModel.get("GOBLIN")?.tags.has("sleeping"), false);
-    assert.equal(game.worldModel.get("JOGADOR")?.stats.fear, 9);
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("sleeping"), true);
+    game = narrative.interact(game, "@goblin");
+    assert.equal(game.worldModel.get("@goblin")?.tags.has("sleeping"), false);
+    assert.equal(game.worldModel.get("@jogador")?.stats.fear, 9);
   });
 });

@@ -32,11 +32,11 @@ describe("Intent Engine capabilities", () => {
   });
 
   it("parses commands through the IntentEngine service without touching the world", () => {
-    const parsed = engine.parse("intent.action.interact.attack.GOBLIN");
+    const parsed = engine.parse("intent.action.interact.attack.@goblin");
     assert.equal(parsed.status, "complete");
     assert.equal(parsed.family, "action");
     assert.deepEqual(parsed.operation, ["interact", "attack"]);
-    assert.equal(parsed.args.target, "GOBLIN");
+    assert.equal(parsed.args.target, "@goblin");
 
     const children = catalog.getChildren("intent.");
     assert.deepEqual(
@@ -57,14 +57,14 @@ describe("Intent Engine capabilities", () => {
 
     assert.deepEqual(
       engine.suggest("intent.action.interact.take.", game).map((s) => s.token),
-      ["TOCHA"],
+      ["@tocha"],
     );
-    assert.equal(engine.resolve("intent.action.interact.attack.GOBLIN", game).status, "TARGET_UNAVAILABLE");
+    assert.equal(engine.resolve("intent.action.interact.attack.@goblin", game).status, "TARGET_UNAVAILABLE");
 
-    game.worldModel.get("JOGADOR")!.links.current_location = "CAVERNA";
-    const attack = engine.resolve("intent.action.interact.attack.GOBLIN", game);
+    game.worldModel.get("@jogador")!.links.current_location = "@caverna";
+    const attack = engine.resolve("intent.action.interact.attack.@goblin", game);
     assert.equal(attack.status, "VALID");
-    assert.equal(attack.resolvedArgs?.target, "GOBLIN");
+    assert.equal(attack.resolvedArgs?.target, "@goblin");
   });
 
   it("executes take through NarrativeEngine.interact and strips intent links", () => {
@@ -77,12 +77,12 @@ describe("Intent Engine capabilities", () => {
       compiled.taxonomy,
     );
 
-    const result = engine.execute("intent.action.interact.take.TOCHA", game);
+    const result = engine.execute("intent.action.interact.take.@tocha", game);
     assert.equal(result.executed, true);
-    assert.equal(result.triggerId, "TOCHA");
-    assert.equal(game.worldModel.get("TOCHA")?.links.current_location, "ENTRADA");
-    assert.equal(result.game.worldModel.get("TOCHA")?.links.current_location, "JOGADOR");
-    const actor = result.game.worldModel.get("JOGADOR");
+    assert.equal(result.triggerId, "@tocha");
+    assert.equal(game.worldModel.get("@tocha")?.links.current_location, "@entrada");
+    assert.equal(result.game.worldModel.get("@tocha")?.links.current_location, "@jogador");
+    const actor = result.game.worldModel.get("@jogador");
     assert.ok(actor);
     assert.equal(actor.links.intent, undefined);
     assert.equal(actor.links.intent_target, undefined);
@@ -97,12 +97,12 @@ describe("Intent Engine capabilities", () => {
       project.settings.playerEntityId,
       compiled.taxonomy,
     );
-    assert.equal(engine.commandFromChoice(game, "TOCHA"), "intent.action.interact.take.TOCHA");
-    assert.equal(engine.commandFromChoice(game, "CAVERNA"), "intent.action.move.CAVERNA");
+    assert.equal(engine.commandFromChoice(game, "@tocha"), "intent.action.interact.take.@tocha");
+    assert.equal(engine.commandFromChoice(game, "@caverna"), "intent.action.move.@caverna");
   });
 
   it("completes command tokens for the CommandBar", () => {
     assert.equal(engine.applySuggestion("intent.action.", "move"), "intent.action.move.");
-    assert.equal(engine.applySuggestion("intent.action.move.", "CAVERNA"), "intent.action.move.CAVERNA");
+    assert.equal(engine.applySuggestion("intent.action.move.", "@caverna"), "intent.action.move.@caverna");
   });
 });

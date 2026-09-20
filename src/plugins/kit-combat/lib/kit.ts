@@ -10,9 +10,9 @@ mortal → agent
 
 export const COMBAT_RULES = `# attack combat
 ON: *.hostile
-IF: JOGADOR.intent=attack
+IF: @jogador.intent=attack
 IF: $.hp>=1
-DO: $.hp-JOGADOR.force
+DO: $.hp-@jogador.force
     $.mood - 1
 SEMANTIC: agency
 narrativa: "{$.name} sofre o golpe."

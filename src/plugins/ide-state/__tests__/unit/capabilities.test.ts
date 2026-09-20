@@ -41,7 +41,7 @@ describe('IDE State Capabilities', () => {
     assert.ok(withBlank.game);
 
     // Edit entities
-    const newEntities = `JOGADOR.{\ntags: agent;\nstats: hp=100;\nlinks: current_location=SALA;\n}\nSALA.{\ntags: place;\n}\nstart()\n`;
+    const newEntities = `@jogador.{\ntags: agent;\nstats: hp=100;\nlinks: current_location=@sala;\n}\n@sala.{\ntags: place;\n}\nstart()\n`;
     store.getState().setEntities(newEntities);
     assert.equal(store.getState().project?.entitiesSource, newEntities);
 
@@ -53,7 +53,7 @@ describe('IDE State Capabilities', () => {
 
     // Play interaction
     store.getState().openPlay();
-    store.getState().interact('SALA');
+    store.getState().interact('@sala');
     const afterPlay = store.getState();
     assert.ok(afterPlay.game);
 
@@ -64,7 +64,7 @@ describe('IDE State Capabilities', () => {
     const session = store.getState().exportSessionJson();
     assert.ok(session);
     assert.ok(Array.isArray(session.triggerIds));
-    store.getState().interact('JOGADOR');
+    store.getState().interact('@jogador');
     assert.ok(store.getState().skein.children.length > 0);
     assert.equal(store.getState().importSessionJson(session), true);
     assert.deepEqual(
@@ -87,10 +87,10 @@ describe('IDE State Capabilities', () => {
     const families = store.getState().suggestCommands('intent.').map((s) => s.token);
     assert.deepEqual(families, ['action', 'cognize', 'perceive']);
 
-    assert.equal(store.getState().executeCommand('intent.action.interact.take.TOCHA'), true);
-    assert.equal(store.getState().game?.worldModel.get('TOCHA')?.links.current_location, 'JOGADOR');
-    assert.equal(store.getState().executeCommand('intent.action.interact.attack.GOBLIN'), false);
-    assert.equal(store.getState().game?.worldModel.get('GOBLIN')?.tags.has('sleeping'), true);
+    assert.equal(store.getState().executeCommand('intent.action.interact.take.@tocha'), true);
+    assert.equal(store.getState().game?.worldModel.get('@tocha')?.links.current_location, '@jogador');
+    assert.equal(store.getState().executeCommand('intent.action.interact.attack.@goblin'), false);
+    assert.equal(store.getState().game?.worldModel.get('@goblin')?.tags.has('sleeping'), true);
   });
 
   it('openPlay and closePlay toggle screen play vs ide', () => {
@@ -128,18 +128,18 @@ describe('IDE State Capabilities', () => {
     const history = store.getState().game?.history.length ?? 0;
     assert.equal(store.getState().screen, 'ide');
     assert.equal(store.getState().ideMode, 'write');
-    assert.equal(store.getState().executeCommand('intent.action.interact.take.TOCHA'), false);
+    assert.equal(store.getState().executeCommand('intent.action.interact.take.@tocha'), false);
     assert.equal(store.getState().game?.history.length, history);
-    store.getState().interact('TOCHA');
+    store.getState().interact('@tocha');
     assert.equal(store.getState().game?.history.length, history);
     store.getState().setIdeMode('play');
     assert.equal(store.getState().screen, 'ide');
-    assert.equal(store.getState().executeCommand('intent.action.interact.take.TOCHA'), true);
-    assert.equal(store.getState().game?.worldModel.get('TOCHA')?.links.current_location, 'JOGADOR');
+    assert.equal(store.getState().executeCommand('intent.action.interact.take.@tocha'), true);
+    assert.equal(store.getState().game?.worldModel.get('@tocha')?.links.current_location, '@jogador');
     assert.equal(store.getState().compiled?.errors.length, 0);
     const after = store.getState().game?.history.length ?? 0;
     store.getState().setIdeMode('write');
-    store.getState().interact('GOBLIN');
+    store.getState().interact('@goblin');
     assert.equal(store.getState().game?.history.length, after);
   });
 

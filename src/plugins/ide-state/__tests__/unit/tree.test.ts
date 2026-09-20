@@ -20,27 +20,27 @@ describe("sidebar tree grouping", () => {
   it("keeps ENTITIES sections in order and sends uncategorized to Other", () => {
     assert.deepEqual([...ENTITY_SECTIONS], ["agent", "object", "place", "event", "information", "abstract", "other"]);
     const project = createProject("tree", {
-      entitiesSource: `JOGADOR.{ tags: agent; stats: ; links: ; }
-TOCHA.{ tags: object; stats: ; links: ; }
-SALA.{ tags: place; stats: ; links: ; }
-LORE.{ tags: information; stats: ; links: ; }
-SOM.{ tags: event; stats: ; links: ; }
-IDEIA.{ tags: abstract; stats: ; links: ; }
-COISA.{ tags: reliquia; stats: ; links: ; }
+      entitiesSource: `@jogador.{ tags: agent; stats: ; links: ; }
+@tocha.{ tags: object; stats: ; links: ; }
+@sala.{ tags: place; stats: ; links: ; }
+@lore.{ tags: information; stats: ; links: ; }
+@som.{ tags: event; stats: ; links: ; }
+@ideia.{ tags: abstract; stats: ; links: ; }
+@coisa.{ tags: reliquia; stats: ; links: ; }
 start()
 `,
     });
     const compiled = compileProject(project);
     const groups = entitiesBySection(compiled.worldModel, compiled.taxonomy);
-    assert.equal(groups.agent.some((e) => e.id === "JOGADOR"), true);
-    assert.equal(groups.object.some((e) => e.id === "TOCHA"), true);
-    assert.equal(groups.place.some((e) => e.id === "SALA"), true);
-    assert.equal(groups.event.some((e) => e.id === "SOM"), true);
-    assert.equal(groups.information.some((e) => e.id === "LORE"), true);
-    assert.equal(groups.abstract.some((e) => e.id === "IDEIA"), true);
-    assert.equal(groups.other.some((e) => e.id === "COISA"), true);
+    assert.equal(groups.agent.some((e) => e.id === "@jogador"), true);
+    assert.equal(groups.object.some((e) => e.id === "@tocha"), true);
+    assert.equal(groups.place.some((e) => e.id === "@sala"), true);
+    assert.equal(groups.event.some((e) => e.id === "@som"), true);
+    assert.equal(groups.information.some((e) => e.id === "@lore"), true);
+    assert.equal(groups.abstract.some((e) => e.id === "@ideia"), true);
+    assert.equal(groups.other.some((e) => e.id === "@coisa"), true);
     assert.equal(groups.other.some((e) => e.id === "start"), false);
-    assert.equal(entitySection(compiled.worldModel.get("COISA")!), "other");
+    assert.equal(entitySection(compiled.worldModel.get("@coisa")!), "other");
   });
 
   it("groups RULES by semantic kind and uses Other when none apply", () => {
@@ -50,9 +50,9 @@ ON: start
 narrativa: "ok"
 `);
     const attack = parseRuleBlock(`# hit
-ON: GOBLIN
-IF: JOGADOR.intent=attack
-DO: GOBLIN.hp-2
+ON: @goblin
+IF: @jogador.intent=attack
+DO: @goblin.hp-2
 SEMANTIC: agency
 narrativa: "hit"
 `);
@@ -71,12 +71,12 @@ describe("sidebar folders", () => {
   it("creates, renames, places and deletes without dropping sibling data", () => {
     const created = addFolder(undefined, "entities", "agent", "Monstros");
     const renamed = renameFolder(created.tree, "entities", "agent", created.id, "NPCs");
-    const placed = placeItem(renamed, "entities", "agent", "GOBLIN", created.id);
+    const placed = placeItem(renamed, "entities", "agent", "@goblin", created.id);
     assert.equal(placed.entities.agent.folders[0]?.name, "NPCs");
-    assert.equal(placed.entities.agent.placements.GOBLIN, created.id);
+    assert.equal(placed.entities.agent.placements["@goblin"], created.id);
     const cleared = deleteFolder(placed, "entities", "agent", created.id);
     assert.equal(cleared.entities.agent.folders.length, 0);
-    assert.equal(cleared.entities.agent.placements.GOBLIN, undefined);
+    assert.equal(cleared.entities.agent.placements["@goblin"], undefined);
   });
 
   it("persists folders through the ide store", () => {
@@ -96,7 +96,7 @@ describe("sidebar folders", () => {
   it("round-trips folders through coerceProject", () => {
     const created = addFolder(undefined, "entities", "object", "Chaves");
     const raw = createProject("saved", {
-      settings: { playerEntityId: "JOGADOR", debug: true, tree: created.tree },
+      settings: { playerEntityId: "@jogador", debug: true, tree: created.tree },
     });
     const loaded = coerceProject(JSON.parse(JSON.stringify(raw)));
     assert.equal(loaded.settings.tree?.entities.object.folders[0]?.name, "Chaves");

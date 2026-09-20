@@ -3,7 +3,7 @@ import { matchesEntity, parseMatcher, queryHasResults, specificityOf } from "./q
 import type { CompiledTaxonomy } from "./taxonomy.ts";
 import type { ChangeAST, ChangeField, ChangeTarget, Entity, Issue, MatcherAST, PathDrawer, Token, WorldModel } from "./types.ts";
 import { isPathDrawer } from "./types.ts";
-import { cloneEntity, cloneWorldModel, parseDottedEntity, assignLink, clearLink, readStat, writeStat, destroyEntityInWorld, instantiateFromTemplate, syncLinks, createEmptyEntity, findEntityByQuad } from "./world-model.ts";
+import { cloneEntity, cloneWorldModel, parseDottedEntity, assignLink, clearLink, readStat, writeStat, destroyEntityInWorld, instantiateFromTemplate, syncLinks, createEmptyEntity, findEntityByQuad, assertEntityId, getLink } from "./world-model.ts";
 
 export const SEMANTIC_KINDS = [
   "constraint",
@@ -215,9 +215,9 @@ function parseSpawnLine(rest: string, source: string, startLine: number): Change
   if (!rest) {
     throw new ParseError(makeIssue("E000", "error", { detail: "SPAWN requer um id" }, { file: "rules", line: startLine, column: 1 }));
   }
-  const from = rest.trim().match(/^([\p{L}_][\p{L}\p{N}\p{M}_]*)\s+(?:FROM|DE)\s+([\p{L}_][\p{L}\p{N}\p{M}_]*)$/iu);
+  const from = rest.trim().match(/^(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)\s+(?:FROM|DE)\s+(@?[\p{L}_][\p{L}\p{N}\p{M}_]*)$/iu);
   if (from) {
-    const entity = createEmptyEntity(from[1]!, { templateId: from[2] });
+    const entity = createEmptyEntity(assertEntityId(from[1]!, startLine), { templateId: from[2] });
     return {
       target: { kind: "id", id: entity.id },
       fields: [{ kind: "createEntity", entity }],
@@ -249,7 +249,7 @@ function parseDestroyLine(rest: string, source: string, startLine: number): Chan
 }
 
 function parseListOpLine(verb: string, rest: string, source: string, startLine: number): ChangeAST {
-  const m = rest.trim().match(/^([\p{L}_$][\p{L}\p{N}\p{M}_]*)\.([\p{L}_][\p{L}\p{N}\p{M}_]*)(?:\s+(.+))?$/u);
+  const m = rest.trim().match(/^(\$|#[0-9A-Fa-f]{4}|@[\p{L}_][\p{L}\p{N}\p{M}_]*|[\p{L}_][\p{L}\p{N}\p{M}_]*)\.([\p{L}_][\p{L}\p{N}\p{M}_]*)(?:\s+(.+))?$/u);
   if (!m) {
     throw new ParseError(makeIssue("E000", "error", { detail: `${verb} requer ENTIDADE.lista` }, { file: "rules", line: startLine, column: 1 }));
   }
@@ -287,6 +287,8 @@ function takeNamedIdent(s: string, i: number): { ident: string; next: number } |
   const slice = s.slice(i);
   const hash = slice.match(/^#[0-9A-Fa-f]{4}/);
   if (hash) return { ident: hash[0], next: i + hash[0].length };
+  const at = slice.match(/^@[\p{L}_][\p{L}\p{N}\p{M}_]*/u);
+  if (at) return { ident: at[0], next: i + at[0].length };
   const ident = slice.match(/^[\p{L}_][\p{L}\p{N}\p{M}_]*/u);
   if (ident) return { ident: ident[0], next: i + ident[0].length };
   return null;
@@ -303,7 +305,7 @@ function parseNamedPath(rest: string, verb: string, startLine: number): NamedPat
   let i = 0;
   let target: ChangeTarget;
   let compactHead: string;
-  const link = s.match(/^\(\s*link\s+(\$|#[0-9A-Fa-f]{4}|[\p{L}_][\p{L}\p{N}\p{M}_]*)\.([\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\)/u);
+  const link = s.match(/^\(\s*link\s+(\$|#[0-9A-Fa-f]{4}|@[\p{L}_][\p{L}\p{N}\p{M}_]*|[\p{L}_][\p{L}\p{N}\p{M}_]*)\.([\p{L}_][\p{L}\p{N}\p{M}_]*)\s*\)/u);
   if (link) {
     target = { kind: "linkLookup", entityId: link[1]!, key: link[2]! };
     compactHead = `(link ${link[1]}.${link[2]})`;
@@ -371,7 +373,7 @@ function requireValue(path: NamedPath, verb: string, startLine: number): string 
 }
 
 function parseFuseValue(raw: string, key: string, startLine: number): { remaining: number; targetId: string } {
-  const m = raw.trim().match(/^(-?\d+)(?:\s*[>→:]\s*([\p{L}_][\p{L}\p{N}\p{M}_]*))?$/u);
+  const m = raw.trim().match(/^(-?\d+)(?:\s*[>→:]\s*(\$|#[0-9A-Fa-f]{4}|@[\p{L}_][\p{L}\p{N}\p{M}_]*|[\p{L}_][\p{L}\p{N}\p{M}_]*))?$/u);
   if (!m) fail("SET_FUSE requer turnos ou turnos>alvo", dummyToken(startLine, raw));
   return { remaining: Number(m[1]), targetId: m[2] || key };
 }
@@ -667,7 +669,7 @@ function resolveChangeTarget(world: WorldModel, target: ChangeTarget, triggerId:
   const from = target.entityId === "$" ? triggerId : target.entityId;
   const fromId = findEntityByQuad(world, from)?.id;
   if (!fromId) return null;
-  return world.get(fromId)?.links[target.key] ?? null;
+  return getLink(world, fromId, target.key);
 }
 
 function applyListOp(entity: Entity, list: string, op: "PUSH" | "POP" | "REMOVE" | "CLEAR" | "ADD_UNIQUE", value?: string | number) {

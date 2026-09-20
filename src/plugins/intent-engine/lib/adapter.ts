@@ -1,4 +1,4 @@
-import { cloneWorldModel } from "../../narrative-engine/lib/world-model.ts";
+import { cloneWorldModel, assignLink, clearLink } from "../../narrative-engine/lib/world-model.ts";
 import type { GameState } from "../../narrative-engine/types.ts";
 import type { Intent, IntentExecution, ParseIntentOptions } from "../types.ts";
 import { presentIntent } from "./present.ts";
@@ -32,10 +32,10 @@ function annotateActorIntent(
   const actor = world.get(actorId);
   if (!actor) return false;
   const leaf = leafOperation(intent);
-  if (leaf) actor.links[INTENT_KEY] = leaf;
-  if (intent.family) actor.links[`${INTENT_PREFIX}family`] = intent.family;
+  if (leaf) assignLink(actor, INTENT_KEY, leaf);
+  if (intent.family) assignLink(actor, `${INTENT_PREFIX}family`, intent.family);
   for (const [name, value] of Object.entries(resolvedArgs)) {
-    actor.links[`${INTENT_PREFIX}${name}`] = value;
+    assignLink(actor, `${INTENT_PREFIX}${name}`, value);
   }
   return true;
 }
@@ -43,9 +43,10 @@ function annotateActorIntent(
 function clearActorIntent(world: GameState["worldModel"], actorId: string): void {
   const actor = world.get(actorId);
   if (!actor) return;
-  delete actor.links[INTENT_KEY];
-  for (const key of Object.keys(actor.links)) {
-    if (key.startsWith(INTENT_PREFIX)) delete actor.links[key];
+  clearLink(actor, INTENT_KEY);
+  const keys = new Set([...Object.keys(actor.links), ...Object.keys(actor.softLinks), ...Object.keys(actor.hardLinks)]);
+  for (const key of keys) {
+    if (key.startsWith(INTENT_PREFIX)) clearLink(actor, key);
   }
 }
 

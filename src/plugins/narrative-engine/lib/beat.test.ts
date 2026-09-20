@@ -23,10 +23,10 @@ describe("beat trace", () => {
 
   it("records intent rule candidates effects and vivo from the depth-1 beat", () => {
     const project = narrative.createProject("beat", {
-      entitiesSource: `JOGADOR.{ tags: agent; links: current_location=SALA; }
-SALA.{ tags: place; }
-ESPADA.{ tags: object; links: current_location=SALA; }
-GOBLIN.{ tags: agent, vivo; links: current_location=SALA; }
+      entitiesSource: `@jogador.{ tags: agent; links: current_location=@sala; }
+@sala.{ tags: place; }
+@espada.{ tags: object; links: current_location=@sala; }
+@goblin.{ tags: agent, vivo; links: current_location=@sala; }
 start()
 `,
       rulesSource: `# start
@@ -39,21 +39,21 @@ DO: LIVE
 narrativa: "pega"
 
 # espada
-ON: ESPADA
+ON: @espada
 DO: KNOW x
     LIVE
 narrativa: "maldita"
 
 # goblin
-ON: GOBLIN
+ON: @goblin
 narrativa: "grita"
 `,
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = interactWith(game, "ESPADA");
-    assert.equal(game.lastBeat.triggerId, "ESPADA");
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = interactWith(game, "@espada");
+    assert.equal(game.lastBeat.triggerId, "@espada");
     assert.equal(game.lastBeat.ruleId, "espada");
     assert.ok(game.lastBeat.candidates.some((c) => c.ruleId === "espada"));
     assert.ok(game.lastBeat.candidates.some((c) => c.ruleId === "take_gen"));
@@ -61,21 +61,21 @@ narrativa: "grita"
     const generic = game.lastBeat.candidates.find((c) => c.ruleId === "take_gen")!;
     assert.ok(espada.score > generic.score);
     assert.deepEqual(game.lastBeat.effects, ["KNOW", "LIVE"]);
-    assert.equal(game.lastBeat.vivos[0]?.id, "GOBLIN");
+    assert.equal(game.lastBeat.vivos[0]?.id, "@goblin");
     assert.equal(game.lastBeat.vivos[0]?.ruleId, "goblin");
-    const text = formatBeat(game.lastBeat, "intent.action.interact.take.ESPADA");
-    assert.match(text, /intent\.action\.interact\.take\.ESPADA/);
+    const text = formatBeat(game.lastBeat, "intent.action.interact.take.@espada");
+    assert.match(text, /intent\.action\.interact\.take\.@espada/);
     assert.match(text, /regra: espada/);
     assert.match(text, /espada \(spec \d+\)/);
     assert.match(text, /efeitos: KNOW, LIVE/);
-    assert.match(text, /vivo: GOBLIN → goblin/);
+    assert.match(text, /vivo: @goblin → goblin/);
   });
 
   it("does not alter official examples", () => {
     const cave = createExampleProject("goblin-cave");
     const compiled = narrative.compileProject(cave);
     assert.equal(compiled.errors.length, 0);
-    const game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
+    const game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
     assert.equal(game.lastBeat.triggerId, "start");
   });
 });

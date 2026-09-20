@@ -37,24 +37,24 @@ describe("Prose kit", () => {
 
   it("FUNCAO does not change match score; voice picks the listed block", () => {
     const cursed = parseRuleBlock(`# abre
-ON: PORTA
-IF: JOGADOR.intent=open
+ON: @porta
+IF: @jogador.intent=open
 FUNCAO: curse
 narrativa: "A porta abre."
 narrativa: somber: "A porta range."
 `);
     const plain = parseRuleBlock(`# abre
-ON: PORTA
-IF: JOGADOR.intent=open
+ON: @porta
+IF: @jogador.intent=open
 narrativa: "A porta abre."
 `);
     assert.equal(cursed.funcao, "curse");
     assert.equal(ruleSpecificity({ ...cursed, index: 0, source: "" }), ruleSpecificity({ ...plain, index: 1, source: "" }));
 
     let project = narrative.createProject("kit-prose-voice", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
-PORTA.{ tags: object; name: Porta; }
-NARRADOR.{ tags: abstract; voice: somber; }
+      entitiesSource: `@jogador.{ tags: agent; }
+@porta.{ tags: object; name: Porta; }
+@narrador.{ tags: abstract; voice: somber; }
 start()
 `,
       taxonomySource: "",
@@ -63,7 +63,7 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
+ON: @porta
 FUNCAO: curse
 narrativa: "A porta abre."
 narrativa: somber: "A porta range."
@@ -71,19 +71,19 @@ narrativa: somber: "A porta range."
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    const winner = findMatchingRule("PORTA", compiled.rules, compiled.worldModel, compiled.taxonomy);
+    const winner = findMatchingRule("@porta", compiled.rules, compiled.worldModel, compiled.taxonomy);
     assert.equal(winner?.funcao, "curse");
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = interactWith(game, "PORTA");
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = interactWith(game, "@porta");
     assert.equal(game.story, "A porta range.");
     assert.equal(game.history[game.history.length - 1]?.story, "A porta range.");
   });
 
   it("recap only reads history; focalizer and reverse are flashback", () => {
     let project = narrative.createProject("kit-prose-recap", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
-PORTA.{ tags: object; name: Porta; }
-GUARDA.{ tags: agent; name: Guarda; }
+      entitiesSource: `@jogador.{ tags: agent; }
+@porta.{ tags: object; name: Porta; }
+@guarda.{ tags: agent; name: Guarda; }
 start()
 `,
       taxonomySource: "",
@@ -92,35 +92,35 @@ ON: start
 narrativa: "ok"
 
 # porta
-ON: PORTA
+ON: @porta
 narrativa: "A porta abre."
 
 # guarda
-ON: GUARDA
+ON: @guarda
 narrativa: "O guarda aceita."
 `,
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = interactWith(game, "PORTA");
-    game = interactWith(game, "GUARDA");
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = interactWith(game, "@porta");
+    game = interactWith(game, "@guarda");
     const before = game.history.length;
     const md = prose.recap(game.history, { order: "chrono" });
-    assert.match(md, /\*\*PORTA\.\*\* A porta abre\./);
-    assert.match(md, /\*\*GUARDA\.\*\* O guarda aceita\./);
-    assert.ok(md.indexOf("PORTA") < md.indexOf("GUARDA"));
-    const flash = prose.recap(game.history, { focalizer: "PORTA", order: "reverse", limit: 1 });
+    assert.match(md, /\*\*@porta\.\*\* A porta abre\./);
+    assert.match(md, /\*\*@guarda\.\*\* O guarda aceita\./);
+    assert.ok(md.indexOf("@porta") < md.indexOf("@guarda"));
+    const flash = prose.recap(game.history, { focalizer: "@porta", order: "reverse", limit: 1 });
     assert.match(flash, /porta abre/);
     assert.equal(flash.includes("guarda"), false);
     assert.equal(game.history.length, before);
-    assert.equal(game.worldModel.get("PORTA")?.tags.has("event"), false);
+    assert.equal(game.worldModel.get("@porta")?.tags.has("event"), false);
   });
 
   it("falls back to default narrativa without matching voice; cave unchanged", () => {
     let project = narrative.createProject("kit-prose-fallback", {
-      entitiesSource: `JOGADOR.{ tags: agent; }
-PORTA.{ tags: object; name: Porta; }
+      entitiesSource: `@jogador.{ tags: agent; }
+@porta.{ tags: object; name: Porta; }
 start()
 `,
       taxonomySource: "",
@@ -129,15 +129,15 @@ ON: start
 narrativa: "ok"
 
 # abre
-ON: PORTA
+ON: @porta
 narrativa: "A porta abre."
 narrativa: somber: "A porta range."
 `,
     });
     const compiled = narrative.compileProject(project);
     assert.equal(compiled.errors.length, 0);
-    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "JOGADOR", compiled.taxonomy));
-    game = interactWith(game, "PORTA");
+    let game = narrative.bootGame(createGame(compiled.worldModel, compiled.rules, "@jogador", compiled.taxonomy));
+    game = interactWith(game, "@porta");
     assert.equal(game.story, "A porta abre.");
 
     const cave = createExampleProject("goblin-cave");

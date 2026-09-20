@@ -7,7 +7,7 @@ import type {
 } from "../types.ts";
 import { catalogPathOf, intentCatalog } from "./catalog.ts";
 
-const IDENT_RE = /^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u;
+const IDENT_RE = /^@?[\p{L}_][\p{L}\p{N}\p{M}_]*$/u;
 const FAMILIES = new Set<IntentFamily>(["perceive", "cognize", "action"]);
 
 export function splitCommands(text: string): string[] {
@@ -40,7 +40,7 @@ function baseIntent(raw: string, options: ParseIntentOptions): Intent {
     status: "incomplete",
     operation: [],
     args: {},
-    actor: options.actor ?? "JOGADOR",
+    actor: options.actor ?? "@jogador",
   };
 }
 

@@ -9,7 +9,7 @@ describe("Intent parser", () => {
     assert.equal(empty.status, "incomplete");
     assert.equal(empty.family, undefined);
     assert.deepEqual(empty.operation, []);
-    assert.equal(empty.actor, "JOGADOR");
+    assert.equal(empty.actor, "@jogador");
     assert.equal(empty.source, "player");
 
     const root = parseIntent("intent.");
@@ -64,11 +64,11 @@ describe("Intent parser", () => {
   });
 
   it("preserves argument case and accepts uppercase keywords", () => {
-    const intent = parseIntent("INTENT.ACTION.INTERACT.ATTACK.GOBLIN");
+    const intent = parseIntent("INTENT.ACTION.INTERACT.ATTACK.@goblin");
     assert.equal(intent.status, "complete");
     assert.equal(intent.family, "action");
     assert.deepEqual(intent.operation, ["interact", "attack"]);
-    assert.equal(intent.args.target, "GOBLIN");
+    assert.equal(intent.args.target, "@goblin");
   });
 
   it("completes wait with no arguments and rejects extras", () => {
@@ -116,18 +116,18 @@ describe("Intent parser", () => {
     assert.equal(put.args.object, "ESPADA");
     assert.equal(put.args.target, "CAIXA");
 
-    const ask = parseIntent("intent.action.interact.ask.GOBLIN.CHAVE");
+    const ask = parseIntent("intent.action.interact.ask.@goblin.CHAVE");
     assert.equal(ask.status, "complete");
-    assert.equal(ask.args.target, "GOBLIN");
+    assert.equal(ask.args.target, "@goblin");
     assert.equal(ask.args.topic, "CHAVE");
 
-    const tell = parseIntent("intent.action.interact.tell.GOBLIN.CHAVE");
+    const tell = parseIntent("intent.action.interact.tell.@goblin.CHAVE");
     assert.equal(tell.status, "complete");
     assert.equal(tell.args.topic, "CHAVE");
 
-    const bye = parseIntent("intent.action.interact.bye.GOBLIN");
+    const bye = parseIntent("intent.action.interact.bye.@goblin");
     assert.equal(bye.status, "complete");
-    assert.equal(bye.args.target, "GOBLIN");
+    assert.equal(bye.args.target, "@goblin");
 
     const compare = parseIntent("intent.cognize.compare.sword_01.sword_02");
     assert.equal(compare.status, "complete");
@@ -185,12 +185,12 @@ describe("Intent parser", () => {
   });
 
   it("does not execute and honors source/actor options", () => {
-    const intent = parseIntent("intent.action.move.CAVERNA", { source: "button", actor: "HEROI" });
+    const intent = parseIntent("intent.action.move.@caverna", { source: "button", actor: "HEROI" });
     assert.equal(intent.status, "complete");
     assert.equal(intent.source, "button");
     assert.equal(intent.actor, "HEROI");
-    assert.equal(intent.args.destination, "CAVERNA");
-    assert.equal(intent.raw, "intent.action.move.CAVERNA");
+    assert.equal(intent.args.destination, "@caverna");
+    assert.equal(intent.raw, "intent.action.move.@caverna");
   });
 });
 

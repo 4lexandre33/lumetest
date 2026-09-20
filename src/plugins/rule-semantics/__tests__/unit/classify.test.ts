@@ -17,21 +17,21 @@ describe("Rule Semantics", () => {
 
   it("infers kinds from AST and unions author SEMANTIC", () => {
     const transformation = parseRuleBlock(`# t
-ON: JOGADOR
-DO: JOGADOR.hp-10
+ON: @jogador
+DO: @jogador.hp-10
 narrativa: "hit"
 `);
     assert.deepEqual(classifyRule({ ...transformation, index: 0, source: "" }), ["transformation"]);
 
     const mixed = parseRuleBlock(`# m
-ON: PORTA
-IF: JOGADOR.intent=open
-IF: PORTA.!trancada
-DO: PORTA.aberta
-    PORTA.current_location=SALA
-    CREATE FUMACA.event
-    KNOW JOGADOR.PORTA
-    INTENT GOBLIN.attack.JOGADOR
+ON: @porta
+IF: @jogador.intent=open
+IF: @porta.!trancada
+DO: @porta.aberta
+    @porta.current_location=@sala
+    CREATE @fumaca.event
+    KNOW @jogador.@porta
+    INTENT @goblin.attack.@jogador
 SEMANTIC: process
 narrativa: "abre"
 `);
@@ -47,14 +47,14 @@ narrativa: "abre"
 
   it("infers process from WAIT and TICK without author SEMANTIC", () => {
     const wait = parseRuleBlock(`# w
-ON: PORTA
+ON: @porta
 DO: WAIT 3.FUSE
 narrativa: "espera"
 `);
     assert.deepEqual(classifyRule({ ...wait, index: 0, source: "" }), ["process"]);
 
     const tick = parseRuleBlock(`# t
-ON: JOGADOR
+ON: @jogador
 DO: TICK
 narrativa: "passa"
 `);
@@ -70,14 +70,14 @@ narrativa: "passa"
     const semantics = core.getService<RuleSemanticsService>("RuleSemantics");
 
     const project = createProject("sem", {
-      entitiesSource: `PORTA.{ tags: object; stats: ; links: ; }\nstart()\n`,
+      entitiesSource: `@porta.{ tags: object; stats: ; links: ; }\nstart()\n`,
       rulesSource: `# a
-ON: PORTA
+ON: @porta
 narrativa: "generica"
 
 # b
-ON: PORTA
-IF: PORTA.aberta
+ON: @porta
+IF: @porta.aberta
 narrativa: "aberta"
 SEMANTIC: constraint
 `,
@@ -87,8 +87,8 @@ SEMANTIC: constraint
     const classified = compiled.rules.map((rule) => semantics.classify(rule));
     assert.ok(classified[1]?.includes("constraint"));
     const world = compiled.worldModel;
-    world.get("PORTA")!.tags.add("aberta");
-    const match = findMatchingRule("PORTA", compiled.rules, world, compiled.taxonomy);
+    world.get("@porta")!.tags.add("aberta");
+    const match = findMatchingRule("@porta", compiled.rules, world, compiled.taxonomy);
     assert.equal(match?.id, "b");
   });
 });

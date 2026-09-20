@@ -11,18 +11,18 @@ export const GUIDE_SLIDES: GuideSlide[] = [
   },
   {
     kicker: "2 · Entidades",
-    title: "Tudo o que existe tem um id em MAIÚSCULAS",
+    title: "Tudo o que existe tem um id @ em minúsculas",
     body: [
-      "Uma entidade é uma pessoa, um lugar, um objeto, um evento, uma informação ou um conceito. O nome técnico é o id: JOGADOR, CAVERNA, TOCHA.",
+      "Uma entidade é uma pessoa, um lugar, um objeto, um evento, uma informação ou um conceito. O nome técnico é o id: @jogador, @caverna, @tocha.",
       "Há 6 categorias fixas (em inglês, minúsculas): agent, object, place, event, information, abstract. hidden é uma flag, não uma categoria.",
-      "Aperte o nome em maiúsculas, um ponto, e Enter — a Lume monta o bloco.",
+      "Escreva @, o nome em minúsculas, um ponto, e Enter — a Lume monta o bloco. Sem @, ou com maiúsculas, o editor marca E040.",
     ],
     sample: {
       label: "Uma tocha no chão",
-      code: `TOCHA.{
+      code: `@tocha.{
 tags: object;
 stats: illumination=7;
-links: current_location=ENTRADA;
+links: current_location=@entrada;
 name: Tocha;
 description: Uma tocha no chão.
 }`,
@@ -34,8 +34,8 @@ description: Uma tocha no chão.
     body: [
       "tags: etiquetas. Palavras sem número. agent, sleeping, dark, quest_item. Uma entidade casa com *.place se tiver a tag place.",
       "stats: números. fear=0, illumination=7, vida=100. Dá para comparar (fear>4) e mudar (fear+2, fear=9, fear*2).",
-      "links: relações com OUTRA entidade. current_location=CAVERNA quer dizer 'está na caverna'. O motor usa current_location (em inglês) para saber onde o jogador está.",
-      "name e description NÃO são tags. São propriedades visíveis. {ASTRONOMA.name} lê o campo name da entidade ASTRONOMA. Se não houver name, a Lume humaniza o id (ASTRONOMA → Astronoma).",
+      "links: relações com OUTRA entidade. current_location=@caverna quer dizer 'está na caverna'. O motor usa current_location (em inglês) para saber onde o jogador está.",
+      "name e description NÃO são tags. São propriedades visíveis. {@astronoma.name} lê o campo name da entidade @astronoma. Se não houver name, a Lume humaniza o id (@astronoma → Astronoma).",
     ],
   },
   {
@@ -44,7 +44,7 @@ description: Uma tocha no chão.
     body: [
       "A aba Taxonomia classifica tags. Não muda a entidade: o goblin continua só com a tag goblin. Na hora de casar regras, o motor também vê os pais.",
       "Uma linha, um pai: goblin → monster. monster → agent. Assim, *.monster e *.agent encontram o goblin. hidden nunca é herdada. Stats e links também não.",
-      "Se a taxonomia estiver vazia, o motor funciona como antes. A regra mais específica vence: on: GOBLIN > *.goblin > *.monster.",
+      "Se a taxonomia estiver vazia, o motor funciona como antes. A regra mais específica vence: on: @goblin > *.goblin > *.monster.",
       "A árvore ao lado do caderno mostra os pais. Clique numa tag para ver quem herda e quais regras citam. No depurador, Efetiva encontra descendentes; Direta só a tag escrita na entidade.",
     ],
     sample: {
@@ -52,7 +52,7 @@ description: Uma tocha no chão.
       code: `goblin → monster
 monster → agent
 
-GOBLIN.{
+@goblin.{
 tags: goblin, sleeping;
 }
 
@@ -64,16 +64,16 @@ narrativa: "O goblin já acordou."`,
     kicker: "5 · Regras",
     title: "on, if, do, narrativa",
     body: [
-      "on: o que o jogador clicou. Pode ser um id (CAVERNA), um filtro (*.object) ou start (o boot da história).",
+      "on: o que o jogador clicou. Pode ser um id (@caverna), um filtro (*.object) ou start (o boot da história).",
       "if: condição extra. Só dispara se essa pergunta for verdadeira agora no mundo. Pode haver vários if:.",
       "do: o que muda no mundo. No editor, usa verbos nomeados (ADD_TAG, SET_STAT, SET_FLAG…). Compacto continua a compilar.",
       "narrativa: o único parágrafo que o jogador lê.",
     ],
     sample: {
       label: "Entrar só com luz",
-      code: `on: CAVERNA.!explored
-if: *.object.current_location=JOGADOR.illumination>5
-do: SET_LINK JOGADOR.softLinks.current_location CAVERNA
+      code: `on: @caverna.!explored
+if: *.object.current_location=@jogador.illumination>5
+do: SET_LINK @jogador.softLinks.current_location @caverna
 narrativa: "Você entra, com a tocha à frente."`,
     },
   },
@@ -82,14 +82,14 @@ narrativa: "Você entra, com a tocha à frente."`,
     title: "Qualquer, o clicado, o contrário",
     body: [
       "*.place — qualquer entidade que tenha a tag place. *.object, *.agent, *.event funcionam igual.",
-      "$ — a entidade que o jogador acabou de clicar (o gatilho). Em on: *.object, o $ é aquele objeto. {$.name} é o nome visível dele. $.current_location=JOGADOR põe o clicado no jogador.",
-      "! — negação. CAVERNA.!explored = a caverna SEM a tag explored. JOGADOR.!current_location=$ = o jogador NÃO está no lugar clicado.",
-      "-tag no do: tira a tag: GOBLIN.-sleeping acorda o goblin.",
+      "$ — a entidade que o jogador acabou de clicar (o gatilho). Em on: *.object, o $ é aquele objeto. {$.name} é o nome visível dele. $.current_location=@jogador põe o clicado no jogador.",
+      "! — negação. @caverna.!explored = a caverna SEM a tag explored. @jogador.!current_location=$ = o jogador NÃO está no lugar clicado.",
+      "-tag no do: tira a tag: @goblin.-sleeping acorda o goblin.",
     ],
     sample: {
       label: "Pegar qualquer objeto que não está com você",
-      code: `on: *.object.!current_location=JOGADOR
-do: $.current_location=JOGADOR
+      code: `on: *.object.!current_location=@jogador
+do: $.current_location=@jogador
 narrativa: "Você pega {$.name}."`,
     },
   },
@@ -99,25 +99,25 @@ narrativa: "Você pega {$.name}."`,
     body: [
       "Na pergunta (on/if): illumination>5, fear<4, fear>=9, fear=0. O motor usa um = só (não precisa de ==). > < >= <= =.",
       "No do: fear=9 põe o valor; fear+2 soma; fear-1 diminui; fear*2 multiplica (o dobro do medo).",
-      "Só stats (números) aceitam > < + - *. Links usam = (current_location=CAVERNA).",
+      "Só stats (números) aceitam > < + - *. Links usam = (current_location=@caverna).",
     ],
     sample: {
       label: "Medo sobe, depois dobra",
-      code: `do: JOGADOR.fear+2
-    JOGADOR.fear*2`,
+      code: `do: @jogador.fear+2
+    @jogador.fear*2`,
     },
   },
   {
     kicker: "8 · Chaves { }",
     title: "O parágrafo pode mudar sozinho",
     body: [
-      "Propriedade: {ASTRONOMA.name} → o name da astrônoma. {TOCHA.description}. {$.name} → o name de quem você clicou.",
-      "Pergunta: {JOGADOR.fear>4? o coração disparado | com coragem}. Se o medo for alto, usa a primeira frase; senão, a segunda.",
+      "Propriedade: {@astronoma.name} → o name da astrônoma. {@tocha.description}. {$.name} → o name de quem você clicou.",
+      "Pergunta: {@jogador.fear>4? o coração disparado | com coragem}. Se o medo for alto, usa a primeira frase; senão, a segunda.",
       "Ciclo, sem pergunta, só barras: {primeira vez | segunda | já cansou}. Cada clique seguinte avança a opção e para na última. É assim que o zelador diz três falas diferentes.",
     ],
     sample: {
       label: "Três falas do zelador",
-      code: `on: ZELADOR
+      code: `on: @zelador
 narrativa: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' | 'Não peço a chave. A cúpula é que pede.' | Ele já varreu o suficiente.}"`,
     },
   },
@@ -142,7 +142,7 @@ narrativa: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' |
       code: `start()
 
 on: start
-narrativa: "A sessão das nove não começou. A {ASTRONOMA.name} não levanta a luneta."`,
+narrativa: "A sessão das nove não começou. A {@astronoma.name} não levanta a luneta."`,
     },
   },
   {
@@ -152,6 +152,7 @@ narrativa: "A sessão das nove não começou. A {ASTRONOMA.name} não levanta a 
       "À esquerda, o índice. Clique numa entidade para saltar no caderno, no começo exato da linha. Categorias usam a taxonomia: um goblin com tag goblin aparece em Agent se goblin → agent.",
       "No centro, três cadernos: Entidades, Taxonomia e Regras. Ponto (.) abre sugestões. Tab confirma (com espaço). Enter desce de linha. Na taxonomia, complete uma tag e a Lume oferece →.",
       "À direita, o preview. Cada parágrafo já lido tem um ícone para voltar àquele ponto e seguir por outro caminho. O círculo no canto recomeça do zero.",
+      "O documento completo — todos os métodos do editor de entidades, do editor de regras e do caderno, com exemplos — está em Ajuda → Rever guia, e dá para descarregar.",
     ],
   },
 ];

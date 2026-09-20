@@ -8,7 +8,7 @@ import type { PluginContext } from '../../core/contracts/plugin-context.ts';
 import { IDE_GUIDE_MANIFEST } from './manifest.ts';
 import type { IdeGuideService, GuideSlide, RefSection } from './types.ts';
 import { GUIDE_SLIDES } from './lib/guide.ts';
-import { SYNTAX_REF } from './lib/syntax-ref.ts';
+import { SYNTAX_REF, syntaxRefMarkdown } from './lib/syntax-ref.ts';
 
 export * from './manifest.ts';
 export * from './types.ts';
@@ -52,6 +52,10 @@ export class IdeGuidePlugin implements IPlugin {
             s.body.some((b) => b.toLowerCase().includes(q)) ||
             (s.sample && s.sample.toLowerCase().includes(q))
         );
+      },
+
+      getGuideMarkdown: (): string => {
+        return syntaxRefMarkdown();
       }
     };
   }

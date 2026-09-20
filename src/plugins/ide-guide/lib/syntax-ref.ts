@@ -5,10 +5,10 @@ export const SYNTAX_REF: RefSection[] = [
     id: "bloco",
     title: "Bloco de entidade (FBE)",
     body: [
-      "O id (HumanSlug) vai em maiúsculas. Ponto + Enter monta o bloco com name e description no topo, depois as 10 gavetas. Cada gaveta termina com ponto-e-vírgula; itens internos separam-se por vírgula. Texto com delimitadores usa aspas simples ' '.",
-      "Quad-IDs: o slug é a chave do mundo (JOGADOR). O motor gera shortCode (#A8F2); o UUID fica escondido. templateId aponta para um protótipo usado em SPAWN. extra não é gaveta-base. CREATE ID ou CREATE ID.tag — o 2.º segmento é tag, nunca gaveta.",
+      "O id canónico é @ + minúsculas: @pessoa, @tocha, @caverna. Sem @, ou com maiúsculas (@Pessoa, JOGADOR), o editor marca E040. Ponto + Enter monta o bloco. Cada gaveta termina com ponto-e-vírgula; itens internos separam-se por vírgula.",
+      "Quad-IDs: o slug (@pessoa) é a chave do mundo. id: no bloco é o shortCode gerado (#A8F2); o UUID fica escondido. templateId aponta para um protótipo usado em SPAWN. extra não é gaveta-base. CREATE ID ou CREATE ID.tag — o 2.º segmento é tag, nunca gaveta.",
     ],
-    sample: `DRAGAO_ANCIAO.{
+    sample: `@dragao_anciao.{
   name: Dragão Ancião do Abismo;
   description: 'Uma besta ancestral envolta em chamas étereas.';
   tags: agent, vivo, chefe, voador, dragao;
@@ -16,8 +16,8 @@ export const SYNTAX_REF: RefSection[] = [
   flags: em_combate=true, derrotado=false;
   enums: estado_fsm=COMBATE_AEREO, postura=AGRESSIVO;
   phrases: titulo='O Flagelo dos CÉUS';
-  hardLinks: elemento_core=CORACAO_DRAGAO;
-  softLinks: current_location=PICO_SERPENTE, alvo_foco=JOGADOR;
+  hardLinks: elemento_core=@coracao_dragao;
+  softLinks: current_location=@pico_serpente, alvo_foco=@jogador;
   lists: inventario=[GEMA_FOGO, ESCAMA_ANCIA];
   fuses: temporizador_sopro=2, recarga_voo=4;
   struct: resistencias='fogo:100,gelo:-50';
@@ -29,9 +29,9 @@ export const SYNTAX_REF: RefSection[] = [
     body: [
       "tags — aspectos e taxonomia: agent, object, place, event, information, abstract, hidden. *.place casa quem tem a tag place.",
       "stats — só número ou gauge: `hp=10`, `hp=10[0..100]`. flags — booleanos, sempre chave=true ou chave=false. enums — estados discretos de FSM. phrases — diálogos e títulos consultáveis.",
-      "hardLinks — posse/composição: apagar o pai destrói os filhotes. softLinks — foco/posição: apagar o alvo faz null-reset (\"\") sem apagar o pai. Destino só ID ou #A8F2 (`alvo=JOGADOR`). links: legado vira softLinks.",
-      "lists — inventários/filas, forma `nome=[a, b]`. PUSH, POP, REMOVE, CLEAR, ADD_UNIQUE. fuses — só `N` ou `N>alvo` (`sopro=2`, `sopro=2>BOOM`). struct — objetos/matrizes aninhados.",
-      "name / description — texto de topo para o jogador, não tags. {ASTRONOMA.name} lê o campo. Se faltar, a Lume humaniza o id.",
+      "hardLinks — posse/composição: apagar o pai destrói os filhotes. softLinks — foco/posição: apagar o alvo faz null-reset (\"\") sem apagar o pai. Destino só ID ou #A8F2 (`alvo=@jogador`). links: legado vira softLinks.",
+      "lists — inventários/filas, forma `nome=[a, b]`. PUSH, POP, REMOVE, CLEAR, ADD_UNIQUE. fuses — só `N` ou `N>alvo` (`sopro=2`, `sopro=2>@boom`). struct — objetos/matrizes aninhados.",
+      "name / description — texto de topo para o jogador, não tags. {@astronoma.name} lê o campo. Se faltar, a Lume humaniza o id.",
     ],
   },
   {
@@ -39,9 +39,9 @@ export const SYNTAX_REF: RefSection[] = [
     title: "Taxonomia: filho → pai",
     body: [
       "A aba Taxonomia fica entre Entidades e Regras. Cada linha é uma herança: tag → pai. Só um pai por tag. Pai desconhecido vira raiz. Comentários só /* assim */.",
-      "A entidade não ganha as tags do pai. GOBLIN com tags: goblin continua {goblin}. Consultas e regras on/if vêem os ancestrais: *.monster e *.agent casam.",
+      "A entidade não ganha as tags do pai. @goblin com tags: goblin continua {goblin}. Consultas e regras on/if vêem os ancestrais: *.monster e *.agent casam.",
       "hidden nunca herda. Stats e links também não. Seta → ou ->. Ciclo, dois pais e linha inválida sublinham no caderno. Taxonomia vazia = motor antigo.",
-      "A regra mais específica vence: on: GOBLIN > *.goblin > *.monster > *.creature.",
+      "A regra mais específica vence: on: @goblin > *.goblin > *.monster > *.creature.",
       "A árvore ao lado lista os pais. Clique para ver impacto: entidades que herdam e regras on/if que citam a tag. No depurador, Efetiva (padrão) vê ancestrais; Direta ignora a taxonomia.",
     ],
     sample: `goblin → monster
@@ -60,9 +60,9 @@ narrativa: "O goblin já acordou."`,
       "do: o que muda. Várias linhas. Acrescenta tag, tira tag, muda número, muda ligação, SPAWN, CREATE ID ou CREATE ID.tag, DESTROY, PUSH/POP de listas.",
       "narrativa: o único parágrafo que o jogador lê.",
     ],
-    sample: `on: CAVERNA.!explored
-if: *.object.current_location=JOGADOR.illumination>5
-do: JOGADOR.current_location=CAVERNA
+    sample: `on: @caverna.!explored
+if: *.object.current_location=@jogador.illumination>5
+do: @jogador.current_location=@caverna
 narrativa: "Você entra, com a tocha à frente."`,
   },
   {
@@ -70,12 +70,12 @@ narrativa: "Você entra, com a tocha à frente."`,
     title: "*  $  !",
     body: [
       "* — qualquer entidade. *.place = qualquer uma com a tag place. *.object, *.agent, *.event, *.information, *.abstract funcionam igual.",
-      "$ — a entidade que o jogador acabou de clicar (o gatilho). Em on: *.object, o $ é aquele objeto. {$.name} é o nome visível dele. $.current_location=JOGADOR põe o clicado no jogador.",
-      "! — negação. CAVERNA.!explored = a caverna SEM a tag explored. *.object.!current_location=JOGADOR = objeto que NÃO está com o jogador.",
-      "-tag no do: tira a tag: GOBLIN.-sleeping acorda o goblin.",
+      "$ — a entidade que o jogador acabou de clicar (o gatilho). Em on: *.object, o $ é aquele objeto. {$.name} é o nome visível dele. $.current_location=@jogador põe o clicado no jogador.",
+      "! — negação. @caverna.!explored = a caverna SEM a tag explored. *.object.!current_location=@jogador = objeto que NÃO está com o jogador.",
+      "-tag no do: tira a tag: @goblin.-sleeping acorda o goblin.",
     ],
-    sample: `on: *.object.!current_location=JOGADOR
-do: $.current_location=JOGADOR
+    sample: `on: *.object.!current_location=@jogador
+do: $.current_location=@jogador
 narrativa: "Você pega {$.name}."`,
   },
   {
@@ -84,21 +84,21 @@ narrativa: "Você pega {$.name}."`,
     body: [
       "Na pergunta (on/if): illumination>5, hp<4, hp>=9, hp=0. Um = só (não precisa de ==; == também é aceito). Operadores: > < >= <= =.",
       "No do: hp=9 põe o valor; hp+2 soma; hp-1 diminui; hp*2 multiplica. Gauge [min..max] clamp automaticamente.",
-      "Só stats (números) aceitam > < + - *. Links usam = : current_location=CAVERNA. flags usam true/false.",
+      "Só stats (números) aceitam > < + - *. Links usam = : current_location=@caverna. flags usam true/false.",
     ],
-    sample: `do: JOGADOR.hp+2
-    JOGADOR.hp*2
-    JOGADOR.hp-1`,
+    sample: `do: @jogador.hp+2
+    @jogador.hp*2
+    @jogador.hp-1`,
   },
   {
     id: "chaves",
     title: "Chaves { } na narrativa",
     body: [
-      "Propriedade: {ASTRONOMA.name} → o name da astrônoma. {TOCHA.description}. {$.name} → o name de quem você clicou.",
-      "Pergunta: {JOGADOR.hp>4? o coração disparado | com coragem}. Se a pergunta for verdadeira, usa a primeira frase; senão, a segunda.",
+      "Propriedade: {@astronoma.name} → o name da astrônoma. {@tocha.description}. {$.name} → o name de quem você clicou.",
+      "Pergunta: {@jogador.hp>4? o coração disparado | com coragem}. Se a pergunta for verdadeira, usa a primeira frase; senão, a segunda.",
       "Ciclo, sem pergunta, só barras: {primeira | segunda | já cansou}. Cada clique seguinte avança a opção e para na última. Pontos dentro do texto são permitidos.",
     ],
-    sample: `on: ZELADOR
+    sample: `on: @zelador
 narrativa: "{O zelador sacode um pano. 'A lente está aí.' | 'Não peço a chave.' | Ele já varreu o suficiente.}"`,
   },
   {
@@ -114,40 +114,40 @@ narrativa: "{O zelador sacode um pano. 'A lente está aí.' | 'Não peço a chav
     id: "caminhos",
     title: "Caminho de gaveta",
     body: [
-      "No on:, if: e no do: compacto podes nomear a gaveta: JOGADOR.stats.hp>4, JOGADOR.flags.em_combate, JOGADOR.softLinks.alvo=GOBLIN, JOGADOR.tags.ferido, JOGADOR.phrases.titulo='Oi'.",
+      "No on:, if: e no do: compacto podes nomear a gaveta: @jogador.stats.hp>4, @jogador.flags.em_combate, @jogador.softLinks.alvo=@goblin, @jogador.tags.ferido, @jogador.phrases.titulo='Oi'.",
       "Sem gaveta o motor resolve como antes — tag, stat ou link conforme o que existir. #A8F2 no lugar do slug também é o mesmo alvo (Quad-ID).",
       "lists, fuses e struct não têm caminho compacto no do:. Listas usam PUSH/POP/REMOVE/CLEAR/ADD_UNIQUE. Fusíveis usam SET_FUSE.",
     ],
-    sample: `on: JOGADOR.stats.hp>0
-if: JOGADOR.flags.em_combate
-do: JOGADOR.softLinks.current_location=CAVERNA
-    JOGADOR.tags.explorado
-    JOGADOR.stats.hp-1`,
+    sample: `on: @jogador.stats.hp>0
+if: @jogador.flags.em_combate
+do: @jogador.softLinks.current_location=@caverna
+    @jogador.tags.explorado
+    @jogador.stats.hp-1`,
   },
   {
     id: "nomeados",
     title: "do: nomeado",
     body: [
       "Os verbos nomeados são o mesmo do: compacto, com a gaveta implícita: ADD_TAG, REMOVE_TAG, SET_STAT, ADD_STAT, MUL_STAT, SET_FLAG, SET_ENUM, SET_LINK.",
-      "No editor e no Vincular, o do: oferece só nomeados (mais PUSH/CLEAR/CREATE/DESTROY/SPAWN). Compacto (JOGADOR.ferido) continua a compilar no motor; STRUCT não sai do retrato.",
+      "No editor e no Vincular, o do: oferece só nomeados (mais PUSH/CLEAR/CREATE/DESTROY/SPAWN). Compacto (@jogador.ferido) continua a compilar no motor; STRUCT não sai do retrato.",
       "Buracos FBE: SET_PHRASE (phrases), UNLINK (parte o link sem DESTROY), SET_FUSE (turnos ou turnos>alvo). TICK continua um efeito, não uma mutação.",
-      "A caixa não conta: set_flag JOGADOR.em_combate false = SET_FLAG JOGADOR.flags.em_combate false = JOGADOR.flags.em_combate=false.",
+      "A caixa não conta: set_flag @jogador.em_combate false = SET_FLAG @jogador.flags.em_combate false = @jogador.flags.em_combate=false.",
     ],
-    sample: `do: ADD_TAG JOGADOR ferido
-    SET_STAT JOGADOR.hp 10
-    SET_PHRASE JOGADOR.titulo 'O herói'
-    UNLINK JOGADOR.alvo
-    SET_FUSE BOMBA.estouro 3>BOOM`,
+    sample: `do: ADD_TAG @jogador ferido
+    SET_STAT @jogador.hp 10
+    SET_PHRASE @jogador.titulo 'O herói'
+    UNLINK @jogador.alvo
+    SET_FUSE @bomba.estouro 3>@boom`,
   },
   {
     id: "ramos",
     title: "/ e ()",
     body: [
-      "/ é OU. on: JOGADOR / GOBLIN casa qualquer um dos dois. O ponto liga mais forte do que /: JOGADOR.vivo / GOBLIN.vivo.",
-      "() agrupam. (JOGADOR / GOBLIN).vivo distribui o sufixo pelos dois ramos. JOGADOR.(vivo / morto) é OU só nas cláusulas.",
-      "A especificidade de um OU é a do ramo mais fraco, para JOGADOR / *.object não roubar o clique ao id. Comentário só /* assim */ — tem de abrir e fechar. // já não é comentário: / é OU.",
+      "/ é OU. on: @jogador / @goblin casa qualquer um dos dois. O ponto liga mais forte do que /: @jogador.vivo / @goblin.vivo.",
+      "() agrupam. (@jogador / @goblin).vivo distribui o sufixo pelos dois ramos. @jogador.(vivo / morto) é OU só nas cláusulas.",
+      "A especificidade de um OU é a do ramo mais fraco, para @jogador / *.object não roubar o clique ao id. Comentário só /* assim */ — tem de abrir e fechar. // já não é comentário: / é OU.",
     ],
-    sample: `on: JOGADOR / GOBLIN
+    sample: `on: @jogador / @goblin
 if: (*.agent / *.object).vivo
 narrativa: "Alguém vivo responde."`,
   },
@@ -155,14 +155,14 @@ narrativa: "Alguém vivo responde."`,
     id: "posse",
     title: "(link) · TEM · NAO_TEM",
     body: [
-      "(link JOGADOR.alvo) no on:/if: é um passeio: casa a entidade para onde o link aponta. (link $.current_location) parte de quem foi clicado. Link vazio ou em falta não casa ninguém.",
-      "Depois de =, (link X.y) continua a ser valor, como sempre. (link / GOBLIN) é agrupamento, não passeio — falta o ponto da chave.",
-      "TEM e NAO_TEM perguntam se o detentor tem o item no conteúdo: current_location, in, ou uma lists do detentor. Um link qualquer (alvo, foco) não conta. NÃO_TEM e nao_tem são o mesmo. TEM ESPADA no gatilho é $ TEM ESPADA. TEM sozinho não parseia.",
-      "No caderno, «Quando o jogador tem a espada» vira on: JOGADOR TEM ESPADA. «Se o jogador não tem a tocha» vira if: JOGADOR NAO_TEM TOCHA. «Ele tem 100 de vida» no retrato continua stat, não matcher.",
+      "(link @jogador.alvo) no on:/if: é um passeio: casa a entidade para onde o link aponta. (link $.current_location) parte de quem foi clicado. Link vazio ou em falta não casa ninguém.",
+      "Depois de =, (link X.y) continua a ser valor, como sempre. (link / @goblin) é agrupamento, não passeio — falta o ponto da chave.",
+      "TEM e NAO_TEM perguntam se o detentor tem o item no conteúdo: current_location, in, ou uma lists do detentor. Um link qualquer (alvo, foco) não conta. NÃO_TEM e nao_tem são o mesmo. TEM @espada no gatilho é $ TEM @espada. TEM sozinho não parseia.",
+      "No caderno, «Quando o jogador tem a espada» vira on: @jogador TEM @espada. «Se o jogador não tem a tocha» vira if: @jogador NAO_TEM @tocha. «Ele tem 100 de vida» no retrato continua stat, não matcher.",
     ],
-    sample: `on: (link JOGADOR.alvo).vivo
-if: JOGADOR TEM ESPADA
-if: JOGADOR NAO_TEM PEDRA
+    sample: `on: (link @jogador.alvo).vivo
+if: @jogador TEM @espada
+if: @jogador NAO_TEM @pedra
 narrativa: "A lâmina está na tua mão."`,
   },
   {
@@ -182,8 +182,125 @@ Quando o jogador é marcado como "combate":
   narre "O ferro canta."
 ## /regras
 # --- lume-anotacoes ---
-1 {"id":"a1","book":"book-0","heading":"A Espada","quote":"A lâmina pesa.","do":"CREATE TOCHA.object"}
-2 {"id":"a2","book":"book-0","heading":"A Espada","quote":"A lâmina pesa.","do":"SET_STAT JOGADOR.hp 10"}
+1 {"id":"a1","book":"book-0","heading":"A Espada","quote":"A lâmina pesa.","do":"CREATE @tocha.object"}
+2 {"id":"a2","book":"book-0","heading":"A Espada","quote":"A lâmina pesa.","do":"SET_STAT @jogador.hp 10"}
 # --- /lume-anotacoes ---`,
   },
+  {
+    id: "editor",
+    title: "Editor de entidades",
+    body: [
+      "Escreve @pessoa. e Enter: a Lume monta o bloco com id: #shortCode e as 10 gavetas vazias. start. ou start + Enter vira start(). Sem @, ou com maiúsculas, o editor marca E040.",
+      "Nova entidade (menu Editar / árvore) insere @nova antes de start(), fora da fatia # --- lume-caderno ---. A fatia é do caderno; o sítio à mão é a linha em branco acima de start().",
+      "Atalhos: Tab depois de tags/on/if/do completa os dois-pontos. Espaço depois de um item na gaveta põe vírgula. Ctrl+Espaço abre sugestões. Ponto (.) também sugere.",
+      "Texto só entre aspas simples ' '. \"duplas\" é E041; sem aspas em name/description/phrases é E042. flags sempre chave=true ou chave=false. lists sempre nome=[a, b]. fuses só N ou N>@alvo. Comentário só /* assim */ — tem de abrir e fechar.",
+    ],
+    sample: `@guarda.{
+  id: #A1B2;
+  name: Guarda;
+  description: 'Um homem à porta.';
+  tags: agent, vivo;
+  stats: hp=10[0..10], forca=12;
+  flags: alerta=true, dormindo=false;
+  enums: posto=SENTINELA;
+  phrases: fala='Alto lá.';
+  hardLinks: arma=@alabarda;
+  softLinks: current_location=@portao;
+  lists: bolso=['chave', 2];
+  fuses: ronda=3>@alarme;
+  struct: visao='norte:1,sul:0';
+}
+
+start()`,
+  },
+  {
+    id: "caderno",
+    title: "Caderno (língua humana)",
+    body: [
+      "CADERNO: título na primeira linha. ### abre capítulo. A prosa vira mundo no Enter: a fatia # --- lume-caderno --- aparece no editor de entidades, abaixo de start().",
+      "Tipo: Alexandre é um Agent. / objeto / lugar / npc / abstrato / evento / informação. Aspas opcionais: 'A Espada Enferrujada' é um objeto. Pronome Ele/Ela aplica-se ao último sujeito. é um humano (não-tipo) vira tag extra.",
+      "Retrato: Ele tem 10 de vida. → hp=10. Ele tem força: 12. → stats. Ele está na Caverna. → current_location. pertence / é dono / contém / carrega ligam as entidades. Template \"NPC Comum\": lista indentada.",
+      "Regras no caderno: Quando o jogador pega a espada: / Se / narre \"…\" / cause 3 de dano ao goblin / marque o goblin como \"ferido\". Entenda \"pega [algo]\" como take. Cerca ## regras … ## /regras isola regras sem criar entidades da prosa.",
+      "Modo Escrita, botão direito: Vincular mutação (Pôr/Tirar nas 10 gavetas, ou CREATE @id / CREATE @id.tag / DESTROY), Inserir frase, Secção de regras. ¹ ² ³ ficam ao lado da palavra. A mutação vai para # --- lume-anotacoes ---, não para o Markdown.",
+    ],
+    sample: `CADERNO: A Caverna
+### A Espada
+A espada é um objeto.
+A espada está na caverna.
+O jogador tem 10 de vida.
+
+Quando o jogador pega a espada:
+  narre "O ferro canta."
+  cause 1 de dano ao jogador
+  marque o jogador como "armado"
+
+## regras
+Quando o jogador é marcado como "combate":
+  narre "A sala estreita."
+## /regras`,
+  },
+  {
+    id: "metodos",
+    title: "Todos os métodos do editor de regras",
+    body: [
+      "Cabeçalho: on: (obrigatório) · if: (0..N, todos verdadeiros) · do: (0..N linhas) · narrativa: (o parágrafo). Canónico em minúsculas; ON: IF: DO: compilam.",
+      "Gatilho on:/if:: @id · *.tag · $.campo · !negação · / OU · () grupo · TEM @item · NAO_TEM @item · (link @id.chave) passeio. Compacto com gaveta: @jogador.stats.hp>4.",
+      "do: nomeado — ADD_TAG, REMOVE_TAG, SET_STAT, ADD_STAT, MUL_STAT, SET_FLAG, SET_ENUM, SET_LINK, SET_PHRASE, UNLINK, CLEAR_LINK, SET_FUSE, PUSH, POP, REMOVE, CLEAR, ADD_UNIQUE, CREATE, DESTROY, SPAWN.",
+      "do: compacto — @id.tag põe tag; @id.-tag tira; @id.hp=9 / +2 / -1 / *2; @id.current_location=@sala. Equivale ao nomeado. A caixa não conta.",
+      "Mundo: CREATE @fumaça · CREATE @tocha.object · DESTROY @tocha · SPAWN @guarda_2 FROM @guarda. Listas: PUSH/POP/REMOVE/CLEAR/ADD_UNIQUE @id.lista item. Fusível: SET_FUSE @bomba.estouro 3 ou 3>@boom.",
+    ],
+    sample: `on: @porta / *.object
+if: @jogador TEM @chave
+if: (link @jogador.alvo).vivo
+do: ADD_TAG @porta aberta
+    REMOVE_TAG @porta trancada
+    SET_STAT @jogador.hp 10
+    ADD_STAT @jogador.hp 2
+    MUL_STAT @jogador.medo 2
+    SET_FLAG @jogador.alerta true
+    SET_ENUM @porta.estado ABERTA
+    SET_LINK @jogador.softLinks.current_location @sala
+    SET_PHRASE @guarda.fala 'Passa.'
+    UNLINK @jogador.alvo
+    SET_FUSE @bomba.estouro 3>@boom
+    PUSH @jogador.bolso chave
+    ADD_UNIQUE @jogador.bolso chave
+    CREATE @fumaca.abstract
+    SPAWN @guarda_2 FROM @guarda
+narrativa: "A porta cede. {@jogador.hp>4? O peito alivia. | Ainda tontas.}"`,
+  },
+  {
+    id: "efeitos",
+    title: "WAIT · TICK · LIVE e irmãos",
+    body: [
+      "Além do do: que muda o mundo, há efeitos de processo. Não são gavetas. TICK não é mutação de retrato.",
+      "WAIT N.@fuse — arma um processo de N turnos. TICK — decrementa todos os WAIT; ao chegar a 0 dispara on: desse fusível. No caderno, «a cada turno:» emite WAIT.",
+      "LIVE — os NPCs ao redor reagem (kit life). EMIT / INTENT / KNOW / THEN — efeitos de canal, intenção e conhecimento. SEMANTIC: classifica a regra; o matcher continua um só.",
+    ],
+    sample: `on: @alavanca
+do: WAIT 3.@fuse_porta
+narrativa: "A engrenagem queixa-se."
+
+on: @fuse_porta
+do: TICK
+    SET_LINK @jogador.softLinks.current_location @sala
+narrativa: "A grade sobe."`,
+  },
 ];
+
+export function syntaxRefMarkdown(): string {
+  const lines = [
+    "# Lume — guia da linguagem",
+    "",
+    "Documento completo para usar a ferramenta: editor de entidades, editor de regras e caderno. Todos os métodos, com exemplos.",
+    "",
+  ];
+  for (const section of SYNTAX_REF) {
+    lines.push(`## ${section.title}`, "");
+    for (const para of section.body) lines.push(para, "");
+    if (section.sample) {
+      lines.push("```", section.sample.replace(/\n$/, ""), "```", "");
+    }
+  }
+  return lines.join("\n");
+}
