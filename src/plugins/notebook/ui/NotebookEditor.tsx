@@ -22,8 +22,17 @@ import {
   bibliotecaOf,
   selectionOf,
   cadernoLive,
+  MENU_CURSOR,
+  MENU_MAIS,
+  nascerPalavra,
+  saberPalavra,
+  ligarPalavra,
+  maisUmPalavra,
+  cartaoNaLinha,
+  trechoDe,
   type DrawerHost,
   type MutationDraft,
+  type TipoNascer,
 } from "../lib/write-menu.ts";
 import { addAnnotation, headingOf, markHitsOnPage, nextAnnotationId, parseAnotacoesSlice, type MarkHit, type NotebookAnnotation } from "../lib/annotations.ts";
 import { proseTriggers, type ProseHit } from "../lib/prose-triggers.ts";
@@ -132,6 +141,7 @@ export function NotebookEditor({
   rules = [],
   annotations = [],
   onBindMutation,
+  onShowLine,
   lineBase = 1,
 }: {
   value: string;
@@ -144,6 +154,7 @@ export function NotebookEditor({
   rules?: { id: string; narrative?: string }[];
   annotations?: NotebookAnnotation[];
   onBindMutation?: (draft: MutationDraft, heading: string) => void;
+  onShowLine?: (line: number) => void;
   lineBase?: number;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -155,6 +166,8 @@ export function NotebookEditor({
   const { bookId, setCartao } = useNotebookView();
   const scrollRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<number | null>(null);
+  const cartaoLinha = useRef<number | null>(null);
+  const segurarCartao = useRef(false);
   const selectionRef = useRef({ start: 0, end: 0 });
   const openRef = useRef(false);
   const [open, setOpen] = useState(false);
@@ -163,6 +176,12 @@ export function NotebookEditor({
   const [replace, setReplace] = useState<{ start: number; end: number } | null>(null);
   const [menuPos, setMenuPos] = useState({ left: 8, top: 8 });
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [mais, setMais] = useState(false);
+  const [isto, setIsto] = useState(false);
+  const [sabe, setSabe] = useState("");
+  const [ligarNome, setLigarNome] = useState("");
+  const [ligarDestino, setLigarDestino] = useState("");
+  const [folha, setFolha] = useState<null | "sabe" | "ligar">(null);
   const [note, setNote] = useState<{ line: number; text: string } | null>(null);
   const [draft, setDraft] = useState<MutationDraft | null>(null);
   const [phrasesOpen, setPhrasesOpen] = useState(false);
@@ -182,6 +201,9 @@ export function NotebookEditor({
   useEffect(() => {
     if (live) return;
     setMenu(null);
+    setMais(false);
+    setIsto(false);
+    setFolha(null);
     setDraft(null);
     setPhrasesOpen(false);
     setProseHits([]);
@@ -190,6 +212,14 @@ export function NotebookEditor({
   function setOpenBoth(v: boolean) {
     openRef.current = v;
     setOpen(v);
+  }
+
+  function moverLinha(line: number) {
+    const next = cartaoNaLinha(cartaoLinha.current, line, segurarCartao.current);
+    if (next.limpar) setCartao(null);
+    cartaoLinha.current = next.linha;
+    segurarCartao.current = next.segurar;
+    onCaretLine?.(line);
   }
 
   function rememberSelection(start: number, end: number) {
@@ -317,6 +347,9 @@ export function NotebookEditor({
 
   function closeSheets() {
     setMenu(null);
+    setMais(false);
+    setIsto(false);
+    setFolha(null);
     setDraft(null);
     setPhrasesOpen(false);
     setNote(null);
@@ -342,6 +375,141 @@ export function NotebookEditor({
     }
     setProseHits([]);
     setOpenBoth(false);
+  }
+
+  function palavraMarcada(): boolean {
+    if (menu?.text.trim()) return true;
+    setCartao({ ok: false, titulo: "marque a palavra", linhas: [] });
+    setMenu(null);
+    setIsto(false);
+    return false;
+  }
+
+  function nascer(tag: TipoNascer) {
+    if (!menu || !palavraMarcada()) return;
+    const ran = nascerPalavra(entitiesSource, menu.text, tag);
+    setCartao(ran.cartao);
+    if (ran.cartao.ok && ran.entities !== entitiesSource) setEntities(ran.entities);
+    setMenu(null);
+    setIsto(false);
+  }
+
+  function guardarSabe() {
+    if (!menu) return;
+    const ran = saberPalavra(entitiesSource, menu.text, entityIds, sabe);
+    setCartao(ran.cartao);
+    if (ran.cartao.ok && ran.entities !== entitiesSource) setEntities(ran.entities);
+    setFolha(null);
+    setMenu(null);
+    setSabe("");
+  }
+
+  function guardarLigacao() {
+    if (!menu) return;
+    const ran = ligarPalavra(entitiesSource, menu.text, entityIds, ligarNome, ligarDestino);
+    setCartao(ran.cartao);
+    if (!ran.cartao.ok || !ran.mut) {
+      setFolha(null);
+      setMenu(null);
+      return;
+    }
+    onBindMutation?.(
+      {
+        entityId: ran.mut.id,
+        drawer: "hardLinks",
+        key: ligarNome.trim().toLowerCase(),
+        value: ligarDestino.trim(),
+        quote: menu.text.trim(),
+        line: menu.line,
+        op: "set",
+        column: columnOf(value, menu.start),
+      },
+      headingOf(value, menu.line),
+    );
+    setFolha(null);
+    setMenu(null);
+    setLigarNome("");
+  }
+
+  function maisUm() {
+    if (!menu || !palavraMarcada()) return;
+    const ran = maisUmPalavra(entitiesSource, menu.text, entities);
+    setCartao(ran.cartao);
+    if (ran.cartao.ok && ran.entities !== entitiesSource) setEntities(ran.entities);
+    setMenu(null);
+  }
+
+  function escolher(label: (typeof MENU_CURSOR)[number]) {
+    if (!menu) return;
+    if (label === "Isto é…") {
+      if (!palavraMarcada()) return;
+      setIsto(true);
+      return;
+    }
+    if (label === "Mudar isto") {
+      setDraft(emptyDraft(entityGuess(menu.text, entityIds), menu.text, menu.line, "tags", { column: columnOf(value, menu.start), into: intoOf(value, menu.line) }));
+      setMenu(null);
+      return;
+    }
+    if (label === "Ela sabe…") {
+      if (!palavraMarcada()) return;
+      setSabe("");
+      setFolha("sabe");
+      return;
+    }
+    if (label === "Ligar a…") {
+      if (!palavraMarcada()) return;
+      setLigarNome("");
+      setLigarDestino(entityIds[0] ?? "");
+      setFolha("ligar");
+      return;
+    }
+    if (label === "Mais um como esta") {
+      maisUm();
+      return;
+    }
+    if (label === "Nesta linha") {
+      moverLinha(menu.line);
+      onShowLine?.(menu.line);
+      setMenu(null);
+      return;
+    }
+    setMais(true);
+  }
+
+  function escolherMais(label: (typeof MENU_MAIS)[number]) {
+    if (!menu) return;
+    if (label === "Adicionar nota") {
+      setNote({ line: menu.line, text: noteOnLine(split[menu.line - 1] ?? "") ?? "" });
+      setMenu(null);
+      return;
+    }
+    if (label === "Biblioteca") {
+      setPhraseRange({ start: menu.start, end: menu.end });
+      setPhrasesOpen(true);
+      setMenu(null);
+      return;
+    }
+    if (label === "Ver índices") {
+      onShowIndex?.();
+      setMenu(null);
+      return;
+    }
+    if (label === "Linha do tempo") {
+      onShowTimeline?.();
+      setMenu(null);
+      return;
+    }
+    const pos = offsetOfLine(value, menu.line) + (split[menu.line - 1]?.length ?? 0);
+    const next = label === "Secção de regras"
+      ? insertRegrasSection(value, pos)
+      : label === "Secção de moldes"
+        ? insertMoldesSection(value, pos)
+        : insertSectionBreak(value, pos);
+    caretRef.current = next.offset;
+    onChange(next.source);
+    setMenu(null);
+    requestAnimationFrame(() => placeCaret(next.offset));
   }
 
   function menuRows() {
@@ -388,13 +556,18 @@ export function NotebookEditor({
       return;
     }
     if (e.key === "Enter" && !e.shiftKey) {
-      const ran = aplicarLinhaComando(ta.value, ta.selectionStart, entitiesSource);
+      const ran = aplicarLinhaComando(ta.value, ta.selectionStart, entitiesSource, {
+        prosa: notebooks || ta.value,
+        linha: (notebooks ? lineBase : 1) + selectionOf(ta.value, ta.selectionStart, ta.selectionStart).line - 1,
+      });
       if (ran) {
         e.preventDefault();
         setCartao(ran.cartao);
         if (ran.entities !== entitiesSource) setEntities(ran.entities);
+        if (ran.anotacao || ran.source !== ta.value) segurarCartao.current = true;
         if (ran.anotacao) {
           if (!bookId) {
+            segurarCartao.current = false;
             setCartao({ ok: false, titulo: "Não há caderno.", linhas: [] });
             return;
           }
@@ -483,7 +656,7 @@ export function NotebookEditor({
               autoComplete="off"
               onSelect={(e) => {
                 rememberSelection(e.currentTarget.selectionStart, e.currentTarget.selectionEnd);
-                onCaretLine?.(selectionOf(value, e.currentTarget.selectionStart, e.currentTarget.selectionStart).line);
+                moverLinha(selectionOf(value, e.currentTarget.selectionStart, e.currentTarget.selectionStart).line);
               }}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -493,7 +666,7 @@ export function NotebookEditor({
                 const caret = tabbed ? tabbed.offset : pos;
                 rememberSelection(caret, caret);
                 onChange(next);
-                onCaretLine?.(selectionOf(next, caret, caret).line);
+                moverLinha(selectionOf(next, caret, caret).line);
                 suggest(next, caret);
               }}
               onKeyDown={onKeyDown}
@@ -506,8 +679,19 @@ export function NotebookEditor({
                 const y = e.clientY - sc.getBoundingClientRect().top + sc.scrollTop - PAD_TOP;
                 const line = Math.max(1, Math.min(lineCount, Math.floor(y / LINE_PX) + 1));
                 const sel = selectionOf(value, ta?.selectionStart ?? 0, ta?.selectionEnd ?? 0);
-                rememberSelection(sel.start, sel.end);
-                setMenu({ x: e.clientX, y: e.clientY, line, start: sel.start, end: sel.end, text: sel.text });
+                const trecho = trechoDe(value, sel.start, sel.end);
+                rememberSelection(trecho.text ? trecho.start : sel.start, trecho.text ? trecho.end : sel.end);
+                if (trecho.erro === "O trecho fica na mesma linha.") setCartao({ ok: false, titulo: trecho.erro, linhas: [] });
+                setMais(false);
+                setIsto(false);
+                setMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  line: trecho.text ? trecho.line : line,
+                  start: trecho.text ? trecho.start : sel.start,
+                  end: trecho.text ? trecho.end : sel.end,
+                  text: trecho.text,
+                });
                 setOpenBoth(false);
               }}
               onBlur={() =>
@@ -541,107 +725,93 @@ export function NotebookEditor({
           onPick={(index) => menuRows()[index]?.pick()}
         />
       ) : null}
-      {menu ? <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Fechar menu" onClick={() => setMenu(null)} /> : null}
-      {menu ? (
+      {menu ? <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Fechar menu" onClick={() => { setMenu(null); setMais(false); setIsto(false); setFolha(null); }} /> : null}
+      {menu && !folha ? (
         <div
           className="fixed z-50 min-w-44 overflow-hidden rounded-sm border border-border bg-elevated py-1 shadow-xl"
           style={{ left: menu.x, top: menu.y }}
           onMouseDown={(e) => e.preventDefault()}
         >
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              setDraft(emptyDraft(entityGuess(menu.text, entityIds), menu.text, menu.line, "tags", { column: columnOf(value, menu.start), into: intoOf(value, menu.line) }));
-              setMenu(null);
-            }}
-          >
-            Vincular mutação
-          </button>
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              setPhraseRange({ start: menu.start, end: menu.end });
-              setPhrasesOpen(true);
-              setMenu(null);
-            }}
-          >
-            Biblioteca
-          </button>
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              setNote({ line: menu.line, text: noteOnLine(split[menu.line - 1] ?? "") ?? "" });
-              setMenu(null);
-            }}
-          >
-            Adicionar nota
-          </button>
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              onShowIndex?.();
-              setMenu(null);
-            }}
-          >
-            Ver índices
-          </button>
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              onShowTimeline?.();
-              setMenu(null);
-            }}
-          >
-            Linha do tempo
-          </button>
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              const pos = offsetOfLine(value, menu.line) + (split[menu.line - 1]?.length ?? 0);
-              const next = insertRegrasSection(value, pos);
-              caretRef.current = next.offset;
-              onChange(next.source);
-              setMenu(null);
-              requestAnimationFrame(() => placeCaret(next.offset));
-            }}
-          >
-            Secção de regras
-          </button>
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              const pos = offsetOfLine(value, menu.line) + (split[menu.line - 1]?.length ?? 0);
-              const next = insertMoldesSection(value, pos);
-              caretRef.current = next.offset;
-              onChange(next.source);
-              setMenu(null);
-              requestAnimationFrame(() => placeCaret(next.offset));
-            }}
-          >
-            Secção de moldes
-          </button>
-          <button
-            type="button"
-            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
-            onClick={() => {
-              const pos = offsetOfLine(value, menu.line) + (split[menu.line - 1]?.length ?? 0);
-              const next = insertSectionBreak(value, pos);
-              caretRef.current = next.offset;
-              onChange(next.source);
-              setMenu(null);
-              requestAnimationFrame(() => placeCaret(next.offset));
-            }}
-          >
-            Separar secção
-          </button>
+          {isto ? (
+            <>
+              {(["pessoa", "lugar", "objeto"] as const).map((tag) => (
+                <button key={tag} type="button" className="flex w-full px-3 py-1.5 text-left text-sm capitalize hover:bg-surface" onClick={() => nascer(tag)}>
+                  {tag}
+                </button>
+              ))}
+              <button type="button" className="flex w-full px-3 py-1.5 text-left text-sm text-muted hover:bg-surface" onClick={() => setIsto(false)}>
+                Voltar
+              </button>
+            </>
+          ) : mais ? (
+            <>
+              {MENU_MAIS.map((label) => (
+                <button key={label} type="button" className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface" onClick={() => escolherMais(label)}>
+                  {label}
+                </button>
+              ))}
+              <button type="button" className="flex w-full px-3 py-1.5 text-left text-sm text-muted hover:bg-surface" onClick={() => setMais(false)}>
+                Voltar
+              </button>
+            </>
+          ) : (
+            MENU_CURSOR.map((label) => (
+              <button key={label} type="button" className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface" onClick={() => escolher(label)}>
+                {label}
+              </button>
+            ))
+          )}
         </div>
+      ) : null}
+      {folha && menu ? (
+        <form
+          className="fixed z-50 w-64 rounded-sm border border-border bg-elevated p-3 shadow-xl"
+          style={{ left: menu.x, top: menu.y }}
+          onMouseDown={(e) => e.preventDefault()}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (folha === "sabe") guardarSabe();
+            else guardarLigacao();
+          }}
+        >
+          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">{folha === "sabe" ? "Ela sabe…" : "Ligar a…"}</p>
+          {folha === "sabe" ? (
+            <input
+              autoFocus
+              className="mt-2 h-8 w-full rounded-xs border border-border bg-surface px-2 text-sm text-fg outline-none"
+              value={sabe}
+              placeholder="o facto"
+              onChange={(e) => setSabe(e.target.value)}
+            />
+          ) : (
+            <>
+              <input
+                autoFocus
+                className="mt-2 h-8 w-full rounded-xs border border-border bg-surface px-2 text-sm text-fg outline-none"
+                value={ligarNome}
+                placeholder="nome da ligação"
+                onChange={(e) => setLigarNome(e.target.value)}
+              />
+              <select
+                className="mt-2 h-8 w-full rounded-xs border border-border bg-surface px-2 text-sm text-fg outline-none"
+                value={ligarDestino}
+                onChange={(e) => setLigarDestino(e.target.value)}
+              >
+                {entityIds.map((id) => (
+                  <option key={id} value={id}>{id}</option>
+                ))}
+              </select>
+            </>
+          )}
+          <div className="mt-2 flex justify-end gap-2">
+            <button type="button" className="h-7 rounded-xs px-2.5 text-sm text-muted hover:text-fg" onClick={() => { setFolha(null); setMenu(null); }}>
+              Cancelar
+            </button>
+            <button type="submit" className="h-7 rounded-xs bg-surface px-2.5 text-sm text-fg">
+              Guardar
+            </button>
+          </div>
+        </form>
       ) : null}
       {note ? (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-bg/70 p-4">

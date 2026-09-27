@@ -1,6 +1,6 @@
 import { FBE_DRAWERS, type Entity, type FbeDrawer, type WorldModel } from "../../narrative-engine/lib/types.ts";
 import { applyChanges, parseDoLine } from "../../narrative-engine/lib/rule-engine.ts";
-import { cloneWorldModel, compileEntityFile } from "../../narrative-engine/lib/world-model.ts";
+import { cloneWorldModel, compileEntityFile, isSystemEntityId } from "../../narrative-engine/lib/world-model.ts";
 import { compileNotebook } from "./notebook.ts";
 import {
   cadernoBookRanges,
@@ -177,6 +177,29 @@ export function leituraAte(text: string, entitiesSource = "", line: number | nul
 export function entityHistory(entries: readonly TimelineEntry[], entityId: string | null | undefined): TimelineEntry[] {
   if (!entityId) return [];
   return entries.filter((item) => item.entityId === entityId);
+}
+
+export type ArestaMapa = { de: string; para: string; nome: string; dura: boolean };
+
+export function mapaDe(world: WorldModel): { nos: string[]; arestas: ArestaMapa[] } {
+  const nos = [...world.values()]
+    .filter((entity) => !isSystemEntityId(entity.id) && !entity.tags.has("molde"))
+    .map((entity) => entity.id)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const tem = new Set(nos);
+  const arestas: ArestaMapa[] = [];
+  for (const id of nos) {
+    const entity = world.get(id);
+    if (!entity) continue;
+    for (const [nome, para] of Object.entries(entity.hardLinks)) {
+      if (para && tem.has(para) && para !== id) arestas.push({ de: id, para, nome, dura: true });
+    }
+    for (const [nome, para] of Object.entries(entity.softLinks)) {
+      if (para && tem.has(para) && para !== id) arestas.push({ de: id, para, nome, dura: false });
+    }
+  }
+  arestas.sort((a, b) => `${a.de}.${a.nome}.${a.para}`.localeCompare(`${b.de}.${b.nome}.${b.para}`));
+  return { nos, arestas };
 }
 
 export function changedSnaps(entry: TimelineEntry): DrawerSnap[] {

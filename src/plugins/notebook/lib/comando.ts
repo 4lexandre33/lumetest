@@ -2,6 +2,7 @@ import type { Entity, StatValue } from "../../narrative-engine/lib/types.ts";
 import { canonicalEntityId, cloneEntity, compileEntityFile, formatFuseValue, formatStatInput, isCanonicalEntityId, isSystemEntityId, serializeEntityBlock, shortCodeFromSlug } from "../../narrative-engine/lib/world-model.ts";
 import { deleteEntityBlock, handwrittenInsertAt, inCadernoSlice, insertEntity, locateEntityBlock } from "../../narrative-engine/lib/source-ops.ts";
 import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/lib/types.ts";
+import { authorshipTimeline, leituraAte } from "./timeline.ts";
 import { headingOf, rebindAnnotation } from "./annotations.ts";
 
 export type CartaoComando = {
@@ -837,7 +838,37 @@ function sabeOf(entities: string, id: string): string[] {
   return (mundo(entities).get(id)?.lists.sabe ?? []).map(String);
 }
 
-function knoDe(parts: string[], entities: string): EfeitoComando | null {
+export type Relogio = { prosa: string; linha: number | null };
+
+function relogioDe(raw?: { prosa?: string; linha?: number | null }): Relogio {
+  return { prosa: raw?.prosa ?? "", linha: raw?.linha ?? null };
+}
+
+function mundoAte(entities: string, relogio: Relogio) {
+  if (relogio.linha == null) return mundo(entities);
+  return leituraAte(relogio.prosa, entities, relogio.linha).world;
+}
+
+function fatosAte(entities: string, id: string, relogio: Relogio): string[] {
+  return (mundoAte(entities, relogio).get(id)?.lists.sabe ?? []).map(String);
+}
+
+function mudancas(entities: string, relogio: Relogio, id: string, key: string): string[] {
+  const base = (relogio.linha == null ? mundo(entities) : leituraAte(relogio.prosa, entities, 0).world).get(id);
+  let prev = base ? valorAgora(base, key) : null;
+  const lines: string[] = [];
+  for (const entry of authorshipTimeline(relogio.prosa, entities)) {
+    if (entry.entityId !== id) continue;
+    if (relogio.linha != null && (entry.line == null || entry.line > relogio.linha)) continue;
+    const next = entry.after ? valorAgora(entry.after, key) : null;
+    if (next === prev) continue;
+    lines.push(`L${entry.line ?? "—"} ${prev || "—"} → ${next || "—"}`);
+    prev = next;
+  }
+  return lines;
+}
+
+function knoDe(parts: string[], entities: string, relogio: Relogio): EfeitoComando | null {
   const verb = (parts[0] ?? "").toLowerCase();
   if (!verb.startsWith("kno.") && verb !== "kno") return null;
   const op = verb.split(".")[1] ?? "";
@@ -845,14 +876,17 @@ function knoDe(parts: string[], entities: string): EfeitoComando | null {
   if (verb.split(".").length > 2) return fail("Não entendi.", entities);
   const args = parts.slice(1);
   if (!args.length) return fail("Falta o id.", entities);
-  const id = asId(args[0] ?? "");
+  const said = resolverPessoa(args[0] ?? "", entities, relogio);
+  if (said && "erro" in said) return fail(said.erro, entities);
+  const id = said && "id" in said ? said.id : asId(args[0] ?? "");
   if (!id) return fail("Id inválido.", entities);
   const world = mundo(entities);
   if (!world.has(id) && !locateEntityBlock(entities, id)) return fail(`Não achei ${id}.`, entities);
 
   if (op === "show" || op === "at") {
     if (args.length !== 1) return fail("Não entendi.", entities);
-    const facts = sabeOf(entities, id);
+    const facts = op === "at" ? fatosAte(entities, id, relogio) : sabeOf(entities, id);
+    if (op === "at" && !mundoAte(entities, relogio).has(id) && !locateEntityBlock(entities, id)) return fail(`Não achei ${id}.`, entities);
     return ok(id, facts.length ? facts : ["Nada."], entities);
   }
   if (op !== "learn" && op !== "forget") return fail("Não entendi.", entities);
@@ -874,24 +908,32 @@ function knoDe(parts: string[], entities: string): EfeitoComando | null {
   return ok("Esqueceu", [fact], next);
 }
 
-function queDe(parts: string[], entities: string): EfeitoComando | null {
+function queDe(parts: string[], entities: string, relogio: Relogio): EfeitoComando | null {
   const verb = (parts[0] ?? "").toLowerCase();
   if (!verb.startsWith("que.") && verb !== "que") return null;
   const bits = verb.split(".");
   const op = bits[1] ?? "";
   if (!op) return fail("Falta o comando.", entities);
   const args = parts.slice(1);
-  const world = mundo(entities);
+  const world = mundoAte(entities, relogio);
+  let erroPessoa: string | null = null;
   const known = (raw: string): string | null => {
+    const said = resolverPessoa(raw, entities, relogio);
+    if (said && "erro" in said) {
+      erroPessoa = said.erro;
+      return null;
+    }
+    if (said && "id" in said) return said.id;
     const id = asId(raw);
     if (!id) return null;
     return world.has(id) || locateEntityBlock(entities, id) ? id : null;
   };
+  const falha = (raw: string) => (erroPessoa ? fail(erroPessoa, entities) : raw && asId(raw) ? fail(`Não achei ${asId(raw)}.`, entities) : fail(raw ? "Id inválido." : "Falta o id.", entities));
 
   if (op === "where") {
     if (bits.length > 3 || args.length !== 1) return fail("Não entendi.", entities);
     const id = known(args[0] ?? "");
-    if (!id) return args[0] && asId(args[0]) ? fail(`Não achei ${asId(args[0])}.`, entities) : fail(args[0] ? "Id inválido." : "Falta o id.", entities);
+    if (!id) return falha(args[0] ?? "");
     const rel = bits[2] ?? "";
     const linhas = linksOut(world.get(id)).filter((line) => !rel || line.startsWith(`${rel} `));
     return ok(rel ? `${id}.${rel}` : id, linhas.length ? linhas : ["Nenhuma."], entities);
@@ -910,19 +952,20 @@ function queDe(parts: string[], entities: string): EfeitoComando | null {
   }
 
   if (op === "at") {
-    if (args.length === 2) return fail("Não há relógio.", entities);
     if (bits.length !== 2 || args.length !== 1) return fail("Não entendi.", entities);
     const id = known(args[0] ?? "");
-    if (!id) return args[0] && asId(args[0]) ? fail(`Não achei ${asId(args[0])}.`, entities) : fail(args[0] ? "Id inválido." : "Falta o id.", entities);
-    const linhas = retrato(world.get(id)!);
+    if (!id) return falha(args[0] ?? "");
+    const entity = world.get(id);
+    if (!entity) return fail(`Não achei ${id}.`, entities);
+    const linhas = retrato(entity);
     return ok(id, linhas.length ? linhas : ["Nada."], entities);
   }
 
   if (op === "knowledge") {
     if (bits.length !== 2 || args.length !== 1) return fail("Não entendi.", entities);
     const id = known(args[0] ?? "");
-    if (!id) return args[0] && asId(args[0]) ? fail(`Não achei ${asId(args[0])}.`, entities) : fail(args[0] ? "Id inválido." : "Falta o id.", entities);
-    const facts = sabeOf(entities, id);
+    if (!id) return falha(args[0] ?? "");
+    const facts = fatosAte(entities, id, relogio);
     return ok(id, facts.length ? facts : ["Nada."], entities);
   }
 
@@ -932,9 +975,9 @@ function queDe(parts: string[], entities: string): EfeitoComando | null {
     const head = raw.split(".")[0] ?? "";
     const id = known(head);
     const key = raw.slice(head.length + 1);
-    if (!id || !key) return id ? fail("Não entendi.", entities) : fail(head && asId(head) ? `Não achei ${asId(head)}.` : "Id inválido.", entities);
-    const hit = valorAgora(world.get(id)!, key);
-    return ok(`${id}.${key}`, hit ? [hit] : ["Nada."], entities);
+    if (!id || !key) return id ? fail("Não entendi.", entities) : falha(head);
+    const linhas = mudancas(entities, relogio, id, key);
+    return ok(`${id}.${key}`, linhas.length ? linhas : ["Nada."], entities);
   }
 
   return fail("Não entendi.", entities);
@@ -992,10 +1035,81 @@ function casaExpr(blob: string, expr: string): boolean | null {
   return blob.includes(e);
 }
 
-function buscar(entities: string, expr: string, tag?: string): EfeitoComando {
-  const linhas: string[] = [];
-  for (const entity of mundo(entities).values()) {
+function citaToken(texto: string, token: string): boolean {
+  if (!token) return false;
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^\\p{L}\\p{N}_])${escaped}([^\\p{L}\\p{N}_]|$)`, "iu").test(texto);
+}
+
+function noCapitulo(entities: string, relogio: Relogio): { world: ReturnType<typeof mundo>; only: Set<string> | null } {
+  if (relogio.linha == null) return { world: mundo(entities), only: null };
+  const world = mundoAte(entities, relogio);
+  const lines = relogio.prosa.replace(/^\uFEFF/, "").split("\n");
+  const at = Math.max(0, Math.min(relogio.linha, lines.length)) - 1;
+  let start = 0;
+  for (let i = at; i >= 0; i--) {
+    if (/^###\s+/.test((lines[i] ?? "").trim())) {
+      start = i;
+      break;
+    }
+  }
+  const texto = lines.slice(start, at + 1).join("\n");
+  const only = new Set<string>();
+  for (const entity of world.values()) {
     if (isSystemEntityId(entity.id)) continue;
+    const slug = entity.id.replace(/^@/, "");
+    if (citaToken(texto, entity.id) || citaToken(texto, slug) || citaToken(texto, entity.name) || citaToken(texto, entity.shortCode)) only.add(entity.id);
+  }
+  return { world, only };
+}
+
+function textoDoCapitulo(relogio: Relogio): string[] {
+  const lines = relogio.prosa.replace(/^\uFEFF/, "").split("\n");
+  const at = Math.max(0, Math.min(relogio.linha ?? lines.length, lines.length)) - 1;
+  let start = 0;
+  for (let i = at; i >= 0; i--) {
+    if (/^###\s+/.test((lines[i] ?? "").trim())) {
+      start = i;
+      break;
+    }
+  }
+  return lines.slice(start, Math.max(start, at));
+}
+
+function resolverPessoa(raw: string, entities: string, relogio: Relogio): { id: string } | { erro: string } | null {
+  const token = raw.trim().replace(/^'|'$/g, "");
+  if (!token) return null;
+  const world = relogio.linha == null ? mundo(entities) : mundoAte(entities, relogio);
+  const pronome = token.toLocaleLowerCase();
+  if (pronome === "ela" || pronome === "ele") {
+    if (relogio.linha == null) return { erro: "Não achei." };
+    let last: string | null = null;
+    for (const line of textoDoCapitulo(relogio)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith(">") || /^###\s+/.test(trimmed)) continue;
+      const hits = [...world.values()].filter((entity) => {
+        if (isSystemEntityId(entity.id)) return false;
+        const slug = entity.id.replace(/^@/, "");
+        return citaToken(line, entity.id) || citaToken(line, slug) || citaToken(line, entity.name);
+      });
+      if (hits.length === 1) last = hits[0]!.id;
+    }
+    return last ? { id: last } : { erro: "Não achei." };
+  }
+  const id = asId(token);
+  if (id && (world.has(id) || locateEntityBlock(entities, id))) return { id };
+  const hits = [...world.values()].filter((entity) => !isSystemEntityId(entity.id) && entity.name.trim().toLocaleLowerCase() === token.toLocaleLowerCase());
+  if (hits.length === 1) return { id: hits[0]!.id };
+  if (hits.length > 1) return { erro: "Não achei." };
+  return null;
+}
+
+function buscar(entities: string, expr: string, relogio: Relogio, tag?: string): EfeitoComando {
+  const { world, only } = noCapitulo(entities, relogio);
+  const linhas: string[] = [];
+  for (const entity of world.values()) {
+    if (isSystemEntityId(entity.id)) continue;
+    if (only && !only.has(entity.id)) continue;
     if (tag && !entity.tags.has(tag)) continue;
     const hit = casaExpr(ficha(entity), expr);
     if (hit == null) return fail("Não entendi.", entities);
@@ -1005,7 +1119,7 @@ function buscar(entities: string, expr: string, tag?: string): EfeitoComando {
   return ok(expr, linhas.length ? linhas : ["Nenhuma."], entities);
 }
 
-function seaDe(parts: string[], entities: string): EfeitoComando | null {
+function seaDe(parts: string[], entities: string, relogio: Relogio): EfeitoComando | null {
   const verb = (parts[0] ?? "").toLowerCase();
   if (!verb.startsWith("sea.") && verb !== "sea") return null;
   const bits = verb.split(".");
@@ -1019,8 +1133,9 @@ function seaDe(parts: string[], entities: string): EfeitoComando | null {
   }
   if (op === "tag") {
     if (args.length !== 1 || !args[0] || args[0].startsWith("@") || args[0].includes("'")) return fail("Não entendi.", entities);
-    const linhas = [...mundo(entities).values()]
-      .filter((entity) => !isSystemEntityId(entity.id) && entity.tags.has(args[0]!))
+    const { world, only } = noCapitulo(entities, relogio);
+    const linhas = [...world.values()]
+      .filter((entity) => !isSystemEntityId(entity.id) && (!only || only.has(entity.id)) && entity.tags.has(args[0]!))
       .map((entity) => entity.id)
       .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     return ok(args[0], linhas.length ? linhas : ["Nenhuma."], entities);
@@ -1029,14 +1144,14 @@ function seaDe(parts: string[], entities: string): EfeitoComando | null {
     if (args.length !== 1) return fail("O texto fica entre ' '.", entities);
     const expr = quoted(args[0]);
     if (expr == null) return fail("O texto fica entre ' '.", entities);
-    return buscar(entities, expr);
+    return buscar(entities, expr, relogio);
   }
   if (op === "in") {
     if (args.length !== 2) return fail("Não entendi.", entities);
     const tag = args[0] ?? "";
     const expr = quoted(args[1]);
     if (!tag || tag.startsWith("@") || expr == null) return fail(expr == null ? "O texto fica entre ' '." : "Não entendi.", entities);
-    return buscar(entities, expr, tag);
+    return buscar(entities, expr, relogio, tag);
   }
   return fail("Não entendi.", entities);
 }
@@ -1112,7 +1227,7 @@ function valorAgora(entity: Entity, key: string): string | null {
   return statText(entity.stats[key]) ?? (key in entity.flags ? String(entity.flags[key]) : null) ?? entity.hardLinks[key] ?? entity.softLinks[key] ?? null;
 }
 
-export function correrComando(corpo: string, entities = ""): EfeitoComando {
+export function correrComando(corpo: string, entities = "", relogio?: { prosa?: string; linha?: number | null }): EfeitoComando {
   if (!corpo) return fail("Falta o comando.", entities);
   const parts = lex(corpo);
   if (!parts) return fail("O texto fica entre ' '.", entities);
@@ -1133,16 +1248,17 @@ export function correrComando(corpo: string, entities = ""): EfeitoComando {
   const link = linkDe(parts, entities);
   if (link) return link;
 
-  const kno = knoDe(parts, entities);
+  const clock = relogioDe(relogio);
+  const kno = knoDe(parts, entities, clock);
   if (kno) return kno;
 
-  const que = queDe(parts, entities);
+  const que = queDe(parts, entities, clock);
   if (que) return que;
 
-  const sea = seaDe(parts, entities);
+  const sea = seaDe(parts, entities, clock);
   if (sea) return sea;
 
-  const aud = audDe(parts, entities);
+  const aud = audDe(parts, entities, clock);
   if (aud) return aud;
 
   if (verb === "ent.list") {
@@ -1205,14 +1321,15 @@ function existe(ids: Set<string>, raw: string): boolean {
   return id ? ids.has(id) : true;
 }
 
-function furos(entities: string): Furos {
-  const world = mundo(entities);
+function furos(entities: string, relogio: Relogio = { prosa: "", linha: null }): Furos {
+  const { world, only } = noCapitulo(entities, relogio);
   const ids = new Set([...world.keys()].filter((id) => !isSystemEntityId(id)));
   const out: Furos = { links: [], identities: [], instances: [], continuity: [], references: [] };
   const byCode = new Map<string, string[]>();
   const cite = (raw: string) => (raw.startsWith("@") ? raw : `@${raw}`);
   for (const entity of world.values()) {
     if (isSystemEntityId(entity.id)) continue;
+    if (only && !only.has(entity.id)) continue;
     const code = entity.shortCode.toUpperCase();
     byCode.set(code, [...(byCode.get(code) ?? []), entity.id]);
     for (const [key, dest] of Object.entries(entity.hardLinks)) {
@@ -1247,13 +1364,13 @@ function furos(entities: string): Furos {
   return out;
 }
 
-function audDe(parts: string[], entities: string): EfeitoComando | null {
+function audDe(parts: string[], entities: string, relogio: Relogio): EfeitoComando | null {
   const verb = (parts[0] ?? "").toLowerCase();
   if (verb !== "aud" && !verb.startsWith("aud.")) return null;
   const bits = verb.split(".");
   const op = bits[1] ?? "all";
   if (bits.length > 2 || parts.length > 1) return fail("Não entendi.", entities);
-  const holes = furos(entities);
+  const holes = furos(entities, relogio);
   const show = (titulo: string, linhas: string[]) => ok(titulo, linhas.length ? linhas : ["Fecha."], entities);
   if (op === "all") {
     const linhas = [...holes.links, ...holes.identities, ...holes.instances, ...holes.continuity, ...holes.references];
@@ -1293,12 +1410,13 @@ export function aplicarLinhaComando(
   source: string,
   offset: number,
   entities = "",
+  relogio?: { prosa?: string; linha?: number | null },
 ): { source: string; offset: number; cartao: CartaoComando; entities: string; anotacao?: AnotacaoComando } | null {
   const lines = source.split("\n");
   const index = lineIndexAt(source, offset);
   const corpo = corpoComando(lines[index] ?? "");
   if (corpo === null) return null;
-  const efeito = correrComando(corpo, entities);
+  const efeito = correrComando(corpo, entities, relogio ?? { prosa: source, linha: index + 1 });
   if (!efeito.cartao.ok || !efeito.mut) {
     if (!efeito.cartao.ok) return { source, offset, cartao: efeito.cartao, entities };
     const next = withoutLine(source, index);

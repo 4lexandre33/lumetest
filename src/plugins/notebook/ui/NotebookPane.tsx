@@ -135,6 +135,10 @@ export function NotebookPane() {
           onShowTimeline={() => setWriteFocus(entries[0]?.annotation.id ?? null)}
           onSelectMark={(id) => setWriteFocus(id)}
           onCaretLine={(line) => setWriteLine(book.startLine + line - 1)}
+          onShowLine={(line) => {
+            setWriteLine(book.startLine + line - 1);
+            setWriteFocus(null, false);
+          }}
           onChange={(next, opts) => setNotebooks(replaceBookSource(text, book.id, next), opts)}
           lineBase={book.startLine}
           onBindMutation={(draft, heading) => {

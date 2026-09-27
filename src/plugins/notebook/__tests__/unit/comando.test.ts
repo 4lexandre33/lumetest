@@ -3,9 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { aplicarLinhaComando, correrComando } from "../../lib/comando.ts";
+import { cartaoNaLinha, entityGuess, ligarPalavra, maisUmPalavra, MENU_CURSOR, nascerPalavra, saberPalavra, trechoDe } from "../../lib/write-menu.ts";
 import { lerProsa } from "../../lib/leitor.ts";
-import { applyNamedDoToDraft, markHitsOnPage, type MutableDraft } from "../../lib/annotations.ts";
+import { addAnnotation, markHitsOnPage, applyNamedDoToDraft, type MutableDraft } from "../../lib/annotations.ts";
+import { leituraAte, mapaDe } from "../../lib/timeline.ts";
 import { compileEntityFile } from "../../../narrative-engine/lib/world-model.ts";
+import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
+import { compileProject } from "../../../narrative-engine/lib/project.ts";
 
 const bloco = `@goblin.{
   id: #A1B2;
@@ -365,8 +369,8 @@ describe("K8 que", () => {
     assert.deepEqual(correrComando("que.when stats.hp=9", src).cartao.linhas, ["Nenhuma."]);
     assert.deepEqual(correrComando("que.knowledge @goblin", src).cartao.linhas, ["a porta range"]);
     assert.ok(correrComando("que.at @goblin", src).cartao.linhas.includes("stats: hp=4"));
-    assert.equal(correrComando("que.at 3 @goblin", src).cartao.titulo, "Não há relógio.");
-    assert.deepEqual(correrComando("que.timeline @goblin.stats.hp", src).cartao.linhas, ["4"]);
+    assert.equal(correrComando("que.at 3 @goblin", src).cartao.titulo, "Não entendi.");
+    assert.deepEqual(correrComando("que.timeline @goblin.stats.hp", src).cartao.linhas, ["Nada."]);
     assert.equal(correrComando("que.foo @goblin", src).cartao.titulo, "Não entendi.");
   });
 });
@@ -409,5 +413,204 @@ describe("K10 aud", () => {
     assert.deepEqual(correrComando("aud.links", src).cartao.linhas, ["@goblin.lugar → @sumida", "@goblin.olha aponta para si"]);
     assert.deepEqual(correrComando("aud", bloco).cartao.linhas, ["Fecha."]);
     assert.equal(correrComando("aud.rules", src).cartao.titulo, "Não entendi.");
+  });
+});
+
+describe("U1 menu do cursor", () => {
+  it("nasce, sabe, liga e copia pelo mesmo caminho da ordem", () => {
+    assert.deepEqual([...MENU_CURSOR], ["Isto é…", "Mudar isto", "Ela sabe…", "Ligar a…", "Mais um como esta", "Nesta linha", "Mais"]);
+    assert.equal(nascerPalavra(bloco, "  ", "pessoa").cartao.titulo, "marque a palavra");
+    const born = nascerPalavra(bloco, "Mira", "lugar");
+    assert.equal(born.cartao.titulo, "Nasceu @mira");
+    assert.equal(compileEntityFile(born.entities).worldModel.get("@mira")?.tags.has("lugar"), true);
+    assert.equal(born.entities.includes("@goblin"), true);
+
+    const sabe = saberPalavra(bloco, "goblin", ["@goblin"], "a porta range");
+    assert.equal(sabe.cartao.titulo, "Aprendeu");
+    assert.deepEqual(compileEntityFile(sabe.entities).worldModel.get("@goblin")?.lists.sabe, ["a porta range"]);
+
+    const ligado = ligarPalavra(`${bloco}\n${pessoa("@sala", "#A1B3")}`, "goblin", ["@goblin", "@sala"], "lugar", "@sala");
+    assert.equal(ligado.mut?.do, "SET_LINK @goblin.hardLinks.lugar @sala");
+
+    assert.equal(maisUmPalavra(bloco, "goblin", [{ id: "@goblin", tags: [] }]).cartao.titulo, "marque como modelo primeiro");
+    const molde = correrComando("inst.mark @goblin", bloco);
+    const copia = maisUmPalavra(molde.entities, "goblin", [{ id: "@goblin", tags: ["molde"] }]);
+    assert.equal(copia.cartao.ok, true);
+    assert.equal(compileEntityFile(copia.entities).worldModel.has("@goblin_1"), true);
+  });
+});
+
+describe("U2 painel", () => {
+  it("tem três lentes e o cartão sai só quando a linha muda", () => {
+    const preview = readFileSync(fileURLToPath(new URL("../../ui/WritePreview.tsx", import.meta.url)), "utf8");
+    assert.match(preview, /O que é verdade nesta linha\?/);
+    assert.match(preview, /Agora/);
+    assert.match(preview, /Esta pessoa/);
+    assert.match(preview, /Avisos/);
+    assert.match(preview, /Ver entidade/);
+    assert.equal(cartaoNaLinha(null, 4, false).limpar, false);
+    assert.equal(cartaoNaLinha(4, 4, false).limpar, false);
+    assert.equal(cartaoNaLinha(4, 5, false).limpar, true);
+    assert.equal(cartaoNaLinha(4, 5, true).limpar, false);
+  });
+});
+
+describe("U3 relógio", () => {
+  it("a ligação da linha 4 não existe na linha 2 e existe na 4", () => {
+    const ents = `${bloco}\n${pessoa("@sala", "#A1B3")}`;
+    const page = "um\ndois\ntres\no goblin\n";
+    const noted = addAnnotation(page, {
+      id: "a1",
+      book: "book-0",
+      heading: "",
+      quote: "o goblin",
+      do: "SET_LINK @goblin.hardLinks.lugar @sala",
+      column: 2,
+    });
+    const clock = { prosa: noted };
+    assert.deepEqual(correrComando("que.where @goblin", ents, { ...clock, linha: 2 }).cartao.linhas, ["Nenhuma."]);
+    assert.deepEqual(correrComando("que.where @goblin", ents, { ...clock, linha: 4 }).cartao.linhas, ["lugar → @sala"]);
+    assert.deepEqual(correrComando("que.timeline @goblin.hardLinks.lugar", ents, { ...clock, linha: 2 }).cartao.linhas, ["Nada."]);
+    assert.deepEqual(correrComando("que.timeline @goblin.hardLinks.lugar", ents, { ...clock, linha: 4 }).cartao.linhas, ["L4 — → @sala"]);
+    const learned = correrComando("kno.learn @goblin 'a porta range'", ents);
+    assert.deepEqual(correrComando("kno.at @goblin", learned.entities, { prosa: page, linha: 2 }).cartao.linhas, ["a porta range"]);
+    assert.equal(correrComando("que.at 3 @goblin", ents).cartao.titulo, "Não entendi.");
+  });
+});
+
+describe("U4 mapa", () => {
+  it("a ligação da linha 4 desenha-se na 4 e não na 2, sem entrar na prosa", () => {
+    const ents = `${bloco}\n${pessoa("@sala", "#A1B3")}`;
+    const page = "um\ndois\ntres\no goblin\n";
+    const noted = addAnnotation(page, {
+      id: "a1",
+      book: "book-0",
+      heading: "",
+      quote: "o goblin",
+      do: "SET_LINK @goblin.hardLinks.lugar @sala",
+      column: 0,
+    });
+    const antes = mapaDe(leituraAte(noted, ents, 2).world);
+    const depois = mapaDe(leituraAte(noted, ents, 4).world);
+    assert.equal(antes.arestas.some((edge) => edge.de === "@goblin" && edge.para === "@sala"), false);
+    assert.deepEqual(depois.arestas, [{ de: "@goblin", para: "@sala", nome: "lugar", dura: true }]);
+    assert.equal("x" in depois, false);
+    assert.equal("y" in depois, false);
+    assert.equal(noted.includes("x:"), false);
+    assert.equal(lerProsa(noted).includes("lugar"), false);
+    const preview = readFileSync(fileURLToPath(new URL("../../ui/WritePreview.tsx", import.meta.url)), "utf8");
+    assert.match(preview, /mapaDe\(leitura\.world\)/);
+    assert.match(preview, /aria-label="Mapa"/);
+  });
+});
+
+describe("U5 trecho", () => {
+  it("marca o trecho da mesma linha e o ¹ fica no fim", () => {
+    const page = "o goblin chegou";
+    const marcado = trechoDe(page, 2, 2);
+    assert.equal(marcado.text, "goblin");
+    assert.equal(page.slice(marcado.start, marcado.end), "goblin");
+    const frase = trechoDe(`  ${page}  `, 2, 2 + "o goblin".length);
+    assert.equal(frase.text, "o goblin");
+    assert.equal(frase.erro, undefined);
+    const cruza = trechoDe("o goblin\nchegou", 0, 12);
+    assert.equal(cruza.erro, "O trecho fica na mesma linha.");
+    assert.equal(trechoDe("…", 0, 0).erro, "marque a palavra");
+    assert.equal(entityGuess("o goblin", ["@sala", "@goblin"]), "@goblin");
+    assert.equal(entityGuess("jogador", ["@sala", "@jogador"]), "@jogador");
+    assert.equal(nascerPalavra(bloco, "o goblin", "pessoa").cartao.titulo, "Id inválido.");
+    const noted = addAnnotation(page, {
+      id: "a1",
+      book: "book-0",
+      heading: "",
+      quote: "o goblin",
+      do: "ADD_TAG @goblin bruto",
+      column: 0,
+    });
+    const hit = markHitsOnPage(page, [{ id: "a1", book: "book-0", heading: "", quote: "o goblin", do: "ADD_TAG @goblin bruto", column: 0 }])
+      .get(1)?.[0];
+    assert.equal(hit && hit.column + hit.length, "o goblin".length);
+    assert.equal(lerProsa(noted).includes("¹"), false);
+    const editor = readFileSync(fileURLToPath(new URL("../../ui/NotebookEditor.tsx", import.meta.url)), "utf8");
+    assert.match(editor, /trechoDe\(/);
+  });
+});
+
+describe("U6 capítulo", () => {
+  it("busca e audita o capítulo do >, sem mexer no que", () => {
+    const ents = `${pessoa("@goblin", "#A1B2", "lugar=@sumida")}\n${pessoa("@tocha", "#A1B4", "lugar=@outra")}`;
+    const page = "### Sala\no goblin\n### Rua\na tocha\n";
+    const sala = { prosa: page, linha: 2 };
+    const rua = { prosa: page, linha: 4 };
+    assert.deepEqual(correrComando("sea.find 'sumida'", ents, sala).cartao.linhas, ["@goblin"]);
+    assert.deepEqual(correrComando("sea.find 'outra'", ents, sala).cartao.linhas, ["Nenhuma."]);
+    assert.deepEqual(correrComando("sea.find 'outra'", ents, rua).cartao.linhas, ["@tocha"]);
+    assert.deepEqual(correrComando("sea.find 'sumida'", ents, rua).cartao.linhas, ["Nenhuma."]);
+    assert.deepEqual(correrComando("aud.links", ents, sala).cartao.linhas, ["@goblin.lugar → @sumida"]);
+    assert.deepEqual(correrComando("aud.links", ents, rua).cartao.linhas, ["@tocha.lugar → @outra"]);
+    assert.deepEqual(correrComando("que.where @goblin", ents, rua).cartao.linhas, ["lugar → @sumida"]);
+    assert.equal(correrComando("aud", ents, sala).entities, ents);
+  });
+});
+
+describe("U7 falar", () => {
+  it("aceita o nome e ela, e não escolhe quando há duas", () => {
+    const mira = pessoa("@pessoa", "#A1B2", "lugar=@sala").replace("name: ;", "name: 'Mira';");
+    const ana = pessoa("@ana", "#A1B4").replace("name: ;", "name: 'Ana';");
+    const outra = pessoa("@outra", "#A1B5", "lugar=@rua").replace("name: ;", "name: 'Mira';");
+    const sala = `${pessoa("@sala", "#A1B3")}`;
+    const ents = `${mira}\n${ana}\n${sala}`;
+    const page = "### Sala\nMira entrou\n.\n### Rua\nAna esperava\n.\n";
+    const clock = { prosa: page, linha: 3 };
+    assert.deepEqual(correrComando("que.where Mira", ents, clock).cartao.linhas, ["lugar → @sala"]);
+    assert.deepEqual(correrComando("que.where ela", ents, clock).cartao.linhas, ["lugar → @sala"]);
+    assert.deepEqual(correrComando("que.where ela", ents, { prosa: page, linha: 6 }).cartao.linhas, ["Nenhuma."]);
+    assert.equal(correrComando("que.where Ana", ents, { prosa: page, linha: 6 }).cartao.titulo, "@ana");
+    const duas = `${mira}\n${outra}\n${sala}`;
+    assert.equal(correrComando("que.where Mira", duas, clock).cartao.titulo, "Não achei.");
+    assert.deepEqual(correrComando("que.where @pessoa", ents, clock).cartao.linhas, ["lugar → @sala"]);
+    const learned = correrComando("kno.learn @pessoa 'a porta range'", ents);
+    assert.deepEqual(correrComando("kno.at ela", learned.entities, { prosa: page, linha: 3 }).cartao.linhas, ["a porta range"]);
+  });
+});
+
+describe("U8 fecho", () => {
+  it("prende o manuscrito sem gravar prosa nem mudar o jogo", () => {
+    const ref = readFileSync(fileURLToPath(new URL("../../../ide-guide/lib/syntax-ref.ts", import.meta.url)), "utf8");
+    assert.match(ref, /Isto é…/);
+    assert.match(ref, /o que é verdade nesta linha/);
+    assert.match(ref, /O mapa em Agora/);
+    assert.match(ref, /O trecho marcado na mesma linha/);
+    assert.match(ref, /busca no capítulo do >/);
+    assert.match(ref, /ela e ele são a última pessoa/);
+    assert.match(ref, /não gravam na prosa, não criam modo e não mudam o jogo/);
+
+    const mira = pessoa("@pessoa", "#A1B2").replace("name: ;", "name: 'Mira';");
+    const ents = `${mira}\n${pessoa("@sala", "#A1B3")}\n${pessoa("@tocha", "#A1B4", "lugar=@sumida")}`;
+    const page = "### Sala\num\ndois\nMira entrou\n.\n### Rua\na tocha\n";
+    const noted = addAnnotation(page, {
+      id: "a1",
+      book: "book-0",
+      heading: "Sala",
+      quote: "Mira entrou",
+      do: "SET_LINK @pessoa.hardLinks.lugar @sala",
+      column: 0,
+    });
+    const cedo = { prosa: noted, linha: 3 };
+    const tarde = { prosa: noted, linha: 5 };
+    assert.deepEqual(correrComando("que.where Mira", ents, cedo).cartao.linhas, ["Nenhuma."]);
+    assert.deepEqual(correrComando("que.where ela", ents, cedo).cartao.titulo, "Não achei.");
+    assert.deepEqual(correrComando("que.where ela", ents, tarde).cartao.linhas, ["lugar → @sala"]);
+    assert.equal(mapaDe(leituraAte(noted, ents, 3).world).arestas.some((edge) => edge.para === "@sala"), false);
+    assert.deepEqual(mapaDe(leituraAte(noted, ents, 4).world).arestas, [{ de: "@pessoa", para: "@sala", nome: "lugar", dura: true }]);
+    assert.deepEqual(correrComando("aud.links", ents, tarde).cartao.linhas, ["Fecha."]);
+    assert.deepEqual(correrComando("aud.links", ents, { prosa: noted, linha: 7 }).cartao.linhas, ["@tocha.lugar → @sumida"]);
+    const frase = trechoDe("Mira entrou", 0, "Mira entrou".length);
+    assert.equal(frase.text, "Mira entrou");
+    assert.equal(frase.erro, undefined);
+    assert.equal(trechoDe("Mira\nentrou", 0, 6).erro, "O trecho fica na mesma linha.");
+    assert.equal(lerProsa(noted).includes(">"), false);
+    assert.equal(lerProsa(noted).includes("SET_LINK"), false);
+    assert.equal(compileProject(createExampleProject("goblin-cave")).errors.length, 0);
   });
 });

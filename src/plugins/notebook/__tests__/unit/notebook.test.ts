@@ -1254,7 +1254,8 @@ describe("C4 caderno by mode", () => {
     const src = readFileSync(fileURLToPath(new URL("../../ui/NotebookEditor.tsx", import.meta.url)), "utf8");
     assert.match(src, /cadernoLive/);
     assert.match(src, /if \(!live\) return/);
-    assert.match(src, /Vincular mutação/);
+    assert.match(src, /Mudar isto/);
+    assert.match(src, /MENU_CURSOR/);
     const cave = createExampleProject("goblin-cave");
     const compiled = compileProject(cave);
     assert.equal(compiled.errors.length, 0);

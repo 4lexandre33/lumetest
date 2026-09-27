@@ -1,5 +1,7 @@
 import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/lib/types.ts";
 import { formatStatInput, isCanonicalEntityId, isLinkTarget, canonicalEntityId } from "../../narrative-engine/lib/world-model.ts";
+import { locateEntityBlock } from "../../narrative-engine/lib/source-ops.ts";
+import { correrComando, type EfeitoComando } from "./comando.ts";
 
 export { FBE_DRAWERS, type FbeDrawer, isLinkTarget, formatStatInput };
 
@@ -78,6 +80,34 @@ export function selectionOf(source: string, start: number, end: number): TextSel
   };
 }
 
+function charDeTrecho(ch: string): boolean {
+  return /^[@#\p{L}\p{N}_]$/u.test(ch);
+}
+
+export function trechoDe(source: string, start: number, end: number): TextSelection & { erro?: string } {
+  const sel = selectionOf(source, start, end);
+  if (sel.text.includes("\n")) return { start: sel.start, end: sel.start, line: sel.line, text: "", erro: "O trecho fica na mesma linha." };
+  if (sel.start !== sel.end) {
+    const lead = sel.text.length - sel.text.trimStart().length;
+    const text = sel.text.trim();
+    if (!text) return { start: sel.start, end: sel.start, line: sel.line, text: "", erro: "marque a palavra" };
+    const from = sel.start + lead;
+    return { start: from, end: from + text.length, line: sel.line, text };
+  }
+  const lineStart = source.lastIndexOf("\n", Math.max(0, sel.start - 1)) + 1;
+  const lineBreak = source.indexOf("\n", sel.start);
+  const lineText = source.slice(lineStart, lineBreak < 0 ? source.length : lineBreak);
+  const at = sel.start - lineStart;
+  let i = at;
+  if (!charDeTrecho(lineText[i] ?? "")) i = at - 1;
+  if (!charDeTrecho(lineText[i] ?? "")) return { start: sel.start, end: sel.start, line: sel.line, text: "", erro: "marque a palavra" };
+  let a = i;
+  let b = i + 1;
+  while (charDeTrecho(lineText[a - 1] ?? "")) a--;
+  while (charDeTrecho(lineText[b] ?? "")) b++;
+  return { start: lineStart + a, end: lineStart + b, line: sel.line, text: lineText.slice(a, b) };
+}
+
 export function insertAtSelection(source: string, start: number, end: number, insert: string): { source: string; offset: number } {
   const sel = selectionOf(source, start, end);
   return {
@@ -152,7 +182,112 @@ export function entityGuess(quote: string, ids: readonly string[]): string {
   if (!t) return ids[0] ?? "";
   const folded = foldId(t);
   const hit = ids.find((id) => foldId(id) === folded);
-  return hit && isCanonicalEntityId(hit) ? hit : emitEntityId(t, ids);
+  if (hit && isCanonicalEntityId(hit)) return hit;
+  if (!/\s/.test(t)) return emitEntityId(t, ids);
+  for (const token of t.split(/\s+/)) {
+    const id = emitEntityId(token, ids);
+    if (isCanonicalEntityId(id) && ids.includes(id)) return id;
+  }
+  const first = emitEntityId(t.split(/\s+/)[0] ?? "", ids);
+  return isCanonicalEntityId(first) ? first : ids[0] ?? "";
+}
+
+export const MENU_CURSOR = [
+  "Isto é…",
+  "Mudar isto",
+  "Ela sabe…",
+  "Ligar a…",
+  "Mais um como esta",
+  "Nesta linha",
+  "Mais",
+] as const;
+
+export const MENU_MAIS = [
+  "Adicionar nota",
+  "Biblioteca",
+  "Ver índices",
+  "Linha do tempo",
+  "Secção de regras",
+  "Secção de moldes",
+  "Separar secção",
+] as const;
+
+export type TipoNascer = "pessoa" | "lugar" | "objeto";
+
+function semPalavra(entities: string): EfeitoComando {
+  return { cartao: { ok: false, titulo: "marque a palavra", linhas: [] }, entities };
+}
+
+function idDaPalavra(word: string, ids: readonly string[]): string | null {
+  const texto = word.trim();
+  if (!texto) return null;
+  const id = entityGuess(texto, ids);
+  return isCanonicalEntityId(id) ? id : null;
+}
+
+function porTag(source: string, id: string, tag: TipoNascer): string | null {
+  const loc = locateEntityBlock(source, id);
+  if (!loc) return null;
+  const lines = source.split("\n");
+  for (let i = loc.startLine - 1; i < loc.endLine; i++) {
+    if (!/^\s*tags\s*:/.test(lines[i] ?? "")) continue;
+    const indent = /^\s*/.exec(lines[i]!)?.[0] ?? "  ";
+    lines[i] = `${indent}tags: ${tag};`;
+    return lines.join("\n");
+  }
+  return null;
+}
+
+export function nascerPalavra(entities: string, word: string, tag: TipoNascer): EfeitoComando {
+  if (!word.trim()) return semPalavra(entities);
+  const id = canonicalEntityId(word);
+  if (!isCanonicalEntityId(id)) return { cartao: { ok: false, titulo: "Id inválido.", linhas: [] }, entities };
+  const ran = correrComando(`ent.create ${id}`, entities);
+  if (!ran.cartao.ok) return ran;
+  const next = porTag(ran.entities, id, tag);
+  return { cartao: { ok: true, titulo: `Nasceu ${id}`, linhas: [tag] }, entities: next ?? ran.entities };
+}
+
+export function saberPalavra(entities: string, word: string, ids: readonly string[], fact: string): EfeitoComando {
+  const id = idDaPalavra(word, ids);
+  if (!id) return semPalavra(entities);
+  const texto = fact.trim();
+  if (!texto || /['\n;\[\]]/.test(texto)) return { cartao: { ok: false, titulo: "O texto fica entre ' '.", linhas: [] }, entities };
+  return correrComando(`kno.learn ${id} '${texto}'`, entities);
+}
+
+export function ligarPalavra(entities: string, word: string, ids: readonly string[], nome: string, destino: string): EfeitoComando {
+  const id = idDaPalavra(word, ids);
+  if (!id) return semPalavra(entities);
+  const key = nome.trim().toLowerCase();
+  const dest = idDaPalavra(destino, ids);
+  if (!key || !/^[\p{L}_][\p{L}\p{N}_]*$/u.test(key) || !dest) {
+    return { cartao: { ok: false, titulo: "Não entendi.", linhas: [] }, entities };
+  }
+  return correrComando(`link.set.${key} ${id} ${dest}`, entities);
+}
+
+export function maisUmPalavra(
+  entities: string,
+  word: string,
+  hosts: readonly { id: string; tags: Iterable<string> }[],
+): EfeitoComando {
+  const id = idDaPalavra(word, hosts.map((item) => item.id));
+  if (!id) return semPalavra(entities);
+  const host = hosts.find((item) => item.id === id);
+  if (!host || ![...host.tags].includes("molde")) {
+    return { cartao: { ok: false, titulo: "marque como modelo primeiro", linhas: [] }, entities };
+  }
+  return correrComando(`inst.create ${id}`, entities);
+}
+
+export function cartaoNaLinha(
+  anterior: number | null,
+  linha: number,
+  segurar: boolean,
+): { limpar: boolean; linha: number; segurar: boolean } {
+  if (segurar) return { limpar: false, linha, segurar: false };
+  return { limpar: anterior != null && anterior !== linha, linha, segurar: false };
 }
 
 export function keysOfDrawer(entity: DrawerHost | undefined, drawer: FbeDrawer): string[] {
