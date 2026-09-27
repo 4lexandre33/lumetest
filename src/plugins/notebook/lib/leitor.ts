@@ -35,7 +35,7 @@ export function lerProsa(source: string): string {
       fence = isRegrasFence(trimmed) ? !/\/regras/i.test(trimmed) : !/\/moldes/i.test(trimmed);
       continue;
     }
-    if (fence || isMachine(trimmed)) {
+    if (fence || isMachine(trimmed) || trimmed.startsWith(">")) {
       if (!fence && !trimmed && out.length && out[out.length - 1] !== "") out.push("");
       continue;
     }

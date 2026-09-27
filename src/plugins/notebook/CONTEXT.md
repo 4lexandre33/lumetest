@@ -15,7 +15,8 @@ Caderno humano. Plugin interno isolado: compile **e** UI. Fora do matcher.
 - `lib/annotations.ts` — fatia `# --- lume-anotacoes ---`, rebind, compile, doFromDraft (SET / CLEAR+PUSH / Tirar)
 - `lib/prose-triggers.ts` — gatilhos ao escrever (popover); writeSuggestions (tags da linha/parágrafo)
 - `lib/timeline.ts` — ordem, cloneWorldModel do projecto ∪ caderno até a linha (`worldAte`), diff das gavetas, histórico por entidade
-- `lib/leitor.ts` — `lerProsa`: prosa até a linha; `lerLivro`: o caderno inteiro, o mesmo corte
+- `lib/leitor.ts` — `lerProsa`: prosa até a linha; `lerLivro`: o caderno inteiro, o mesmo corte. Linha `>` não entra na prosa.
+- `lib/comando.ts` — linha `>`: `help` lista; `ent` e `id` gravam no editor; `mut` e `link` viram anotação; `inst` sincroniza o molde; `kno` guarda fatos; `que` pergunta; `sea` busca; `aud` mostra o que não fecha.
 - `lib/proposta.ts` — proposta da linha: Aceitar grava o do; Recusar não apaga a lei. `sempre` aplica; aviso se o mundo contradiz
 - `index.ts` — capability `Notebook`
 

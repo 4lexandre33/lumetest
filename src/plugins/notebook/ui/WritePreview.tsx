@@ -16,7 +16,7 @@ export function WritePreview() {
   const writeLine = useIdeStore((s) => s.writeLine);
   const setWriteFocus = useIdeStore((s) => s.setWriteFocus);
   const setNotebooks = useIdeStore((s) => s.setNotebooks);
-  const { bookIndex } = useNotebookView();
+  const { bookIndex, cartao } = useNotebookView();
   const text = project?.notebooksSource ?? "";
   const entitiesSource = project?.entitiesSource ?? "";
   const playerId = project?.settings.playerEntityId || "@jogador";
@@ -31,7 +31,7 @@ export function WritePreview() {
   }, [text, bookIndex]);
   const [lendo, setLendo] = useState(false);
   const mundo = useMemo(
-    () => [...leitura.world.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+    () => [...leitura.world.values()].filter((entity) => !entity.tags.has("molde")).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
     [leitura],
   );
   const selected = entries.find((item) => item.annotation.id === writeAnnotationId) ?? null;
@@ -90,6 +90,23 @@ export function WritePreview() {
           {lendo ? "Até aqui" : "Ler"}
         </button>
       </div>
+      <section aria-label="Comando" className="border-b border-border px-3 py-2">
+        <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Comando</p>
+        {cartao ? (
+          <>
+            <p className="mt-1 text-sm text-fg">{cartao.titulo}</p>
+            {cartao.linhas.length ? (
+              <ul className="mt-1 space-y-0.5">
+                {cartao.linhas.map((line) => (
+                  <li key={line} className="text-sm text-muted">{line}</li>
+                ))}
+              </ul>
+            ) : null}
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-muted">—</p>
+        )}
+      </section>
       {lendo ? (
         <article aria-label="Livro" className="min-h-0 flex-1 overflow-auto px-3 py-3">
           <pre className="whitespace-pre-wrap font-display text-[15px] leading-snug text-fg">{livro || "—"}</pre>

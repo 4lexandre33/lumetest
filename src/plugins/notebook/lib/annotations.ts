@@ -313,6 +313,14 @@ function applyOneNamedDo(draft: MutableDraft, doLine: string): boolean {
     draft.stats[key] = shown.includes("[") ? shown : Number(shown);
     return true;
   }
+  if (verb === "ADD_STAT") {
+    const n = Number(value.replace(",", "."));
+    if (!Number.isFinite(n)) return false;
+    const cur = draft.stats[key];
+    const base = typeof cur === "number" ? cur : Number(String(cur ?? "").replace(",", ".")) || 0;
+    draft.stats[key] = base + n;
+    return true;
+  }
   if (verb === "SET_FLAG") {
     draft.flags[key] = value || "true";
     return true;
@@ -363,6 +371,10 @@ function applyOneNamedDo(draft: MutableDraft, doLine: string): boolean {
     return true;
   }
   if (verb === "STRUCT") {
+    if (!value) {
+      delete draft.struct[key];
+      return true;
+    }
     draft.struct[key] = value;
     return true;
   }

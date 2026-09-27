@@ -25,10 +25,13 @@ import {
   type DrawerHost,
   type MutationDraft,
 } from "../lib/write-menu.ts";
-import { headingOf, markHitsOnPage, type MarkHit, type NotebookAnnotation } from "../lib/annotations.ts";
+import { addAnnotation, headingOf, markHitsOnPage, nextAnnotationId, parseAnotacoesSlice, type MarkHit, type NotebookAnnotation } from "../lib/annotations.ts";
 import { proseTriggers, type ProseHit } from "../lib/prose-triggers.ts";
 import { inRegrasFence, proseDegrau, type PhraseLeaf } from "../lib/degrau-prose.ts";
 import { leituraAte } from "../lib/timeline.ts";
+import { aplicarLinhaComando } from "../lib/comando.ts";
+import { replaceBookSource } from "../lib/pages.ts";
+import { useNotebookView } from "./notebook-view.tsx";
 import { menuAnchor, menuDetail, menuOpens, menuSeal } from "../../ide-ui/lib/completion-menu.ts";
 import { CompletionMenu } from "../../ide-ui/lib/components/CompletionMenu.tsx";
 
@@ -145,6 +148,11 @@ export function NotebookEditor({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const live = cadernoLive(useIdeStore((s) => s.ideMode));
+  const entitiesSource = useIdeStore((s) => s.project?.entitiesSource ?? "");
+  const notebooks = useIdeStore((s) => s.project?.notebooksSource ?? "");
+  const setEntities = useIdeStore((s) => s.setEntities);
+  const setNotebooks = useIdeStore((s) => s.setNotebooks);
+  const { bookId, setCartao } = useNotebookView();
   const scrollRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<number | null>(null);
   const selectionRef = useRef({ start: 0, end: 0 });
@@ -380,6 +388,30 @@ export function NotebookEditor({
       return;
     }
     if (e.key === "Enter" && !e.shiftKey) {
+      const ran = aplicarLinhaComando(ta.value, ta.selectionStart, entitiesSource);
+      if (ran) {
+        e.preventDefault();
+        setCartao(ran.cartao);
+        if (ran.entities !== entitiesSource) setEntities(ran.entities);
+        if (ran.anotacao) {
+          if (!bookId) {
+            setCartao({ ok: false, titulo: "Não há caderno.", linhas: [] });
+            return;
+          }
+          const base = replaceBookSource(notebooks, bookId, ran.source);
+          const id = nextAnnotationId(parseAnotacoesSlice(base));
+          setNotebooks(addAnnotation(base, { ...ran.anotacao, id, book: bookId }), { flush: true });
+          caretRef.current = ran.offset;
+          requestAnimationFrame(() => placeCaret(ran.offset));
+          return;
+        }
+        if (ran.source !== ta.value) {
+          caretRef.current = ran.offset;
+          onChange(ran.source, { flush: true });
+          requestAnimationFrame(() => placeCaret(ran.offset));
+        }
+        return;
+      }
       const next = indentOnEnter(ta.value, ta.selectionStart);
       if (next) {
         e.preventDefault();
