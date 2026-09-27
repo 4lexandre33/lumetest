@@ -88,17 +88,19 @@ export function interactWith(state: GameState, triggerId: string): GameState {
     let nextWorld = world;
     let story = "";
     if (rule) {
-      nextWorld = applyChanges(world, rule.changes, triggerId);
+      nextWorld = applyChanges(world, rule.changes, triggerId, tax);
       story = parseNarrative(pickNarrative(rule.narrative, rule.voices, nextWorld, triggerId, state.playerEntityId), {
         worldModel: nextWorld,
         triggerId,
         cycleIndex,
+        taxonomy: tax,
       });
     } else {
       story = parseNarrative(entityDescription(world, triggerId) || `{${triggerId}.name}`, {
         worldModel: world,
         triggerId,
         cycleIndex,
+        taxonomy: tax,
       });
     }
     const beat: GameBeat = { triggerId, ruleId: rule?.id ?? null, story, timestamp: Date.now(), cycleIndex };
@@ -187,7 +189,7 @@ export function rewindTo(state: GameState, index: number): GameState {
 
 export function queryGameView(state: GameState, actorId: string = state.playerEntityId): GameView {
   const { worldModel, taxonomy } = state;
-  const currentLocation = getLink(worldModel, actorId, "current_location");
+  const currentLocation = getLink(worldModel, actorId, "current_location", taxonomy);
   const q = (m: string) => query(m, worldModel, actorId, taxonomy).map(([id]) => id);
   const inventory = q(`*.object.!hidden.current_location=${actorId}`);
   const locations = q(`*.place.!hidden`).filter((id) => id !== currentLocation);

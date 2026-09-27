@@ -4,7 +4,7 @@ Slides da guia e referência de sintaxe.
 
 ## Abrir
 - `lib/guide.ts`
-- `lib/syntax-ref.ts` — FBE, regras, caderno vivo; Escrita/Jogo = um IDE, Vista do jogador à parte; `syntaxRefMarkdown()` = Rever guia + download
+- `lib/syntax-ref.ts` — FBE, regras, caderno; um manuscrito, painéis de entidades/leis/taxonomia; `syntaxRefMarkdown()` = Rever guia + download
 
 ## Provides
 IdeGuide

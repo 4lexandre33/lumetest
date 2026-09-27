@@ -3,7 +3,7 @@ import { createGame, interactWith, type GameState } from "./runtime.ts";
 import type { Rule } from "./rule-engine.ts";
 import type { SiftPattern } from "./sift.ts";
 import type { CompiledTaxonomy } from "./taxonomy.ts";
-import type { Entity, StatValue, TickFuse, WorldModel } from "./types.ts";
+import type { Entity, EnumState, StatValue, TickFuse, WorldModel } from "./types.ts";
 
 export type SessionEntity = {
   id: string;
@@ -16,7 +16,7 @@ export type SessionEntity = {
   tags: string[];
   stats: Record<string, StatValue>;
   flags?: Record<string, boolean>;
-  enums?: Record<string, string>;
+  enums?: Record<string, EnumState>;
   phrases?: Record<string, string>;
   hardLinks?: Record<string, string>;
   softLinks?: Record<string, string>;
@@ -45,7 +45,9 @@ function entityToSession(entity: Entity): SessionEntity {
     tags: [...entity.tags].sort(),
     stats: { ...entity.stats },
     flags: { ...entity.flags },
-    enums: { ...entity.enums },
+    enums: Object.fromEntries(
+      Object.entries(entity.enums).map(([key, value]) => [key, { current: value.current, states: [...value.states] }]),
+    ),
     phrases: { ...entity.phrases },
     hardLinks: { ...entity.hardLinks },
     softLinks: { ...entity.softLinks },

@@ -26,7 +26,7 @@ const DRAGON = `@dragao_anciao.{
   tags: agent, vivo, chefe, voador, dragao;
   stats: hp=500[0..500], mp=200, ataque=85, defesa=60;
   flags: em_combate=true, enfurecido=true, imune_fogo=true, derrotado=false;
-  enums: estado_fsm=COMBATE_AEREO, postura=AGRESSIVO, fase_chefe=FASE_2;
+  enums: estado_fsm=[COMBATE_AEREO, TERRA], postura=[AGRESSIVO, NEUTRO], fase_chefe=[FASE_1, FASE_2];
   phrases: titulo='O Flagelo dos CÉUS', rugido_entrada='ROAAAR! Quem ousa invadir meu domínio?';
   hardLinks: elemento_core=@coracao_dragao, tesouro_guardado=@bau_dourado;
   softLinks: local_atual=@pico_serpente, alvo_foco=@jogador, oponente_direto=@heroi_lume;
@@ -63,7 +63,8 @@ describe("FBE entity", () => {
     assert.equal(e.stats.ataque, 85);
     assert.equal(e.flags.em_combate, true);
     assert.equal(e.flags.derrotado, false);
-    assert.equal(e.enums.estado_fsm, "COMBATE_AEREO");
+    assert.equal(e.enums.estado_fsm.current, "COMBATE_AEREO");
+    assert.deepEqual(e.enums.estado_fsm.states, ["COMBATE_AEREO", "TERRA"]);
     assert.equal(e.phrases.titulo, "O Flagelo dos CÉUS");
     assert.equal(e.hardLinks.elemento_core, "@coracao_dragao");
     assert.equal(e.softLinks.local_atual, "@pico_serpente");
@@ -153,7 +154,7 @@ describe("FBE entity", () => {
   tags: agent, vivo, chefe, voador, dragao;
   stats: hp=500, mp=200, ataque=85, defesa=60;
   flags: em_combate=true, enfurecido=true, imune_fogo=true, derrotado=false;
-  enums: estado_fsm=COMBATE_AEREO, postura=AGRESSIVO, fase_chefe=FASE_2;
+  enums: estado_fsm=[COMBATE_AEREO, TERRA], postura=[AGRESSIVO, NEUTRO], fase_chefe=[FASE_1, FASE_2];
   phrases: titulo='O Flagelo dos CÉUS', rugido_entrada='ROAAAR! Quem ousa invadir meu domínio?';
   hardLinks: elemento_core=@coracao_dragao, tesouro_guardado=@bau_dourado;
   softLinks: local_atual=@pico_serpente, alvo_foco=@jogador, oponente_direto=@heroi_lume;
@@ -189,7 +190,7 @@ describe("FBE entity", () => {
 
   it("SPAWN FROM copies the template drawers", () => {
     const world = compileEntityFile(`
-@proto.{ tags: agent, vivo; stats: hp=10; flags: chefe=false; enums: fase=UM; }
+@proto.{ tags: agent, vivo; stats: hp=10; flags: chefe=false; enums: fase=[UM, DOIS]; }
 `).worldModel;
     const spawn = parseDoLine("SPAWN @g1 FROM @proto").change!;
     const next = applyChanges(world, [spawn], "start");
@@ -199,7 +200,8 @@ describe("FBE entity", () => {
     assert.ok(g1.tags.has("vivo"));
     assert.equal(g1.stats.hp, 10);
     assert.equal(g1.flags.chefe, false);
-    assert.equal(g1.enums.fase, "UM");
+    assert.equal(g1.enums.fase.current, "UM");
+    assert.deepEqual(g1.enums.fase.states, ["UM", "DOIS"]);
     assert.notEqual(g1.systemId, world.get("@proto")?.systemId);
     assert.notEqual(g1.shortCode, world.get("@proto")?.shortCode);
   });
@@ -229,7 +231,7 @@ describe("FBE drawer paths", () => {
   tags: agent;
   stats: hp=50[0..100], fear=2;
   flags: em_combate=true;
-  enums: postura=AGRESSIVO;
+  enums: postura=[AGRESSIVO, DEFESA];
   phrases: titulo='Heroi';
   hardLinks: reliquia=@gema;
   softLinks: alvo=@goblin;
@@ -304,7 +306,8 @@ describe("FBE drawer paths", () => {
     let next = applyChanges(world, [parseChangeLine("@jogador.flags.em_combate=false")], "@jogador");
     assert.equal(next.get("@jogador")!.flags.em_combate, false);
     next = applyChanges(next, [parseChangeLine("@jogador.enums.postura=DEFESA")], "@jogador");
-    assert.equal(next.get("@jogador")!.enums.postura, "DEFESA");
+    assert.equal(next.get("@jogador")!.enums.postura.current, "DEFESA");
+    assert.deepEqual(next.get("@jogador")!.enums.postura.states, ["AGRESSIVO", "DEFESA"]);
     assert.equal(next.get("@jogador")!.softLinks.postura, undefined);
     next = applyChanges(next, [parseChangeLine("@jogador.softLinks.alvo=@gema")], "@jogador");
     assert.equal(next.get("@jogador")!.softLinks.alvo, "@gema");
@@ -341,7 +344,7 @@ describe("FBE named do:", () => {
   tags: agent, vivo;
   stats: hp=50[0..100], fear=2;
   flags: em_combate=true;
-  enums: postura=AGRESSIVO;
+  enums: postura=[AGRESSIVO, DEFESA];
   phrases: titulo='Heroi';
   hardLinks: reliquia=@gema;
   softLinks: alvo=@goblin;
@@ -731,6 +734,30 @@ describe("G8 cut legacy JOGADOR", () => {
     assert.equal(cave.settings.playerEntityId, "@jogador");
     assert.match(cave.entitiesSource, /@jogador\.\{/);
     assert.equal(cave.entitiesSource.includes("JOGADOR.{"), false);
+  });
+});
+
+describe("H2 enum domain", () => {
+  it("accepts a list, rejects a bare value, and SET_ENUM only moves inside the list", () => {
+    const src = `@porta.{ tags: object; enums: estado=[FECHADA, ABERTA]; }`;
+    const compiled = compileEntityFile(src);
+    assert.equal(compiled.errors.length, 0, compiled.errors.map((e) => e.message).join("\n"));
+    const porta = compiled.worldModel.get("@porta")!;
+    assert.equal(porta.enums.estado.current, "FECHADA");
+    assert.deepEqual(porta.enums.estado.states, ["FECHADA", "ABERTA"]);
+    assert.match(serializeEntityBlock(porta), /estado=\[FECHADA, ABERTA\]/);
+
+    const bare = compileEntityFile(`@porta.{ enums: estado=FECHADA; }`);
+    assert.match(bare.errors.map((e) => e.message).join("\n"), /nome=\[estado, estado\]/);
+    const one = compileEntityFile(`@porta.{ enums: estado=[SO]; }`);
+    assert.match(one.errors.map((e) => e.message).join("\n"), /pelo menos 2/);
+
+    const next = applyChanges(compiled.worldModel, [parseDoLine("SET_ENUM @porta.estado ABERTA").change!], "@porta");
+    assert.equal(next.get("@porta")!.enums.estado.current, "ABERTA");
+    assert.deepEqual(next.get("@porta")!.enums.estado.states, ["FECHADA", "ABERTA"]);
+    assert.equal(matchesEntity(parseMatcher("@porta.enums.estado=ABERTA"), "@porta", next, "@porta"), true);
+    assert.equal(matchesEntity(parseMatcher("@porta.enums.estado=FECHADA"), "@porta", next, "@porta"), false);
+    assert.throws(() => applyChanges(next, [parseDoLine("SET_ENUM @porta.estado TRANCADA").change!], "@porta"));
   });
 });
 

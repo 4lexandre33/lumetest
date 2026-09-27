@@ -96,6 +96,57 @@ export function insertRegrasSection(source: string, offset: number): { source: s
   return { source: prefix + insert + source.slice(clamped), offset: clamped + nl.length + open.length };
 }
 
+export function insertMoldesSection(source: string, offset: number): { source: string; offset: number } {
+  const clamped = Math.max(0, Math.min(offset, source.length));
+  const prefix = source.slice(0, clamped);
+  const nl = !prefix.length || prefix.endsWith("\n") ? "" : "\n";
+  const open = "## moldes\n### ";
+  const close = "\n## /moldes\n";
+  const insert = `${nl}${open}${close}`;
+  return { source: prefix + insert + source.slice(clamped), offset: clamped + nl.length + open.length };
+}
+
+export type Molde = { id: string; title: string; body: string };
+export type BibliotecaItem = PhraseSuggestion & { kind: "molde" | "frase" };
+
+export function moldesOf(source: string): Molde[] {
+  const out: Molde[] = [];
+  let on = false;
+  let title = "";
+  let body: string[] = [];
+  const flush = () => {
+    const name = title.trim();
+    const text = body.join("\n").replace(/^\n+|\n+$/g, "");
+    if (name && text) out.push({ id: `molde:${name}`, title: name, body: text });
+    title = "";
+    body = [];
+  };
+  for (const raw of source.replace(/^\uFEFF/, "").split("\n")) {
+    const trimmed = raw.trim();
+    if (/^##\s+\/?moldes\s*$/i.test(trimmed)) {
+      flush();
+      on = !/\/moldes/i.test(trimmed);
+      continue;
+    }
+    if (!on) continue;
+    if (/^###\s+/.test(trimmed)) {
+      flush();
+      title = trimmed.replace(/^###\s+/, "").trim();
+      continue;
+    }
+    if (title) body.push(raw.trimEnd());
+  }
+  flush();
+  return out;
+}
+
+export function bibliotecaOf(source: string, phrases: readonly PhraseSuggestion[]): BibliotecaItem[] {
+  return [
+    ...moldesOf(source).map((item) => ({ id: item.id, label: item.title, insert: item.body, kind: "molde" as const })),
+    ...phrases.map((item) => ({ ...item, kind: "frase" as const })),
+  ];
+}
+
 export function entityGuess(quote: string, ids: readonly string[]): string {
   const t = quote.trim();
   if (!t) return ids[0] ?? "";
@@ -129,7 +180,13 @@ export function enumStates(entities: readonly DrawerHost[], key: string): string
     const rec = entity.enums;
     if (!rec || typeof rec !== "object") continue;
     const value = rec[want];
-    if (value != null && String(value).trim()) out.add(String(value).trim());
+    if (typeof value === "string" && value.trim()) out.add(value.trim());
+    else if (value && typeof value === "object") {
+      const slot = value as { current?: unknown; states?: unknown };
+      if (Array.isArray(slot.states)) {
+        for (const state of slot.states) if (String(state).trim()) out.add(String(state).trim());
+      } else if (slot.current != null && String(slot.current).trim()) out.add(String(slot.current).trim());
+    }
   }
   return [...out].sort();
 }

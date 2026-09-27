@@ -86,6 +86,92 @@ export function inCadernoSlice(source: string, offset: number): boolean {
   return offset >= start;
 }
 
+const DRAWER_JUMP = [
+  "name",
+  "description",
+  "tags",
+  "stats",
+  "flags",
+  "enums",
+  "phrases",
+  "hardlinks",
+  "softlinks",
+  "lists",
+  "fuses",
+  "struct",
+] as const;
+
+const DRAWER_LINE = /^\s*(name|description|tags|stats|flags|enums|phrases|hardLinks|softLinks|lists|fuses|struct)\s*:/i;
+
+function caretAtValueEnd(line: string, lineStart: number): number {
+  const head = line.match(/^(\s*[A-Za-z_][A-Za-z0-9_]*\s*:\s*)/);
+  if (!head) return lineStart + line.length;
+  const rest = line.slice(head[1]!.length);
+  const semi = rest.search(/;\s*$/);
+  const raw = semi >= 0 ? rest.slice(0, semi) : rest;
+  const value = raw.replace(/\s+$/, "");
+  return lineStart + head[1]!.length + value.length;
+}
+
+/** Ctrl sozinho, dentro de um bloco: próxima gaveta. Fora do bloco, null. */
+export function ctrlJumpDrawer(source: string, offset: number): number | null {
+  const pos = Math.max(0, Math.min(offset, source.length));
+  const lines = source.split("\n");
+  const starts: number[] = [];
+  let acc = 0;
+  for (const line of lines) {
+    starts.push(acc);
+    acc += line.length + 1;
+  }
+  let lineIdx = 0;
+  for (let i = 0; i < starts.length; i++) {
+    if (starts[i]! <= pos) lineIdx = i;
+    else break;
+  }
+
+  let blockStart = -1;
+  let blockEnd = -1;
+  for (let i = lineIdx; i >= 0; i--) {
+    const trimmed = lines[i]!.trim();
+    if (i < lineIdx && /^}\s*$/.test(trimmed)) return null;
+    if (!/^@[\p{L}_][\p{L}\p{N}\p{M}_]*\.\{/u.test(trimmed)) continue;
+    let end = i;
+    const same = trimmed.includes("}") && trimmed.indexOf("}") > trimmed.indexOf("{");
+    if (!same) {
+      while (end + 1 < lines.length && !lines[end]!.includes("}")) end += 1;
+      if (!lines[end]?.includes("}")) return null;
+    }
+    if (lineIdx >= i && lineIdx <= end) {
+      blockStart = i;
+      blockEnd = end;
+    }
+    break;
+  }
+  if (blockStart < 0) return null;
+
+  const found = new Map<string, number>();
+  for (let i = blockStart; i <= blockEnd; i++) {
+    const hit = lines[i]!.match(DRAWER_LINE);
+    if (!hit) continue;
+    const key = hit[1]!.toLowerCase();
+    if (!found.has(key)) found.set(key, i);
+  }
+  if (found.size === 0) return null;
+
+  const here = lines[lineIdx]!.match(DRAWER_LINE);
+  const hereKey = here && lineIdx >= blockStart && lineIdx <= blockEnd ? here[1]!.toLowerCase() : "";
+  const hereAt = DRAWER_JUMP.indexOf(hereKey as (typeof DRAWER_JUMP)[number]);
+  const startAt = hereAt >= 0 ? (hereAt + 1) % DRAWER_JUMP.length : 0;
+
+  for (let n = 0; n < DRAWER_JUMP.length; n++) {
+    const key = DRAWER_JUMP[(startAt + n) % DRAWER_JUMP.length]!;
+    const li = found.get(key);
+    if (li == null) continue;
+    return caretAtValueEnd(lines[li]!, starts[li]!);
+  }
+  return null;
+}
+
 function joinParts(left: string, block: string, right: string): string {
   const l = left.replace(/\n+$/, "");
   const r = right.replace(/^\n+/, "");
@@ -110,11 +196,46 @@ export function insertEntity(source: string, id = "@nova"): { source: string; id
 export function insertRule(source: string, id = "nova_regra"): { source: string; id: string; line: number } {
   const taken = compileRuleFile(source).rules.map((r) => r.id);
   const nextId = uniqueId(id, taken);
-  const block = `# ${nextId}\non: ${nextId}\nnarrativa: "…"`;
+  const block = `# ${nextId}\non: ${nextId}\ntext: "…"`;
   const at = handwrittenInsertAt(source);
   const next = joinParts(source.slice(0, at), block + "\n", source.slice(at));
   const loc = locateRuleBlock(next, nextId);
   return { source: next, id: nextId, line: loc?.startLine ?? 1 };
+}
+
+function ruleHeaders(source: string): Set<string> {
+  const ids = new Set<string>();
+  for (const raw of source.split("\n")) {
+    const m = raw.match(/^\s*#\s*(\S.*?)\s*$/);
+    if (!m) continue;
+    const id = m[1]!.trim().replace(/\s+/g, "_");
+    if (!id || id.startsWith("---")) continue;
+    ids.add(id);
+  }
+  return ids;
+}
+
+function nextStubId(taken: Set<string>): string {
+  if (!taken.has("regra_nova")) return "regra_nova";
+  let i = 2;
+  while (taken.has(`regra_nova${i}`)) i += 1;
+  return `regra_nova${i}`;
+}
+
+/** Linha só com `#` + Enter → esqueleto. Outra linha, null. */
+export function expandRuleStub(source: string, pos: number): { source: string; caret: number } | null {
+  const lineStart = source.lastIndexOf("\n", Math.max(0, pos - 1)) + 1;
+  const lineEnd = source.indexOf("\n", lineStart);
+  const end = lineEnd < 0 ? source.length : lineEnd;
+  if (pos < lineStart || pos > end) return null;
+  const line = source.slice(lineStart, end);
+  if (!/^\s*#\s*$/.test(line)) return null;
+  const indent = line.match(/^\s*/)?.[0] ?? "";
+  const id = nextStubId(ruleHeaders(source));
+  const block = `${indent}# ${id}\n${indent}on:\n${indent}if:\n${indent}do:\n${indent}text:`;
+  const next = source.slice(0, lineStart) + block + source.slice(end);
+  const onAt = block.indexOf(`${indent}on:`);
+  return { source: next, caret: lineStart + onAt + `${indent}on:`.length };
 }
 
 /** `@id.` / `start.` / `start` at `pos` → block. Inside the caderno slice, the block goes to the handwritten pad. */

@@ -2,7 +2,7 @@ import { makeIssue, ParseError, tokenize, TokenCursor } from "./lexer.ts";
 import { depthOf, explainTagMatch, matchesTag, type CompiledTaxonomy, type TagMatchMode } from "./taxonomy.ts";
 import type { Comparator, Entity, MatcherAST, MatcherBranch, MatcherClause, MatcherPossess, MatcherSelector, MatcherValue, PathDrawer, Token, WorldModel } from "./types.ts";
 import { isPathDrawer, matcherBranches } from "./types.ts";
-import { findEntityByQuad, getLink, readStat } from "./world-model.ts";
+import { findEntityByQuad, getLink, readStat, withInheritedDrawers } from "./world-model.ts";
 
 function fail(detail: string, t: Token, file = "rules"): never {
   throw new ParseError(makeIssue("E000", "error", { detail }, { file, line: t.line, column: t.column }));
@@ -239,13 +239,18 @@ export function parseMatcher(source: string, options: { file?: string; startLine
   return ast;
 }
 
-function resolveValue(value: MatcherValue | undefined, world: WorldModel, triggerId: string): string | number | null {
+function resolveValue(
+  value: MatcherValue | undefined,
+  world: WorldModel,
+  triggerId: string,
+  taxonomy?: CompiledTaxonomy | null,
+): string | number | null {
   if (!value) return null;
   if (value.kind === "number") return value.value;
   if (value.kind === "id") return value.id;
   if (value.kind === "trigger") return triggerId;
   const id = value.entityId === "$" ? triggerId : value.entityId;
-  return getLink(world, id, value.key);
+  return getLink(world, id, value.key, taxonomy);
 }
 
 function cmp(left: number, op: Comparator, right: number): boolean {
@@ -261,14 +266,20 @@ function wantFlag(resolved: string | number | null): boolean {
   return resolved === 1 || String(resolved).toLowerCase() === "true";
 }
 
-function selectorMatches(selector: MatcherSelector, entityId: string, world: WorldModel, triggerId: string): boolean {
+function selectorMatches(
+  selector: MatcherSelector,
+  entityId: string,
+  world: WorldModel,
+  triggerId: string,
+  taxonomy?: CompiledTaxonomy | null,
+): boolean {
   const entity = world.get(entityId);
   if (!entity) return false;
   if (selector.kind === "any") return true;
   if (selector.kind === "trigger") return entity.id === triggerId;
   if (selector.kind === "linkLookup") {
     const from = selector.entityId === "$" ? triggerId : selector.entityId;
-    const dest = getLink(world, from, selector.key);
+    const dest = getLink(world, from, selector.key, taxonomy);
     return dest != null && dest !== "" && findEntityByQuad(world, dest)?.id === entity.id;
   }
   const hit = findEntityByQuad(world, selector.id);
@@ -294,12 +305,14 @@ function possessHolds(
   taxonomy?: CompiledTaxonomy | null,
   mode: TagMatchMode = "effective",
 ): boolean {
-  const holder = world.get(holderId);
-  if (!holder) return possess.negated;
+  const stored = world.get(holderId);
+  if (!stored) return possess.negated;
+  const holder = withInheritedDrawers(stored, world, taxonomy);
   let found = false;
   for (const [id, item] of world) {
     if (id === holderId) continue;
-    if (!isHeldBy(item, holder)) continue;
+    const seen = withInheritedDrawers(item, world, taxonomy);
+    if (!isHeldBy(seen, holder)) continue;
     if (matchesEntity(possess.item, id, world, triggerId, taxonomy, mode)) {
       found = true;
       break;
@@ -316,8 +329,9 @@ function clauseHolds(
   taxonomy?: CompiledTaxonomy | null,
   mode: TagMatchMode = "effective",
 ): boolean {
-  const entity = world.get(entityId);
-  if (!entity) return false;
+  const stored = world.get(entityId);
+  if (!stored) return false;
+  const entity = withInheritedDrawers(stored, world, taxonomy);
   const drawer = c.drawer;
   if (!c.op) {
     if (!drawer || drawer === "tags") return matchesTag(entity, c.key, taxonomy, mode);
@@ -333,7 +347,7 @@ function clauseHolds(
     if (drawer === "struct") return Object.prototype.hasOwnProperty.call(entity.struct, c.key);
     return false;
   }
-  const resolved = resolveValue(c.value, world, triggerId);
+  const resolved = resolveValue(c.value, world, triggerId, taxonomy);
   if (drawer === "stats" || (!drawer && Object.prototype.hasOwnProperty.call(entity.stats, c.key))) {
     return typeof resolved === "number" && cmp(readStat(entity, c.key), c.op, resolved);
   }
@@ -341,7 +355,7 @@ function clauseHolds(
     return c.op === "=" && entity.flags[c.key] === wantFlag(resolved);
   }
   if (drawer === "enums" || (!drawer && Object.prototype.hasOwnProperty.call(entity.enums, c.key))) {
-    return c.op === "=" && entity.enums[c.key] === String(resolved);
+    return c.op === "=" && entity.enums[c.key]?.current === String(resolved);
   }
   if (drawer === "phrases" || (!drawer && Object.prototype.hasOwnProperty.call(entity.phrases, c.key))) {
     return c.op === "=" && entity.phrases[c.key] === String(resolved);
@@ -382,7 +396,7 @@ function branchHolds(
   taxonomy?: CompiledTaxonomy | null,
   mode: TagMatchMode = "effective",
 ): boolean {
-  if (!selectorMatches(branch.selector, entityId, world, triggerId)) return false;
+  if (!selectorMatches(branch.selector, entityId, world, triggerId, taxonomy)) return false;
   for (const c of branch.clauses) {
     const inner = clauseHolds(c, entityId, world, triggerId, taxonomy, mode);
     if (c.negated ? inner : !inner) return false;
@@ -440,17 +454,18 @@ export function explainMatcher(
   taxonomy?: CompiledTaxonomy | null,
   mode: TagMatchMode = "effective",
 ): MatcherExplain {
-  const entity = world.get(entityId);
+  const stored = world.get(entityId);
   const clauses: ClauseExplain[] = [];
-  if (!entity) {
+  if (!stored) {
     return { matched: false, clauses: [{ source: ast.source, matched: false, kind: "selector", detail: `${entityId} não existe` }] };
   }
+  const entity = withInheritedDrawers(stored, world, taxonomy);
   const branches = matcherBranches(ast);
   const chosen =
     branches.find((branch) => branchHolds(branch, entityId, world, triggerId, taxonomy, mode)) ?? branches[0]!;
   const leaf: MatcherAST = { selector: chosen.selector, clauses: chosen.clauses, source: ast.source, possess: chosen.possess };
   if (leaf.selector.kind === "id") {
-    const hit = selectorMatches(leaf.selector, entityId, world, triggerId);
+    const hit = selectorMatches(leaf.selector, entityId, world, triggerId, taxonomy);
     clauses.push({
       source: leaf.selector.id,
       matched: hit,
@@ -465,7 +480,7 @@ export function explainMatcher(
       detail: entity.id === triggerId ? "é o gatilho" : "não é o gatilho",
     });
   } else if (leaf.selector.kind === "linkLookup") {
-    const hit = selectorMatches(leaf.selector, entityId, world, triggerId);
+    const hit = selectorMatches(leaf.selector, entityId, world, triggerId, taxonomy);
     const from = leaf.selector.entityId;
     clauses.push({
       source: `(link ${from}.${leaf.selector.key})`,
@@ -495,7 +510,7 @@ export function explainMatcher(
     let detail = `${clauseSource(c)} ${inner ? "casa" : "não casa"}`;
     if ((c.drawer === "stats" || (!c.drawer && Object.prototype.hasOwnProperty.call(entity.stats, c.key))) && c.op) {
       kind = "stat";
-      detail = `${c.key}=${readStat(entity, c.key)} ${inner ? "casa" : "não casa"} ${c.op}${resolveValue(c.value, world, triggerId)}`;
+      detail = `${c.key}=${readStat(entity, c.key)} ${inner ? "casa" : "não casa"} ${c.op}${resolveValue(c.value, world, triggerId, taxonomy)}`;
     }
     clauses.push({ source: clauseSource(c), matched: c.negated ? !inner : inner, kind, detail });
   }

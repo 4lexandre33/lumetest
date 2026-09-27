@@ -1,8 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FBE_DRAWERS } from "../../narrative-engine/lib/types.ts";
 import { useIdeStore } from "../../ide-state/lib/orchestrator.ts";
-import { authorshipBaseWorld, authorshipTimeline, changedSnaps, entityHistory, entityOrigin, snapDrawer } from "../lib/timeline.ts";
-import { writeSuggestions } from "../lib/prose-triggers.ts";
+import { authorshipTimeline, changedSnaps, entityHistory, entityOrigin, leituraAte, snapDrawer } from "../lib/timeline.ts";
+import { leisSempre, writeSuggestions, type WriteSuggestion } from "../lib/prose-triggers.ts";
+import { aceitarProposta, decidirSempre, dosNaLinha, propostasAbertas } from "../lib/proposta.ts";
+import { lerLivro, lerProsa } from "../lib/leitor.ts";
+import { parseCadernoLibrary } from "../lib/pages.ts";
+import { useNotebookView } from "./notebook-view.tsx";
 import { cn } from "./cn.ts";
 
 export function WritePreview() {
@@ -11,12 +15,27 @@ export function WritePreview() {
   const writePortrait = useIdeStore((s) => s.writePortrait);
   const writeLine = useIdeStore((s) => s.writeLine);
   const setWriteFocus = useIdeStore((s) => s.setWriteFocus);
+  const setNotebooks = useIdeStore((s) => s.setNotebooks);
+  const { bookIndex } = useNotebookView();
   const text = project?.notebooksSource ?? "";
   const entitiesSource = project?.entitiesSource ?? "";
   const playerId = project?.settings.playerEntityId || "@jogador";
   const entries = useMemo(() => authorshipTimeline(text, entitiesSource), [text, entitiesSource]);
+  const leitura = useMemo(() => leituraAte(text, entitiesSource, writeLine), [text, entitiesSource, writeLine]);
+  const prosa = useMemo(() => lerProsa(leitura.prose), [leitura]);
+  const livro = useMemo(() => {
+    const library = parseCadernoLibrary(text);
+    const book = bookIndex == null ? null : library.books[bookIndex];
+    if (!book) return lerLivro(text);
+    return lerLivro(text, { start: book.startLine - 1, end: book.endLine });
+  }, [text, bookIndex]);
+  const [lendo, setLendo] = useState(false);
+  const mundo = useMemo(
+    () => [...leitura.world.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+    [leitura],
+  );
   const selected = entries.find((item) => item.annotation.id === writeAnnotationId) ?? null;
-  const player = useMemo(() => authorshipBaseWorld(text, entitiesSource).get(playerId) ?? null, [text, entitiesSource, playerId]);
+  const player = leitura.world.get(playerId) ?? null;
   const focusId = selected?.entityId ?? (writePortrait ? playerId : null);
   const history = useMemo(() => entityHistory(entries, focusId), [entries, focusId]);
   const portrait = writePortrait ? selected?.after ?? player : null;
@@ -24,35 +43,109 @@ export function WritePreview() {
     if (writeLine == null) return [];
     return writeSuggestions(text, writeLine);
   }, [text, writeLine]);
+  const [refused, setRefused] = useState<string[]>([]);
+  const [avisoExtra, setAvisoExtra] = useState<string | null>(null);
+  const sempre = useMemo(() => (writeLine == null ? [] : leisSempre(text, writeLine)), [text, writeLine]);
+  const decisao = useMemo(
+    () => decidirSempre(leitura.world, sempre, writeLine == null ? [] : dosNaLinha(text, writeLine)),
+    [leitura, sempre, text, writeLine],
+  );
+  const propostas = useMemo(() => {
+    if (writeLine == null) return [];
+    const mine = refused.filter((key) => key.startsWith(`${writeLine}:`)).map((key) => key.slice(`${writeLine}:`.length));
+    return propostasAbertas(suggestions, mine, dosNaLinha(text, writeLine));
+  }, [suggestions, refused, text, writeLine]);
   const portraitOrigin = portrait ? entityOrigin(portrait.id, text, entitiesSource) : null;
-  const [picked, setPicked] = useState<string | null>(null);
-  const chosen = suggestions.find((item) => item.id === picked) ?? suggestions[0] ?? null;
+
+  useEffect(() => {
+    if (lendo || writeLine == null || !decisao.aplicar.length) return;
+    let next = text;
+    for (const rule of decisao.aplicar) {
+      const result = aceitarProposta(next, writeLine, rule);
+      if ("error" in result) {
+        setAvisoExtra("A lei sempre não coube nesta linha.");
+        return;
+      }
+      next = result.text;
+    }
+    if (next !== text) {
+      setAvisoExtra(null);
+      setNotebooks(next, { flush: true });
+    }
+  }, [decisao, lendo, text, writeLine, setNotebooks]);
+
+  function aceitar(item: WriteSuggestion) {
+    if (writeLine == null) return;
+    const result = aceitarProposta(text, writeLine, item);
+    if ("error" in result) return;
+    setNotebooks(result.text, { flush: true });
+    setWriteFocus(result.id);
+  }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-paper" aria-label="Preview da escrita">
+    <div className="flex h-full min-h-0 flex-col bg-paper" aria-label="Leitura">
       <div className="flex items-center justify-between border-b border-border px-3 py-1">
-        <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Escrita</p>
-        {selected ? (
-          <span className="truncate font-mono text-[11px] text-subtle">{selected.entityId ?? "—"}</span>
-        ) : null}
+        <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Leitura</p>
+        <button type="button" className="text-sm text-muted hover:text-fg" onClick={() => setLendo((on) => !on)}>
+          {lendo ? "Até aqui" : "Ler"}
+        </button>
       </div>
-      {suggestions.length ? (
+      {lendo ? (
+        <article aria-label="Livro" className="min-h-0 flex-1 overflow-auto px-3 py-3">
+          <pre className="whitespace-pre-wrap font-display text-[15px] leading-snug text-fg">{livro || "—"}</pre>
+        </article>
+      ) : (
+      <>
+      <section aria-label="Texto até aqui" className="max-h-[46%] min-h-0 overflow-auto border-b border-border px-3 py-2">
+        <p className="text-[10px] tracking-[0.14em] text-muted uppercase">
+          {writeLine == null ? "Prosa" : `Prosa até a linha ${writeLine}`}
+        </p>
+        <pre className="mt-1 whitespace-pre-wrap font-display text-[15px] leading-snug text-fg">{prosa || "—"}</pre>
+        <p className="mt-3 text-[10px] tracking-[0.14em] text-muted uppercase">Mundo desta linha</p>
+        {mundo.length === 0 ? (
+          <p className="mt-1 text-sm text-muted">Nenhuma entidade até aqui.</p>
+        ) : (
+          <ul className="mt-1 space-y-0.5">
+            {mundo.map((entity) => (
+              <li key={entity.id} className="truncate font-mono text-[11px] text-fg">
+                {entity.id}
+                {entity.name ? <span className="font-sans text-muted"> · {entity.name}</span> : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      {decisao.avisos.length || avisoExtra ? (
         <div className="border-b border-border px-3 py-2">
-          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Sugestões</p>
+          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Avisos</p>
           <ul className="mt-1 space-y-1">
-            {suggestions.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => setPicked(item.id)}
-                  className={cn(
-                    "w-full rounded-xs px-1.5 py-1 text-left hover:bg-elevated",
-                    chosen?.id === item.id ? "bg-elevated" : "",
-                  )}
-                >
-                  <span className="block truncate text-sm text-fg">{item.narrative || item.title}</span>
-                  {item.dos.length ? <span className="block truncate font-mono text-[11px] text-muted">{item.dos.join(" · ")}</span> : null}
-                </button>
+            {decisao.avisos.map((aviso) => (
+              <li key={aviso} className="text-sm text-fg">{aviso}</li>
+            ))}
+            {avisoExtra ? <li className="text-sm text-fg">{avisoExtra}</li> : null}
+          </ul>
+        </div>
+      ) : null}
+      {propostas.length ? (
+        <div className="border-b border-border px-3 py-2">
+          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Propostas</p>
+          <ul className="mt-1 space-y-1">
+            {propostas.map((item) => (
+              <li key={item.id} className="rounded-xs px-1.5 py-1">
+                <span className="block truncate text-sm text-fg">{item.narrative || item.title}</span>
+                {item.dos.length ? <span className="block truncate font-mono text-[11px] text-muted">{item.dos.join(" · ")}</span> : null}
+                <span className="mt-1 flex gap-2">
+                  <button type="button" className="text-sm text-fg hover:underline disabled:text-muted" disabled={!item.dos.length} onClick={() => aceitar(item)}>
+                    Aceitar
+                  </button>
+                  <button
+                    type="button"
+                    className="text-sm text-muted hover:text-fg"
+                    onClick={() => setRefused((list) => (writeLine == null || list.includes(`${writeLine}:${item.id}`) ? list : [...list, `${writeLine}:${item.id}`]))}
+                  >
+                    Recusar
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
@@ -123,7 +216,7 @@ export function WritePreview() {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto px-3 py-3">
-          {suggestions.length ? null : <p className="text-sm text-muted">Sem mutação nesta linha.</p>}
+          {propostas.length ? null : <p className="text-sm text-muted">Sem mutação nesta linha.</p>}
           {player ? (
             <button
               type="button"
@@ -135,6 +228,8 @@ export function WritePreview() {
             </button>
           ) : null}
         </div>
+      )}
+      </>
       )}
     </div>
   );

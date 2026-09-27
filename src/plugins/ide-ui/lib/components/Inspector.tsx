@@ -46,7 +46,9 @@ function EntityCard({ entity, taxonomy }: { entity: Entity; taxonomy?: CompiledT
   const revealTag = useIdeStore((s) => s.revealTag);
   const inherited = inheritedTags(entity, taxonomy);
   const flags = formatRecord(entity.flags);
-  const enums = formatRecord(entity.enums);
+  const enums = Object.entries(entity.enums)
+    .map(([key, value]) => `${key}=${value.current} [${value.states.join(", ")}]`)
+    .join(", ");
   const phrases = formatRecord(entity.phrases);
   const hard = formatRecord(entity.hardLinks);
   const soft = formatRecord(entity.softLinks);

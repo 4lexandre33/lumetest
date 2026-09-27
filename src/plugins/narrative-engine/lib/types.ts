@@ -7,6 +7,9 @@ export type StatValue = number | BoundedStat;
 /** Temporizador por turno. Ao chegar a 0 dispara `targetId`. */
 export type TickFuse = { remaining: number; targetId: string };
 
+/** Domínio fechado. `current` começa no primeiro de `states`. */
+export type EnumState = { current: string; states: string[] };
+
 export type ListOp = "PUSH" | "POP" | "REMOVE" | "CLEAR" | "ADD_UNIQUE";
 
 export const FBE_DRAWERS = [
@@ -67,7 +70,7 @@ export type Entity = {
   tags: Set<string>;
   stats: Record<string, StatValue>;
   flags: Record<string, boolean>;
-  enums: Record<string, string>;
+  enums: Record<string, EnumState>;
   phrases: Record<string, string>;
   hardLinks: Record<string, EntityId>;
   softLinks: Record<string, EntityId>;

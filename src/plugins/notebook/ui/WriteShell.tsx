@@ -308,7 +308,7 @@ export function PhraseSheet({
   onPick,
   onCancel,
 }: {
-  phrases: PhraseSuggestion[];
+  phrases: (PhraseSuggestion & { kind?: "molde" | "frase" })[];
   onPick: (phrase: PhraseSuggestion) => void;
   onCancel: () => void;
 }) {
@@ -316,13 +316,13 @@ export function PhraseSheet({
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-bg/70 p-4">
       <div className="flex max-h-[80%] w-full max-w-sm flex-col overflow-hidden rounded-sm border border-border bg-elevated shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Inserir frase</p>
+          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Biblioteca</p>
           <button type="button" className="text-sm text-muted hover:text-fg" onClick={onCancel}>
             Fechar
           </button>
         </div>
         <ul className="min-h-0 flex-1 overflow-auto p-1">
-          {phrases.length === 0 ? <li className="px-2 py-2 text-sm text-subtle">Sem frases no projecto.</li> : null}
+          {phrases.length === 0 ? <li className="px-2 py-2 text-sm text-subtle">Sem moldes nem frases.</li> : null}
           {phrases.map((phrase) => (
             <li key={phrase.id}>
               <button
@@ -330,8 +330,8 @@ export function PhraseSheet({
                 className="flex w-full flex-col gap-0.5 rounded-xs px-2 py-1.5 text-left hover:bg-surface"
                 onClick={() => onPick(phrase)}
               >
-                <span className="font-mono text-[11px] text-muted">{phrase.label}</span>
-                <span className="truncate text-sm text-fg">{phrase.insert}</span>
+                <span className="font-mono text-[11px] text-muted">{phrase.kind === "molde" ? "molde" : phrase.label}</span>
+                <span className="truncate text-sm text-fg">{phrase.kind === "molde" ? phrase.label : phrase.insert}</span>
               </button>
             </li>
           ))}

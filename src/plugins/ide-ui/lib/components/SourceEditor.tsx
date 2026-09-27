@@ -1,6 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { completeAt, collectVocabulary, highlightSource, offsetOfLine, fieldListShouldComma, underlinesFor, tabAfterKeyword, indentOnEnter, expandEntityDecl, type CompletionItem, type SourceKind } from "../../../narrative-engine/lib/index.ts";
+import { completeAt, collectVocabulary, highlightSource, offsetOfLine, fieldListShouldComma, underlinesFor, tabAfterKeyword, indentOnEnter, expandEntityDecl, expandRuleStub, ctrlJumpDrawer, type CompletionItem, type SourceKind } from "../../../narrative-engine/lib/index.ts";
 import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { menuAnchor, menuDetail, menuOpens, menuSeal } from "../completion-menu.ts";
+import { CompletionMenu } from "./CompletionMenu.tsx";
 import { cn } from "../utils.ts";
 
 const LINE_PX = 24;
@@ -22,11 +24,12 @@ export function SourceEditor({
   const scrollRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<number | null>(null);
   const appliedNonce = useRef<number | null>(null);
-  const openRef = useRef(false);
+  const ctrlPlain = useRef(true);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<CompletionItem[]>([]);
   const [active, setActive] = useState(0);
   const [replace, setReplace] = useState<{ start: number; end: number } | null>(null);
+  const [menuPos, setMenuPos] = useState({ left: 8, top: 8 });
 
   const file = kind;
   const lines = useMemo(() => highlightSource(value, kind), [value, kind]);
@@ -44,11 +47,6 @@ export function SourceEditor({
       taxonomySource: kind === "taxonomy" ? value : project?.taxonomySource,
     });
   }, [compiled, value, kind]);
-
-  function setOpenBoth(v: boolean) {
-    openRef.current = v;
-    setOpen(v);
-  }
 
   function placeCaret(offset: number) {
     const ta = textareaRef.current;
@@ -69,18 +67,14 @@ export function SourceEditor({
 
   function suggest(source: string, offset: number, force = false) {
     const { ctx, items: next } = completeAt(source, kind, offset, vocab);
-    const prev = source[offset - 1] ?? "";
-    const afterDot = prev === ".";
-    const afterColon = prev === ":";
-    const taxonomySlot = ctx.slot === "taxonomy-arrow" || ctx.slot === "taxonomy-parent";
-    const shouldOpen = force || ctx.prefix.length > 0 || afterDot || afterColon || (taxonomySlot && next.length > 0) || openRef.current;
-    if (shouldOpen && next.length) {
+    if (menuOpens(source, offset, force) && next.length) {
       setItems(next);
       setActive(0);
       setReplace({ start: ctx.replaceStart, end: ctx.replaceEnd });
-      setOpenBoth(true);
+      setMenuPos(menuAnchor(source, offset, scrollRef.current, 48));
+      setOpen(true);
     } else {
-      setOpenBoth(false);
+      setOpen(false);
     }
   }
 
@@ -99,7 +93,7 @@ export function SourceEditor({
     const next = value.slice(0, replace.start) + insert + value.slice(replace.end);
     caretRef.current = replace.start + insert.length;
     onChange(next);
-    setOpenBoth(false);
+    setOpen(false);
     requestAnimationFrame(() => placeCaret(replace.start + insert.length));
   }
 
@@ -113,8 +107,23 @@ export function SourceEditor({
     return true;
   }
 
+  function expandRuleTemplate(ta: HTMLTextAreaElement): boolean {
+    if (kind !== "rules") return false;
+    const out = expandRuleStub(value, ta.selectionStart);
+    if (!out) return false;
+    caretRef.current = out.caret;
+    onChange(out.source);
+    requestAnimationFrame(() => placeCaret(out.caret));
+    return true;
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.nativeEvent.isComposing) return;
+    if (e.key === "Control" || e.key === "Meta") {
+      if (!e.repeat) ctrlPlain.current = true;
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) ctrlPlain.current = false;
     const ta = e.currentTarget;
     if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       e.preventDefault();
@@ -126,10 +135,16 @@ export function SourceEditor({
       apply(items[active]!);
       return;
     }
-    if (open && e.key === "Enter") {
-      setOpenBoth(false);
+    if (open && e.key === "Enter" && items[active]) {
+      e.preventDefault();
+      apply(items[active]!);
+      return;
     }
     if (e.key === "Enter" && !e.shiftKey && expandEntityTemplate(ta)) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey && expandRuleTemplate(ta)) {
       e.preventDefault();
       return;
     }
@@ -162,11 +177,24 @@ export function SourceEditor({
       requestAnimationFrame(() => placeCaret(pos + 2));
       return;
     }
-    if (e.key === "Escape") setOpenBoth(false);
+    if (e.key === "Escape") setOpen(false);
     if ((e.ctrlKey || e.metaKey) && e.key === " ") {
       e.preventDefault();
       suggest(ta.value, ta.selectionStart, true);
     }
+  }
+
+  function onKeyUp(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== "Control" && e.key !== "Meta") return;
+    if (!ctrlPlain.current || e.shiftKey || e.altKey) return;
+    if (kind !== "entities") return;
+    const ta = e.currentTarget;
+    if (ta.selectionStart !== ta.selectionEnd) return;
+    const next = ctrlJumpDrawer(ta.value, ta.selectionStart);
+    if (next == null) return;
+    e.preventDefault();
+    setOpen(false);
+    placeCaret(next);
   }
 
   useLayoutEffect(() => {
@@ -249,7 +277,8 @@ export function SourceEditor({
                 suggest(next, caret);
               }}
               onKeyDown={onKeyDown}
-              onBlur={() => setTimeout(() => setOpenBoth(false), 160)}
+              onKeyUp={onKeyUp}
+              onBlur={() => setTimeout(() => setOpen(false), 160)}
               className="absolute inset-0 m-0 resize-none overflow-hidden bg-transparent font-mono text-sm whitespace-pre"
               style={{
                 color: "transparent",
@@ -267,26 +296,21 @@ export function SourceEditor({
         </div>
       </div>
       {open && items.length > 0 ? (
-        <div className="absolute top-3 right-3 z-10 w-72 overflow-hidden rounded-md border border-border bg-elevated shadow-xl">
-          <p className="px-3 py-1.5 text-[10px] tracking-[0.14em] text-muted uppercase">Tab confirma · Enter nova linha</p>
-          <ul className="max-h-56 overflow-auto p-1 text-sm">
-            {items.map((item, i) => (
-              <li key={item.label + i}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    apply(item);
-                  }}
-                  className={cn("flex w-full items-baseline justify-between gap-2 rounded-xs px-2 py-1.5 text-left", i === active ? "bg-surface" : "hover:bg-surface/60")}
-                >
-                  <span>{item.label}</span>
-                  <span className="text-xs tracking-wide text-muted uppercase">{item.kind}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <CompletionMenu
+          items={items.map((item, i) => ({
+            id: `${item.kind}-${item.label}-${i}`,
+            label: item.label,
+            detail: menuDetail(item.detail, item.documentation),
+            seal: menuSeal(item.label, item.kind),
+          }))}
+          active={active}
+          left={menuPos.left}
+          top={menuPos.top}
+          onPick={(index) => {
+            const item = items[index];
+            if (item) apply(item);
+          }}
+        />
       ) : null}
       {issues.filter((i) => i.location.file === file).length ? (
         <p className="border-t border-border px-3 py-1 font-mono text-[11px] text-danger">

@@ -21,6 +21,7 @@ export type WriteRule = {
   ifs: string[];
   narrative: string;
   dos: string[];
+  sempre?: boolean;
 };
 
 export type WriteSuggestion = {
@@ -211,7 +212,16 @@ export function rulesFromSource(rulesSource: string): WriteRule[] {
     }
     if (/^#\s+\S/.test(line) && !/^#\s+---/.test(line)) {
       flush();
-      cur = { id: line.replace(/^#\s+/, "").trim(), on: "", ifs: [], narrative: "", dos: [] };
+      const rawId = line.replace(/^#\s+/, "").trim();
+      const sempre = /\/\*\s*sempre\s*\*\//i.test(rawId);
+      cur = {
+        id: rawId.replace(/\s*\/\*\s*sempre\s*\*\//i, "").trim(),
+        on: "",
+        ifs: [],
+        narrative: "",
+        dos: [],
+        sempre,
+      };
       continue;
     }
     if (!cur) continue;
@@ -266,7 +276,7 @@ export function regrasFenceBody(text: string): string {
 export function writeSuggestionRules(prose: string): WriteRule[] {
   const body = regrasFenceBody(prose);
   if (!body.trim()) return [];
-  return rulesFromSource(compileNotebook(`CADERNO:\n${body}`).rulesSource);
+  return rulesFromSource(compileNotebook(`CADERNO:\n## regras\n${body}\n## /regras\n`).rulesSource);
 }
 
 export function writeSuggestions(prose: string, lineNo: number, rules?: WriteRule[]): WriteSuggestion[] {
@@ -279,7 +289,7 @@ export function writeSuggestions(prose: string, lineNo: number, rules?: WriteRul
   const out: WriteSuggestion[] = [];
   const seen = new Set<string>();
   for (const rule of list) {
-    if (!ruleHits(rule, tags) || seen.has(rule.id)) continue;
+    if (!ruleHits(rule, tags) || seen.has(rule.id) || rule.sempre) continue;
     seen.add(rule.id);
     out.push({
       id: rule.id,
@@ -288,6 +298,23 @@ export function writeSuggestions(prose: string, lineNo: number, rules?: WriteRul
       dos: rule.dos,
     });
     if (out.length >= CAP) break;
+  }
+  return out;
+}
+
+export function leisSempre(prose: string, lineNo: number, rules?: WriteRule[]): WriteRule[] {
+  const list = (rules ?? writeSuggestionRules(prose)).filter((rule) => rule.sempre);
+  if (!list.length) return [];
+  const lines = stripAnotacoesSlice(prose).replace(/^\uFEFF/, "").split("\n");
+  const index = Math.max(0, Math.min(lines.length - 1, lineNo - 1));
+  const tags = tagsOf(paragraphAt(lines, index));
+  if (!tags.length) return [];
+  const seen = new Set<string>();
+  const out: WriteRule[] = [];
+  for (const rule of list) {
+    if (!ruleHits(rule, tags) || seen.has(rule.id)) continue;
+    seen.add(rule.id);
+    out.push(rule);
   }
   return out;
 }

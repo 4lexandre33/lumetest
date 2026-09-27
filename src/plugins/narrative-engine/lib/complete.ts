@@ -6,11 +6,20 @@ import type { WorldModel } from "./types.ts";
 import { BUILTIN_TAGS, CATEGORY_LABEL, isCategoryTag } from "./types.ts";
 import { compileTaxonomy, type CompiledTaxonomy } from "./taxonomy.ts";
 import { compileEntityFile } from "./world-model.ts";
+import { degrauAt } from "./degrau.ts";
 
 export type CompletionKind = "id" | "tag" | "stat" | "link" | "keyword" | "prop" | "snippet" | "star" | "bang";
 export type CompletionItem = { label: string; insert: string; kind: CompletionKind; detail: string; documentation?: string };
 export type CompletionContext = { slot: string; prefix: string; replaceStart: number; replaceEnd: number; line: number; column: number };
-export type Vocabulary = { entityIds: string[]; tags: string[]; statKeys: string[]; linkKeys: string[]; propKeywords: string[] };
+export type Vocabulary = {
+  entityIds: string[];
+  tags: string[];
+  statKeys: string[];
+  linkKeys: string[];
+  propKeywords: string[];
+  worldModel?: WorldModel;
+  taxonomy?: CompiledTaxonomy | null;
+};
 
 export const COMPLETION_TRIGGER_CHARS = [".", "=", "!", ":", " ", ">"] as const;
 export const BUILTIN_LINKS = ["current_location"] as const;
@@ -19,7 +28,7 @@ const RULE_KEYWORDS: CompletionItem[] = [
   { label: "on:", insert: "on: ", kind: "keyword", detail: "gatilho" },
   { label: "if:", insert: "if: ", kind: "keyword", detail: "condição" },
   { label: "do:", insert: "do: ", kind: "keyword", detail: "mudanças" },
-  { label: "narrativa:", insert: "narrativa: ", kind: "keyword", detail: "texto" },
+  { label: "text:", insert: "text: ", kind: "keyword", detail: "texto" },
 ];
 
 const POSSESS_KEYWORDS: CompletionItem[] = [
@@ -118,6 +127,8 @@ export function collectVocabulary(options: {
     statKeys: [...statKeys].sort(),
     linkKeys: [...linkKeys].sort(),
     propKeywords: [...propKeywords].sort(),
+    worldModel: world,
+    taxonomy: tax,
   };
 }
 
@@ -209,6 +220,12 @@ function ids(vocab: Vocabulary): CompletionItem[] {
 }
 
 export function completeAt(source: string, kind: SourceKind, offset: number, vocab: Vocabulary): { ctx: CompletionContext; items: CompletionItem[] } {
+  const stepped = degrauAt(source, kind, offset, vocab);
+  if (stepped) {
+    const p = stepped.ctx.prefix.toLowerCase();
+    const items = p ? stepped.items.filter((i) => i.label.toLowerCase().startsWith(p) || i.label.toLowerCase().includes(p)) : stepped.items;
+    return { ctx: stepped.ctx, items };
+  }
   const ctx = analyzeCompletion(source, kind, offset);
   let items: CompletionItem[] = [];
   switch (ctx.slot) {
@@ -315,8 +332,7 @@ export function tabAfterKeyword(source: string, kind: SourceKind, offset: number
             ["on", ": "],
             ["if", ": "],
             ["do", ": "],
-            ["narrativa", ": "],
-            ["narrative", ": "],
+            ["text", ": "],
           ]
         : kind === "entities"
           ? [

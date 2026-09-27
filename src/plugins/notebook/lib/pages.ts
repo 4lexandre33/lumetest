@@ -1,4 +1,4 @@
-import { compileNotebook, slugOf, hashString, isRegrasFence, type NotebookCompile, type NotebookIssue } from "./notebook.ts";
+import { compileNotebook, slugOf, hashString, isRegrasFence, isMoldesFence, type NotebookCompile, type NotebookIssue } from "./notebook.ts";
 import { anotacoesStartIndex, insertBeforeAnotacoes, stripAnotacoesSlice } from "./annotations.ts";
 
 export type CadernoCover = {
@@ -142,9 +142,15 @@ function parseSlice(lines: string[], start: number, end: number, bookId?: string
 
   type Head = { line: number; level: 2 | 3; title: string };
   const heads: Head[] = [];
+  let mold = false;
   for (let n = i; n < end; n++) {
     const trimmed = (lines[n] ?? "").trim();
     if (isCadernoLine(trimmed)) break;
+    if (isMoldesFence(trimmed)) {
+      mold = !/\/moldes/i.test(trimmed);
+      continue;
+    }
+    if (mold) continue;
     if (/^###\s+/.test(trimmed)) {
       heads.push({ line: n + 1, level: 3, title: trimmed.replace(/^###\s+/, "").trim() });
     } else if (/^##\s+/.test(trimmed) && !isRegrasFence(trimmed)) {
@@ -165,10 +171,15 @@ function parseSlice(lines: string[], start: number, end: number, bookId?: string
     const head = heads[h]!;
     const last = pageEnd(h);
     const bodyLines: string[] = [];
+    let hide = false;
     for (let n = head.line; n < last; n++) {
       const raw = lines[n] ?? "";
       const trimmed = raw.trim();
-      if (isMotorHash(trimmed) || isCadernoLine(trimmed)) continue;
+      if (isMoldesFence(trimmed)) {
+        hide = !/\/moldes/i.test(trimmed);
+        continue;
+      }
+      if (hide || isMotorHash(trimmed) || isCadernoLine(trimmed)) continue;
       if (/^###\s+/.test(trimmed) || (/^##\s+/.test(trimmed) && !/^###/.test(trimmed))) continue;
       bodyLines.push(raw);
     }

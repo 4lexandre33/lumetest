@@ -1,5 +1,7 @@
 import { queryHasResults } from "./query.ts";
+import type { CompiledTaxonomy } from "./taxonomy.ts";
 import type { WorldModel } from "./types.ts";
+import { withInheritedDrawers } from "./world-model.ts";
 
 export const DEFAULT_PROP_KEYWORD_NAMES = ["name", "description"] as const;
 
@@ -24,16 +26,17 @@ export function resetPropKeywords() {
   for (const k of Object.keys(extraKeywords)) delete extraKeywords[k];
 }
 
-function propOf(id: string, key: string, world: WorldModel): string {
+function propOf(id: string, key: string, world: WorldModel, taxonomy?: CompiledTaxonomy | null): string {
   if (extraKeywords[key]) return extraKeywords[key]!(id, world);
-  const entity = world.get(id);
-  if (!entity) return key === "name" ? humanizeEntityId(id) : "";
+  const raw = world.get(id);
+  if (!raw) return key === "name" ? humanizeEntityId(id) : "";
+  const entity = withInheritedDrawers(raw, world, taxonomy);
   if (key === "name") return entity.name || entity.extra?.name || humanizeEntityId(id);
   if (key === "description") return entity.description || entity.extra?.description || "";
   if (key === "shortCode") return entity.shortCode;
   if (key === "slug") return entity.slug;
   if (Object.prototype.hasOwnProperty.call(entity.phrases, key)) return entity.phrases[key] ?? "";
-  if (Object.prototype.hasOwnProperty.call(entity.enums, key)) return entity.enums[key] ?? "";
+  if (Object.prototype.hasOwnProperty.call(entity.enums, key)) return entity.enums[key]?.current ?? "";
   const extra = entity.extra?.[key];
   if (extra) return extra;
   return "";
@@ -64,6 +67,7 @@ export type NarrativeCtx = {
   worldModel: WorldModel;
   triggerId: string;
   cycleIndex: number;
+  taxonomy?: CompiledTaxonomy | null;
 };
 
 export function parseNarrative(template: string, ctx: NarrativeCtx): string {
@@ -78,7 +82,7 @@ export function parseNarrative(template: string, ctx: NarrativeCtx): string {
       const ifTrue = (bar >= 0 ? rest.slice(0, bar) : rest).trim();
       const ifFalse = (bar >= 0 ? rest.slice(bar + 1) : "").trim();
       try {
-        return queryHasResults(query, ctx.worldModel, ctx.triggerId) ? ifTrue : ifFalse;
+        return queryHasResults(query, ctx.worldModel, ctx.triggerId, ctx.taxonomy) ? ifTrue : ifFalse;
       } catch {
         return ifFalse;
       }
@@ -93,7 +97,7 @@ export function parseNarrative(template: string, ctx: NarrativeCtx): string {
       let id = raw.slice(0, dot).trim();
       const key = raw.slice(dot + 1).trim();
       if (id === "$") id = ctx.triggerId;
-      return propOf(id, key, ctx.worldModel);
+      return propOf(id, key, ctx.worldModel, ctx.taxonomy);
     }
     return raw;
   });

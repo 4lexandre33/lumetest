@@ -18,7 +18,7 @@ import { interpret } from "../../../nlp/lib/nlp.ts";
 import { tabAfterKeyword, indentOnEnter, addLineNote, insertSectionBreak, completeAt, collectVocabulary } from "../../../narrative-engine/lib/complete.ts";
 import { LIFE_MANIFEST, createLifePlugin } from "../../../life/index.ts";
 import { NOTEBOOK_MANIFEST, createNotebookPlugin, compileNotebook, EMPTY_NOTEBOOK, slugOf, assistNotebook, slowRulesNote, parseCadernoView, replaceCover, applyNotebookToProject, parseCadernoLibrary, appendCaderno, exportCadernoMd, importCaderno, cadernoFilename, resetNotebookCache, replaceBookSource, CADERNO_SLICE_START, writeCadernoSlice, applyNotebookToProjectWithIssues, extractCadernoSlice, compileCadernoLibraryAsync, notebooksHash, stripCadernoSlice, selectionOf, insertAtSelection, insertRegrasSection, entityGuess, keysOfDrawer, phrasesOfProject, describeMutation, cadernoLive, linkTargets, enumStates, FBE_DRAWERS, addAnnotation, stripAnotacoesSlice, parseAnotacoesSlice, marksOnPage, markHitsOnPage, doFromDraft, proseTriggers, tokenAt, writeSuggestions, rulesFromSource, authorshipTimeline, authorshipBaseWorld, snapDrawer, diffDrawers, entityHistory, changedSnaps, removeAnnotation, isRegrasFence, rebindAnnotation } from "../../index.ts";
-import type { NotebookService } from "../../types.ts";
+import { leituraAte } from "../../lib/timeline.ts";
 
 function worldOf(text: string) {
   const nb = compileNotebook(text);
@@ -1672,7 +1672,7 @@ Quando o jogador é marcado como "combate":
     assert.equal(writeSuggestions(cave.notebooksSource ?? "", 1, []).length, 0);
     const preview = readFileSync(fileURLToPath(new URL("../../ui/WritePreview.tsx", import.meta.url)), "utf8");
     assert.match(preview, /writeSuggestions/);
-    assert.match(preview, /Sugestões/);
+    assert.match(preview, /Propostas/);
     const play = readFileSync(fileURLToPath(new URL("../../../ide-ui/lib/components/PreviewPane.tsx", import.meta.url)), "utf8");
     assert.equal(/writeSuggestions/.test(play), false);
   });
@@ -1727,7 +1727,7 @@ describe("T5 fecho", () => {
     const ref = readFileSync(fileURLToPath(new URL("../../../ide-guide/lib/syntax-ref.ts", import.meta.url)), "utf8");
     assert.match(ref, /## regras/);
     assert.match(ref, /CREATE/);
-    assert.match(ref, /Vista do jogador/);
+    assert.match(ref, /manuscrito/);
     const handwritten = compileNotebook(`CADERNO:
 ### O Jogador
 O jogador está na sala.
@@ -1747,6 +1747,24 @@ O jogador está na sala.
     const orch = readFileSync(fileURLToPath(new URL("../../../ide-state/lib/orchestrator.ts", import.meta.url)), "utf8");
     assert.match(orch, /function inRuntime/);
     assert.match(orch, /if \(!game \|\| !inRuntime\(\)\) return false;/);
+  });
+
+  it("leitura corta o texto e o mundo na linha", () => {
+    const prose = `CADERNO:
+### Sala
+O jogador está na sala.
+A tocha acende.
+`;
+    let src = addAnnotation(prose, { id: "a1", book: "book-0", heading: "Sala", quote: "O jogador está na sala.", do: "SET_FLAG @jogador acordado true" });
+    src = addAnnotation(src, { id: "a2", book: "book-0", heading: "Sala", quote: "A tocha acende.", do: "SET_FLAG @jogador acordado false" });
+    const early = leituraAte(src, "", 3);
+    const late = leituraAte(src, "", 4);
+    assert.match(early.prose, /O jogador está na sala/);
+    assert.equal(early.prose.includes("A tocha acende"), false);
+    assert.match(snapDrawer(early.world.get("@jogador"), "flags"), /acordado=true/);
+    assert.match(late.prose, /A tocha acende/);
+    assert.match(snapDrawer(late.world.get("@jogador"), "flags"), /acordado=false/);
+    assert.equal(late.prose.includes("lume-anotacoes"), false);
   });
 });
 
@@ -1937,3 +1955,31 @@ Quando o jogador pega a espada:
     assert.equal(compileProject(cave).errors.length, 0);
   });
 });
+
+describe("E4 mundo até esta linha", () => {
+  it("não inclui quem a prosa ainda não criou, e não aplica mutação futura", () => {
+    let src = `CADERNO:
+## Lugares
+### Sala
+A sala está quieta.
+### Covil
+O covil arde.
+`;
+    src = addAnnotation(src, { id: "a1", book: "book-0", heading: "Covil", quote: "O covil arde.", do: "SET_FLAG @sala acesa true" });
+    const early = leituraAte(src, "@pacto.{ tags: agent; }", 4);
+    const late = leituraAte(src, "@pacto.{ tags: agent; }", 6);
+    assert.equal(early.world.has("@pacto"), true);
+    assert.equal(early.world.has("@sala"), true);
+    assert.equal(early.world.has("@covil"), false);
+    assert.equal(early.world.get("@sala")?.flags.acesa, undefined);
+    assert.equal(late.world.has("@covil"), true);
+    assert.equal(late.world.get("@sala")?.flags.acesa, true);
+    assert.equal(early.prose.includes("O covil arde"), false);
+    const editor = readFileSync(fileURLToPath(new URL("../../ui/NotebookEditor.tsx", import.meta.url)), "utf8");
+    const preview = readFileSync(fileURLToPath(new URL("../../ui/WritePreview.tsx", import.meta.url)), "utf8");
+    assert.match(editor, /leituraAte/);
+    assert.match(editor, /lineBase/);
+    assert.match(preview, /leitura\.world\.get\(playerId\)/);
+  });
+});
+

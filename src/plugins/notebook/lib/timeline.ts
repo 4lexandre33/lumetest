@@ -46,7 +46,10 @@ export function snapDrawer(entity: Entity | null | undefined, drawer: FbeDrawer)
     case "flags":
       return pairs(entity.flags, (value) => (value ? "true" : "false"));
     case "enums":
-      return pairs(entity.enums);
+      return pairs(entity.enums, (value) => {
+        const slot = value as { current?: string };
+        return slot.current ?? "";
+      });
     case "phrases":
       return pairs(entity.phrases);
     case "hardLinks":
@@ -111,12 +114,30 @@ function applyDo(world: WorldModel, doLine: string, triggerId: string): WorldMod
 }
 
 export function authorshipBaseWorld(text: string, entitiesSource = ""): WorldModel {
+  return mergeWorlds(entitiesSource, stripAnotacoesSlice(text.replace(/^\uFEFF/, "")));
+}
+
+function mergeWorlds(entitiesSource: string, prose: string): WorldModel {
   const motor = compileEntityFile(entitiesSource).worldModel;
-  const caderno = compileEntityFile(compileNotebook(stripAnotacoesSlice(text)).entitiesSource).worldModel;
+  const caderno = compileEntityFile(compileNotebook(prose).entitiesSource).worldModel;
   const world = cloneWorldModel(motor);
   const extra = cloneWorldModel(caderno);
   for (const [id, entity] of extra) {
     if (!world.has(id)) world.set(id, entity);
+  }
+  return world;
+}
+
+export function worldAte(text: string, entitiesSource = "", line: number | null = null): WorldModel {
+  const raw = text.replace(/^\uFEFF/, "");
+  const limited = line == null ? raw : raw.split(/\n/).slice(0, Math.max(0, line)).join("\n");
+  let world = mergeWorlds(entitiesSource, stripAnotacoesSlice(limited));
+  if (line == null) return world;
+  const ordered = orderAnnotations(text, parseAnotacoesSlice(text));
+  for (const item of ordered) {
+    if (item.line == null || item.line > line) continue;
+    const entityId = targetIdOfDo(item.annotation.do) ?? "";
+    world = applyDo(world, item.annotation.do, entityId);
   }
   return world;
 }
@@ -144,6 +165,13 @@ export function authorshipTimeline(text: string, entitiesSource = ""): TimelineE
     });
   }
   return out;
+}
+
+export function leituraAte(text: string, entitiesSource = "", line: number | null = null): { prose: string; world: WorldModel } {
+  const raw = text.replace(/^\uFEFF/, "");
+  const limited = line == null ? raw : raw.split(/\n/).slice(0, Math.max(0, line)).join("\n");
+  const prose = stripAnotacoesSlice(limited).replace(/\s+$/, "");
+  return { prose, world: worldAte(text, entitiesSource, line) };
 }
 
 export function entityHistory(entries: readonly TimelineEntry[], entityId: string | null | undefined): TimelineEntry[] {

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { BookOpen, FilePlus, FolderOpen, GraduationCap, Play } from "lucide-react";
+import { FilePlus, FolderOpen, GraduationCap } from "lucide-react";
 import { Button } from "../ui/button.tsx";
 import { EXAMPLE_CATALOG } from "../../../narrative-engine/lib/examples.ts";
 import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
@@ -15,69 +14,16 @@ export function Welcome() {
   const openReference = useIdeStore((s) => s.openReference);
   const skipGuide = useIdeStore((s) => s.skipGuide);
   const resume = useIdeStore((s) => s.resume);
-  const setIdeMode = useIdeStore((s) => s.setIdeMode);
   const pending = onboarding === "pending" && catalog.length === 0 && !project;
-  const [modeAsk, setModeAsk] = useState(false);
-
-  if (modeAsk) {
-    return (
-      <main className="relative z-10 flex min-h-dvh flex-col bg-bg px-5 py-10 sm:px-10">
-        <header className="mx-auto w-full max-w-5xl">
-          <p className="text-xs tracking-[0.22em] text-muted uppercase">Nova história</p>
-          <h1 className="mt-3 font-display text-5xl leading-none tracking-tight sm:text-6xl">Como queres trabalhar?</h1>
-          <p className="mt-4 max-w-xl text-base leading-relaxed text-muted">
-            Um IDE, dois modos. Entidades, regras e caderno nos dois. Só o preview muda. Podes trocar no interruptor.
-          </p>
-        </header>
-        <section className="mx-auto mt-10 grid w-full max-w-5xl gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => {
-              newBlank();
-              setIdeMode("write");
-            }}
-            className="flex min-h-44 flex-col items-start gap-3 rounded-md border border-border bg-surface p-5 text-left hover:bg-elevated"
-          >
-            <span className="flex items-center gap-2 text-[10px] tracking-[0.14em] text-muted uppercase">
-              <BookOpen className="size-4" /> Modo Escrita
-            </span>
-            <span className="font-display text-3xl leading-none">Escrita</span>
-            <span className="text-sm leading-relaxed text-muted">
-              Preview de estado. Clique em ¹ ² ³ para as mudanças da linha. Ver entidade no painel direito. Sem beat.
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              newBlank();
-              setIdeMode("play");
-            }}
-            className="flex min-h-44 flex-col items-start gap-3 rounded-md border border-border bg-surface p-5 text-left hover:bg-elevated"
-          >
-            <span className="flex items-center gap-2 text-[10px] tracking-[0.14em] text-muted uppercase">
-              <Play className="size-4" /> Modo Jogo
-            </span>
-            <span className="font-display text-3xl leading-none">Jogo</span>
-            <span className="text-sm leading-relaxed text-muted">
-              O jogador clica, um matcher responde. A Vista do jogador (menu Executar) é outro ecrã, sem os editores.
-            </span>
-          </button>
-        </section>
-        <button type="button" onClick={() => setModeAsk(false)} className="mx-auto mt-8 text-sm text-muted hover:text-fg">
-          Voltar
-        </button>
-      </main>
-    );
-  }
 
   return (
     <main className="relative z-10 flex min-h-dvh flex-col bg-bg px-5 py-10 sm:px-10">
       <header className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs tracking-[0.22em] text-muted uppercase">Motor narrativo · IDE</p>
+          <p className="text-xs tracking-[0.22em] text-muted uppercase">Manuscrito</p>
           <h1 className="mt-3 font-display text-6xl leading-none tracking-tight sm:text-7xl">Lume</h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-muted">
-            Histórias feitas de mundo e regras. Você descreve o que existe, o que acontece ao clicar, e o parágrafo que o leitor vê.
+            O que abre é o caderno. Entidades, leis e taxonomia ficam em painéis. A leitura mostra o texto até esta linha e o mundo dela.
           </p>
         </div>
         <button type="button" onClick={pending ? startGuide : openReference} className="flex min-h-11 items-center gap-2 text-sm text-muted hover:text-fg">
@@ -136,7 +82,7 @@ export function Welcome() {
       </section>
 
       <section className="mx-auto mt-10 w-full max-w-5xl">
-        <Button variant="outline" onClick={() => setModeAsk(true)}>
+        <Button variant="outline" onClick={newBlank}>
           <FilePlus className="size-4" /> Nova história
         </Button>
       </section>

@@ -136,6 +136,7 @@ export function NotebookPane() {
           onSelectMark={(id) => setWriteFocus(id)}
           onCaretLine={(line) => setWriteLine(book.startLine + line - 1)}
           onChange={(next, opts) => setNotebooks(replaceBookSource(text, book.id, next), opts)}
+          lineBase={book.startLine}
           onBindMutation={(draft, heading) => {
             const line = doFromDraft(draft, entities.map((item) => item.id));
             if (!line) return;

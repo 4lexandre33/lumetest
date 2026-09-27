@@ -107,18 +107,27 @@ function candidatesOf(state: GameState, triggerId: string): DryRunCandidate[] {
   }));
 }
 
-function storyFor(rule: Rule | null, world: WorldModel, triggerId: string, cycleIndex: number, playerId?: string): string {
+function storyFor(
+  rule: Rule | null,
+  world: WorldModel,
+  triggerId: string,
+  cycleIndex: number,
+  playerId?: string,
+  taxonomy?: GameState["taxonomy"],
+): string {
   if (rule) {
     return parseNarrative(pickNarrative(rule.narrative, rule.voices, world, triggerId, playerId), {
       worldModel: world,
       triggerId,
       cycleIndex,
+      taxonomy,
     });
   }
   return parseNarrative(entityDescription(world, triggerId) || `{${triggerId}.name}`, {
     worldModel: world,
     triggerId,
     cycleIndex,
+    taxonomy,
   });
 }
 
@@ -128,7 +137,7 @@ export function dryRunWith(state: GameState, triggerId: string): DryRunReport {
   const rule = findMatchingRule(triggerId, state.rules, world, state.taxonomy);
   const key = rule?.id ?? triggerId;
   const cycleIndex = state.ruleCounts[key] ?? 0;
-  const nextWorld = rule ? applyChanges(world, rule.changes, triggerId) : world;
+  const nextWorld = rule ? applyChanges(world, rule.changes, triggerId, state.taxonomy) : world;
   const worldDiff = diffWorlds(world, nextWorld);
   return {
     triggerId,
@@ -136,7 +145,7 @@ export function dryRunWith(state: GameState, triggerId: string): DryRunReport {
     ruleId: rule?.id ?? null,
     candidates,
     cycleIndex,
-    story: storyFor(rule, nextWorld, triggerId, cycleIndex, state.playerEntityId),
+    story: storyFor(rule, nextWorld, triggerId, cycleIndex, state.playerEntityId, state.taxonomy),
     changes: rule ? [...rule.changes] : [],
     effects: rule ? [...rule.effects] : [],
     worldDiff,

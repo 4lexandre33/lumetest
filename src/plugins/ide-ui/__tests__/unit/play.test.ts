@@ -12,31 +12,16 @@ describe("play skin hud", () => {
     assert.equal(DRY_RUN_NOTICE, "Pergunta hipotética: nenhuma acção foi executada.");
   });
 
-  it("keeps Escrita/Jogo visible on every viewport after Nova história", () => {
+  it("opens the manuscript; Escrita/Jogo is not on the bar", () => {
     const src = readFileSync(fileURLToPath(new URL("../../lib/components/IdeApp.tsx", import.meta.url)), "utf8");
-    assert.match(src, /<ModeSwitch \/>/);
-    assert.equal(src.includes("hidden md:inline-flex"), false);
-    const lumeAt = src.indexOf("Lume");
-    const switchAt = src.indexOf("<ModeSwitch />");
-    const menusAt = src.indexOf("{MENUS.map");
-    assert.equal(switchAt > lumeAt && switchAt < menusAt, true);
-  });
-
-  it("Welcome Jogo stays in the IDE; Vista do jogador is PlaySkin", () => {
+    assert.equal(src.includes("<ModeSwitch />"), false);
+    assert.equal(src.includes("Vista do jogador"), false);
+    assert.match(src, /NotebookPane/);
+    assert.match(src, /PreviewPane mode="ide"/);
     const welcome = readFileSync(fileURLToPath(new URL("../../lib/components/Welcome.tsx", import.meta.url)), "utf8");
-    assert.match(welcome, /setIdeMode\("play"\)/);
-    assert.equal(welcome.includes("openPlay()"), false);
-    const app = readFileSync(fileURLToPath(new URL("../../lib/components/IdeApp.tsx", import.meta.url)), "utf8");
-    assert.match(app, /Vista do jogador/);
-    assert.match(app, /openPlay/);
-    assert.match(app, /NotebookPane/);
-    const skin = readFileSync(fileURLToPath(new URL("../../lib/components/PlaySkin.tsx", import.meta.url)), "utf8");
-    assert.match(skin, /Vista do jogador/);
-    assert.match(skin, /PreviewPane mode="play"/);
-    assert.match(skin, /Modo Escrita/);
-    assert.match(skin, /Modo Jogo/);
-    assert.match(welcome, /Modo Escrita/);
-    assert.match(welcome, /Modo Jogo/);
-    assert.equal(welcome.includes("Preview de runtime"), false);
+    assert.equal(welcome.includes("setIdeMode"), false);
+    assert.equal(welcome.includes("Modo Jogo"), false);
+    assert.match(welcome, /newBlank/);
+    assert.match(welcome, /O que abre é o caderno/);
   });
 });

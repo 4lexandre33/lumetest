@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   completeAt,
+  collectVocabulary,
   highlightSource,
   offsetOfLine,
   tabAfterKeyword,
@@ -11,20 +12,25 @@ import {
   type CompletionItem,
 } from "../../narrative-engine/lib/index.ts";
 import { useIdeStore } from "../../ide-state/lib/orchestrator.ts";
-import { cn } from "./cn.ts";
 import { MutationSheet, PhraseSheet, emptyDraft } from "./WriteShell.tsx";
 import {
   entityGuess,
   insertAtSelection,
   insertRegrasSection,
+  insertMoldesSection,
   phrasesOfProject,
+  bibliotecaOf,
   selectionOf,
   cadernoLive,
   type DrawerHost,
   type MutationDraft,
 } from "../lib/write-menu.ts";
 import { headingOf, markHitsOnPage, type MarkHit, type NotebookAnnotation } from "../lib/annotations.ts";
-import { caretAnchor, proseTriggers, type ProseHit } from "../lib/prose-triggers.ts";
+import { proseTriggers, type ProseHit } from "../lib/prose-triggers.ts";
+import { inRegrasFence, proseDegrau, type PhraseLeaf } from "../lib/degrau-prose.ts";
+import { leituraAte } from "../lib/timeline.ts";
+import { menuAnchor, menuDetail, menuOpens, menuSeal } from "../../ide-ui/lib/completion-menu.ts";
+import { CompletionMenu } from "../../ide-ui/lib/components/CompletionMenu.tsx";
 
 const LINE_PX = 24;
 const PAD_TOP = 16;
@@ -123,6 +129,7 @@ export function NotebookEditor({
   rules = [],
   annotations = [],
   onBindMutation,
+  lineBase = 1,
 }: {
   value: string;
   onChange: (next: string, opts?: { flush?: boolean }) => void;
@@ -134,6 +141,7 @@ export function NotebookEditor({
   rules?: { id: string; narrative?: string }[];
   annotations?: NotebookAnnotation[];
   onBindMutation?: (draft: MutationDraft, heading: string) => void;
+  lineBase?: number;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const live = cadernoLive(useIdeStore((s) => s.ideMode));
@@ -145,14 +153,13 @@ export function NotebookEditor({
   const [items, setItems] = useState<CompletionItem[]>([]);
   const [active, setActive] = useState(0);
   const [replace, setReplace] = useState<{ start: number; end: number } | null>(null);
+  const [menuPos, setMenuPos] = useState({ left: 8, top: 8 });
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [note, setNote] = useState<{ line: number; text: string } | null>(null);
   const [draft, setDraft] = useState<MutationDraft | null>(null);
   const [phrasesOpen, setPhrasesOpen] = useState(false);
   const [phraseRange, setPhraseRange] = useState({ start: 0, end: 0 });
   const [proseHits, setProseHits] = useState<ProseHit[]>([]);
-  const [proseActive, setProseActive] = useState(0);
-  const [prosePos, setProsePos] = useState<{ left: number; top: number } | null>(null);
 
   const highlighted = useMemo(() => highlightSource(value, "notebook"), [value]);
   const split = useMemo(() => value.split("\n"), [value]);
@@ -160,6 +167,7 @@ export function NotebookEditor({
   const longest = useMemo(() => split.reduce((m, l) => Math.max(m, l.length), 8), [split]);
   const contentH = PAD_TOP * 2 + lineCount * LINE_PX;
   const phrases = useMemo(() => phrasesOfProject(entities, rules), [entities, rules]);
+  const biblioteca = useMemo(() => bibliotecaOf(value, phrases), [value, phrases]);
   const entityIds = useMemo(() => entities.map((item) => item.id), [entities]);
   const marks = useMemo(() => markHitsOnPage(value, annotations), [value, annotations]);
 
@@ -169,7 +177,6 @@ export function NotebookEditor({
     setDraft(null);
     setPhrasesOpen(false);
     setProseHits([]);
-    setProsePos(null);
   }, [live]);
 
   function setOpenBoth(v: boolean) {
@@ -198,43 +205,95 @@ export function NotebookEditor({
   }
 
   function suggest(source: string, offset: number, force = false) {
-    const { ctx, items: next } = completeAt(source, "notebook", offset, {
-      entityIds: [],
-      tags: [],
-      statKeys: [],
-      linkKeys: [],
-      propKeywords: [],
-    });
-    const shouldOpen = force || ctx.prefix.length > 0;
-    if (shouldOpen && next.length) {
+    const opened = menuOpens(source, offset, force);
+    if (!opened) {
+      setOpenBoth(false);
       setProseHits([]);
-      setProsePos(null);
+      return;
+    }
+    const project = useIdeStore.getState().project;
+    const compiled = useIdeStore.getState().compiled;
+    const localLine = source.slice(0, Math.max(0, offset)).split("\n").length;
+    const full = project?.notebooksSource ?? source;
+    const { world } = leituraAte(full, project?.entitiesSource ?? "", lineBase + localLine - 1);
+    const vocab = collectVocabulary({
+      worldModel: world,
+      taxonomy: compiled?.taxonomy,
+      extras: project?.extras,
+      taxonomySource: project?.taxonomySource,
+    });
+    const dot = source[offset - 1] === ".";
+    if (inRegrasFence(source, offset)) {
+      const lineStart = source.lastIndexOf("\n", Math.max(0, offset - 1)) + 1;
+      const local = source.slice(lineStart, offset);
+      const stepped = completeAt(local, "rules", local.length, vocab);
+      if (stepped.ctx.slot === "degrau") {
+        if (stepped.items.length) {
+          setItems(stepped.items);
+          setProseHits([]);
+          setActive(0);
+          setReplace({ start: lineStart + stepped.ctx.replaceStart, end: lineStart + stepped.ctx.replaceEnd });
+          setMenuPos(menuAnchor(source, offset, scrollRef.current, 56));
+          setOpenBoth(true);
+        } else {
+          setOpenBoth(false);
+          setProseHits([]);
+        }
+        return;
+      }
+    }
+    const leaves: PhraseLeaf[] = [];
+    for (const entity of world.values()) {
+      for (const [key, raw] of Object.entries(entity.phrases ?? {})) {
+        const insert = String(raw ?? "");
+        if (insert) leaves.push({ owner: entity.id, key, insert });
+      }
+    }
+    for (const rule of rules) {
+      const insert = (rule.narrative ?? "").replace(/^['"]|['"]$/g, "");
+      if (insert) leaves.push({ owner: rule.id, key: rule.id, insert });
+    }
+    const prose = proseDegrau(source, offset, vocab.entityIds.length ? vocab.entityIds : entityIds, leaves);
+    if (prose) {
+      const p = prose.ctx.prefix.toLowerCase();
+      const items = p ? prose.items.filter((item) => item.label.toLowerCase().startsWith(p) || item.label.toLowerCase().includes(p)) : prose.items;
+      if (items.length) {
+        setItems(items);
+        setProseHits([]);
+        setActive(0);
+        setReplace({ start: prose.ctx.replaceStart, end: prose.ctx.replaceEnd });
+        setMenuPos(menuAnchor(source, offset, scrollRef.current, 56));
+        setOpenBoth(true);
+      } else {
+        setOpenBoth(false);
+        setProseHits([]);
+      }
+      return;
+    }
+    if (dot) {
+      setOpenBoth(false);
+      setProseHits([]);
+      return;
+    }
+    const { ctx, items: next } = completeAt(source, "notebook", offset, vocab);
+    const hits = live
+      ? proseTriggers(source, offset, {
+          entities: entities.map((item) => ({ id: item.id, name: "name" in item ? String((item as { name?: string }).name ?? "") : "" })),
+          phrases,
+          annotations,
+        })
+      : [];
+    if (next.length || hits.length) {
       setItems(next);
+      setProseHits(hits);
       setActive(0);
       setReplace({ start: ctx.replaceStart, end: ctx.replaceEnd });
+      setMenuPos(menuAnchor(source, offset, scrollRef.current, 56));
       setOpenBoth(true);
       return;
     }
     setOpenBoth(false);
-    if (!live) {
-      setProseHits([]);
-      setProsePos(null);
-      return;
-    }
-    const hits = proseTriggers(source, offset, {
-      entities: entities.map((item) => ({ id: item.id, name: "name" in item ? String((item as { name?: string }).name ?? "") : "" })),
-      phrases,
-      annotations,
-    });
-    if (hits.length) {
-      setProseHits(hits);
-      setProseActive(0);
-      const anchor = caretAnchor(source, offset);
-      setProsePos({ left: anchor.left, top: anchor.top });
-    } else {
-      setProseHits([]);
-      setProsePos(null);
-    }
+    setProseHits([]);
   }
 
   function apply(item: CompletionItem) {
@@ -254,7 +313,6 @@ export function NotebookEditor({
     setPhrasesOpen(false);
     setNote(null);
     setProseHits([]);
-    setProsePos(null);
     setOpenBoth(false);
   }
 
@@ -264,7 +322,6 @@ export function NotebookEditor({
       rememberSelection(next.offset, next.offset);
       onChange(next.source);
       setProseHits([]);
-      setProsePos(null);
       requestAnimationFrame(() => placeCaret(next.offset));
       return;
     }
@@ -272,46 +329,55 @@ export function NotebookEditor({
       const line = value.slice(0, hit.start).split("\n").length;
       setDraft(emptyDraft(hit.entityId, hit.token, line, "tags", { column: columnOf(value, hit.start), into: intoOf(value, line) }));
       setProseHits([]);
-      setProsePos(null);
+      setOpenBoth(false);
       return;
     }
     setProseHits([]);
-    setProsePos(null);
+    setOpenBoth(false);
+  }
+
+  function menuRows() {
+    const fromItems = items.map((item, index) => ({
+      id: `c-${item.kind}-${item.label}-${index}`,
+      label: item.label,
+      detail: menuDetail(item.detail, item.documentation),
+      seal: item.detail === "frase" || item.detail.startsWith("frases") || item.label === "frases"
+        ? "frase"
+        : menuSeal(item.label, item.kind),
+      pick: () => apply(item),
+    }));
+    const fromHits = proseHits.map((hit, index) => ({
+      id: `p-${hit.kind}-${hit.label}-${index}`,
+      label: hit.label,
+      detail: menuDetail(hit.detail),
+      seal: menuSeal(hit.label, hit.kind),
+      pick: () => applyProse(hit),
+    }));
+    return open ? [...fromItems, ...fromHits] : [];
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.nativeEvent.isComposing) return;
     const ta = e.currentTarget;
+    if ((e.ctrlKey || e.metaKey) && e.key === " ") {
+      e.preventDefault();
+      suggest(ta.value, ta.selectionStart, true);
+      return;
+    }
     if (e.key === "Escape") {
       closeSheets();
       return;
     }
-    if (proseHits.length && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    const rows = menuRows();
+    if (open && rows.length && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       e.preventDefault();
-      setProseActive((i) => (e.key === "ArrowDown" ? (i + 1) % proseHits.length : (i - 1 + proseHits.length) % proseHits.length));
+      setActive((i) => (e.key === "ArrowDown" ? (i + 1) % rows.length : (i - 1 + rows.length) % rows.length));
       return;
     }
-    if (proseHits.length && e.key === "Tab" && proseHits[proseActive]) {
+    if (open && (e.key === "Enter" || e.key === "Tab") && rows[active]) {
       e.preventDefault();
-      applyProse(proseHits[proseActive]!);
+      rows[active]!.pick();
       return;
-    }
-    if (proseHits.length && e.key === "Enter") {
-      setProseHits([]);
-      setProsePos(null);
-    }
-    if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-      e.preventDefault();
-      setActive((i) => (e.key === "ArrowDown" ? (i + 1) % items.length : (i - 1 + items.length) % items.length));
-      return;
-    }
-    if (open && e.key === "Tab" && items[active]) {
-      e.preventDefault();
-      apply(items[active]!);
-      return;
-    }
-    if (open && e.key === "Enter") {
-      setOpenBoth(false);
     }
     if (e.key === "Enter" && !e.shiftKey) {
       const next = indentOnEnter(ta.value, ta.selectionStart);
@@ -416,7 +482,6 @@ export function NotebookEditor({
                 setTimeout(() => {
                   setOpenBoth(false);
                   setProseHits([]);
-                  setProsePos(null);
                 }, 160)
               }
               className="absolute inset-0 m-0 resize-none overflow-hidden bg-transparent font-mono text-sm whitespace-pre"
@@ -435,52 +500,14 @@ export function NotebookEditor({
           </div>
         </div>
       </div>
-      {open && items.length > 0 ? (
-        <div className="absolute top-3 right-3 z-10 w-72 overflow-hidden rounded-md border border-border bg-elevated shadow-xl">
-          <p className="px-3 py-1.5 text-[10px] tracking-[0.14em] text-muted uppercase">Tab confirma · Enter nova linha</p>
-          <ul className="max-h-56 overflow-auto p-1 text-sm">
-            {items.map((item, i) => (
-              <li key={item.label + i}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    apply(item);
-                  }}
-                  className={cn("flex w-full items-baseline justify-between gap-2 rounded-xs px-2 py-1.5 text-left", i === active ? "bg-surface" : "hover:bg-surface/60")}
-                >
-                  <span>{item.label}</span>
-                  <span className="text-xs tracking-wide text-muted uppercase">{item.kind}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {proseHits.length && prosePos ? (
-        <div
-          className="absolute z-20 w-72 overflow-hidden rounded-md border border-border bg-elevated shadow-xl"
-          style={{ left: Math.max(8, prosePos.left), top: prosePos.top }}
-        >
-          <p className="px-3 py-1.5 text-[10px] tracking-[0.14em] text-muted uppercase">Tab confirma · Esc fecha</p>
-          <ul className="max-h-56 overflow-auto p-1 text-sm">
-            {proseHits.map((hit, i) => (
-              <li key={hit.kind + hit.label + i}>
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    applyProse(hit);
-                  }}
-                  className={cn("flex w-full items-baseline justify-between gap-2 rounded-xs px-2 py-1.5 text-left", i === proseActive ? "bg-surface" : "hover:bg-surface/60")}
-                >
-                  <span className="truncate">{hit.label}</span>
-                  <span className="shrink-0 text-xs tracking-wide text-muted uppercase">{hit.detail}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {open ? (
+        <CompletionMenu
+          items={menuRows()}
+          active={active}
+          left={menuPos.left}
+          top={menuPos.top}
+          onPick={(index) => menuRows()[index]?.pick()}
+        />
       ) : null}
       {menu ? <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Fechar menu" onClick={() => setMenu(null)} /> : null}
       {menu ? (
@@ -508,7 +535,7 @@ export function NotebookEditor({
               setMenu(null);
             }}
           >
-            Inserir frase
+            Biblioteca
           </button>
           <button
             type="button"
@@ -553,6 +580,20 @@ export function NotebookEditor({
             }}
           >
             Secção de regras
+          </button>
+          <button
+            type="button"
+            className="flex w-full px-3 py-1.5 text-left text-sm hover:bg-surface"
+            onClick={() => {
+              const pos = offsetOfLine(value, menu.line) + (split[menu.line - 1]?.length ?? 0);
+              const next = insertMoldesSection(value, pos);
+              caretRef.current = next.offset;
+              onChange(next.source);
+              setMenu(null);
+              requestAnimationFrame(() => placeCaret(next.offset));
+            }}
+          >
+            Secção de moldes
           </button>
           <button
             type="button"
@@ -615,7 +656,7 @@ export function NotebookEditor({
       ) : null}
       {phrasesOpen ? (
         <PhraseSheet
-          phrases={phrases}
+          phrases={biblioteca}
           onCancel={() => setPhrasesOpen(false)}
           onPick={(phrase) => {
             const next = insertAtSelection(value, phraseRange.start, phraseRange.end, phrase.insert);

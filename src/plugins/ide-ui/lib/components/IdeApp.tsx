@@ -13,7 +13,7 @@ import { Welcome } from "./Welcome.tsx";
 import { Guide } from "./Guide.tsx";
 import { Reference } from "./Reference.tsx";
 import { WorldIndex } from "./WorldIndex.tsx";
-import { PlaySkin, ModeSwitch } from "./PlaySkin.tsx";
+import { PlaySkin } from "./PlaySkin.tsx";
 import { ExtPluginsWindow } from "./ExtPluginsWindow.tsx";
 import { NotebookPane, NotebookTabstrip } from "../../../notebook/ui/NotebookPane.tsx";
 import { NotebookViewProvider } from "../../../notebook/ui/notebook-view.tsx";
@@ -64,7 +64,6 @@ function MenuItem({
 
 export function IdeApp() {
   const screen = useIdeStore((s) => s.screen);
-  const ideMode = useIdeStore((s) => s.ideMode);
   const project = useIdeStore((s) => s.project);
   const game = useIdeStore((s) => s.game);
   const tab = useIdeStore((s) => s.tab);
@@ -102,7 +101,6 @@ export function IdeApp() {
   const importNotebooks = useIdeStore((s) => s.importNotebooks);
   const exportSessionJson = useIdeStore((s) => s.exportSessionJson);
   const importSessionJson = useIdeStore((s) => s.importSessionJson);
-  const openPlay = useIdeStore((s) => s.openPlay);
 
   const [openMenu, setOpenMenu] = useState<MenuId | null>(null);
   const [showIndex, setShowIndex] = useState(false);
@@ -296,9 +294,6 @@ export function IdeApp() {
         <button type="button" onClick={openWelcome} className="mr-1 shrink-0 px-2 font-display text-lg leading-none hover:text-muted">
           Lume
         </button>
-        <div className="shrink-0">
-          <ModeSwitch />
-        </div>
         {MENUS.map((m) => (
           <div key={m.id} className="relative">
             <button
@@ -335,7 +330,6 @@ export function IdeApp() {
                 {m.id === "executar" ? (
                   <>
                     <MenuItem label="Jogar / ligar preview" onSelect={() => closeAnd(() => bootPreview(true))} />
-                    <MenuItem label="Vista do jogador" onSelect={() => closeAnd(openPlay)} />
                     <MenuItem label="Recomeçar" onSelect={() => closeAnd(resetPreview)} />
                     <MenuItem
                       label={skeinOpen ? "Ocultar Skein" : "Mostrar Skein"}
@@ -431,7 +425,7 @@ export function IdeApp() {
                 <Panel defaultSize="28" minSize="18" className="min-h-0">
                   <div className="flex h-full min-h-0 flex-col">
                     <div className="min-h-0 flex-1">
-                      <PreviewPane mode={ideMode === "play" ? "play" : "ide"} />
+                      <PreviewPane mode="ide" />
                     </div>
                     {skeinOpen ? (
                       <div className="h-40 shrink-0 border-t border-border">
@@ -474,7 +468,7 @@ export function IdeApp() {
           {mobilePane === "play" ? (
             <div className="flex h-full min-h-0 flex-col">
               <div className="min-h-0 flex-1">
-                <PreviewPane mode={ideMode === "play" ? "play" : "ide"} />
+                <PreviewPane mode="ide" />
               </div>
               {skeinOpen ? (
                 <div className="h-40 shrink-0 border-t border-border">

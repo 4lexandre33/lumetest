@@ -16,7 +16,7 @@ export type SynClass =
 export type HighlightSpan = { text: string; cls: SynClass };
 export type SourceKind = "entities" | "rules" | "taxonomy" | "notebook";
 
-const RULE_KW_RE = /^(ON|IF|DO|NARRATIVE|NARRATIVA|SEMANTIC|SEMANTICS|FUNCAO|FUNÇÃO|FUNCTION|PADRAO)\s*:?/i;
+const RULE_KW_RE = /^(ON|IF|DO|NARRATIVE|NARRATIVA|TEXT|SEMANTIC|SEMANTICS|FUNCAO|FUNÇÃO|FUNCTION|PADRAO)\s*:?/i;
 const SECTION_RE = /^\s*(id|slug|shortCode|templateId|name|description|tags|stats|flags|enums|phrases|hardLinks|softLinks|links|lists|fuses|struct|voice|aliases)\s*:/i;
 const TAXONOMY_TOKEN_RE = /[\p{L}_][\p{L}\p{N}\p{M}_]*|→|->/gu;
 

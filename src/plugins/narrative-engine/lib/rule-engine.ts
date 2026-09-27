@@ -3,7 +3,7 @@ import { matchesEntity, parseMatcher, queryHasResults, specificityOf } from "./q
 import type { CompiledTaxonomy } from "./taxonomy.ts";
 import type { ChangeAST, ChangeField, ChangeTarget, Entity, Issue, MatcherAST, PathDrawer, Token, WorldModel } from "./types.ts";
 import { isPathDrawer } from "./types.ts";
-import { cloneEntity, cloneWorldModel, parseDottedEntity, assignLink, clearLink, readStat, writeStat, destroyEntityInWorld, instantiateFromTemplate, syncLinks, createEmptyEntity, findEntityByQuad, assertEntityId, getLink } from "./world-model.ts";
+import { cloneEntity, cloneWorldModel, parseDottedEntity, assignLink, assignEnum, clearLink, readStat, writeStat, destroyEntityInWorld, instantiateFromTemplate, syncLinks, createEmptyEntity, findEntityByQuad, assertEntityId, getLink, withInheritedDrawers } from "./world-model.ts";
 
 export const SEMANTIC_KINDS = [
   "constraint",
@@ -43,7 +43,7 @@ export type RuleMatch = { rule: Rule; score: number };
 
 export type DoLine = { change?: ChangeAST; effect?: EffectOp };
 
-const KW_RE = /^(ON|IF|DO|NARRATIVA|NARRATIVE|SEMANTIC|SEMANTICS|FUNCAO|FUNÇÃO|FUNCTION)\s*:/i;
+const KW_RE = /^(ON|IF|DO|NARRATIVA|NARRATIVE|TEXT|SEMANTIC|SEMANTICS|FUNCAO|FUNÇÃO|FUNCTION)\s*:/i;
 const EFFECT_VERBS = new Set(["EMIT", "INTENT", "KNOW", "WAIT", "TICK", "THEN", "LIVE"]);
 const EFFECT_ALLOW_EMPTY = new Set(["TICK", "LIVE"]);
 const WORLD_VERBS = new Set(["CREATE", "DESTROY", "SPAWN"]);
@@ -509,6 +509,9 @@ function parseFuncaoName(raw: string): string {
   return raw.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
 }
 
+/** Esqueleto com `on:` vazio: ainda não é regra, e não é erro. */
+class PendingRule extends Error {}
+
 export function parseRuleBlock(text: string, options: { file?: string; startLine?: number; id?: string } = {}): Omit<Rule, "index" | "source"> & { id: string } {
   const file = options.file ?? "rules";
   const startLine = options.startLine ?? 1;
@@ -524,6 +527,7 @@ export function parseRuleBlock(text: string, options: { file?: string; startLine
   const voices: Record<string, string> = {};
   let voiceKey: string | null = null;
   let section: "idle" | "on" | "if" | "do" | "narrative" | "semantic" | "function" = "idle";
+  let sawEmptyOn = false;
 
   for (let i = 0; i < lines.length; i++) {
     const lineNo = startLine + i;
@@ -541,9 +545,14 @@ export function parseRuleBlock(text: string, options: { file?: string; startLine
       const rest = trimmed.slice(trimmed.indexOf(":") + 1);
       if (keyword === "ON") {
         section = "on";
+        if (!rest.trim()) {
+          sawEmptyOn = true;
+          continue;
+        }
         trigger = parseMatcher(rest, { file, startLine: lineNo });
       } else if (keyword === "IF") {
         section = "if";
+        if (!rest.trim()) continue;
         conditions.push(parseMatcher(rest, { file, startLine: lineNo }));
       } else if (keyword === "DO") {
         section = "do";
@@ -580,7 +589,10 @@ export function parseRuleBlock(text: string, options: { file?: string; startLine
       if (!funcao) funcao = parseFuncaoName(trimmed);
     } else fail(`linha inesperada: ${trimmed}`, { kind: "IDENT", value: trimmed, line: lineNo, column: 1, index: 0 });
   }
-  if (!trigger) throw new ParseError(makeIssue("E002", "error", { id: id ?? "?" }, { file, line: startLine, column: 1 }));
+  if (!trigger) {
+    if (sawEmptyOn) throw new PendingRule();
+    throw new ParseError(makeIssue("E002", "error", { id: id ?? "?" }, { file, line: startLine, column: 1 }));
+  }
   return { id: id ?? `regra_${startLine}`, trigger, conditions, changes, effects, semantics, funcao, narrative, voices, startLine };
 }
 
@@ -634,6 +646,7 @@ export function compileRuleFile(
       rules.push({ ...parsed, index, source: text, startLine: block.startLine });
       index += 1;
     } catch (err) {
+      if (err instanceof PendingRule) continue;
       if (err instanceof ParseError) errors.push(...err.issues);
       else errors.push(makeIssue("E000", "error", { detail: err instanceof Error ? err.message : String(err) }, { file: "rules", line: block.startLine, column: 1 }));
     }
@@ -661,7 +674,12 @@ function resolveSpawn(entity: Entity, triggerId: string, world: WorldModel): Ent
   return syncLinks(next);
 }
 
-function resolveChangeTarget(world: WorldModel, target: ChangeTarget, triggerId: string): string | null {
+function resolveChangeTarget(
+  world: WorldModel,
+  target: ChangeTarget,
+  triggerId: string,
+  taxonomy?: CompiledTaxonomy | null,
+): string | null {
   if (target.kind === "trigger") return triggerId;
   if (target.kind === "id") {
     return findEntityByQuad(world, target.id)?.id ?? target.id;
@@ -669,7 +687,7 @@ function resolveChangeTarget(world: WorldModel, target: ChangeTarget, triggerId:
   const from = target.entityId === "$" ? triggerId : target.entityId;
   const fromId = findEntityByQuad(world, from)?.id;
   if (!fromId) return null;
-  return getLink(world, fromId, target.key);
+  return getLink(world, fromId, target.key, taxonomy);
 }
 
 function applyListOp(entity: Entity, list: string, op: "PUSH" | "POP" | "REMOVE" | "CLEAR" | "ADD_UNIQUE", value?: string | number) {
@@ -684,10 +702,27 @@ function applyListOp(entity: Entity, list: string, op: "PUSH" | "POP" | "REMOVE"
   entity.lists[list] = current;
 }
 
-export function applyChanges(world: WorldModel, changes: readonly ChangeAST[], triggerId: string): WorldModel {
+function ensureStat(entity: Entity, view: Entity, key: string): void {
+  if (key in entity.stats || !(key in view.stats)) return;
+  const value = view.stats[key]!;
+  entity.stats[key] = typeof value === "number" ? value : { ...value };
+}
+
+function ensureEnum(entity: Entity, view: Entity, key: string): void {
+  if (entity.enums[key] || !view.enums[key]) return;
+  const slot = view.enums[key]!;
+  entity.enums[key] = { current: slot.current, states: [...slot.states] };
+}
+
+export function applyChanges(
+  world: WorldModel,
+  changes: readonly ChangeAST[],
+  triggerId: string,
+  taxonomy?: CompiledTaxonomy | null,
+): WorldModel {
   const next = cloneWorldModel(world);
   for (const change of changes) {
-    const id = resolveChangeTarget(next, change.target, triggerId);
+    const id = resolveChangeTarget(next, change.target, triggerId, taxonomy);
     if (!id) continue;
     const destroy = change.fields.some((field) => field.kind === "destroyEntity");
     if (destroy) {
@@ -700,32 +735,54 @@ export function applyChanges(world: WorldModel, changes: readonly ChangeAST[], t
     }
     const entity = next.get(id);
     if (!entity) continue;
+    const view = withInheritedDrawers(entity, next, taxonomy);
     for (const field of change.fields) {
       if (field.kind === "createEntity" || field.kind === "destroyEntity") continue;
       if (field.kind === "addTag") entity.tags.add(field.tag);
       else if (field.kind === "removeTag") entity.tags.delete(field.tag);
-      else if (field.kind === "setStat") writeStat(entity, field.key, field.value);
-      else if (field.kind === "deltaStat") writeStat(entity, field.key, readStat(entity, field.key) + field.delta);
-      else if (field.kind === "deltaStatFrom") {
-        const fromId = resolveChangeTarget(next, field.from, triggerId);
+      else if (field.kind === "setStat") {
+        ensureStat(entity, view, field.key);
+        writeStat(entity, field.key, field.value);
+      } else if (field.kind === "deltaStat") {
+        ensureStat(entity, view, field.key);
+        writeStat(entity, field.key, readStat(view, field.key) + field.delta);
+      } else if (field.kind === "deltaStatFrom") {
+        const fromId = resolveChangeTarget(next, field.from, triggerId, taxonomy);
         const fromEntity = fromId ? next.get(fromId) : undefined;
-        const amount = fromEntity ? readStat(fromEntity, field.stat) : 0;
-        writeStat(entity, field.key, readStat(entity, field.key) + field.sign * amount);
-      }
-      else if (field.kind === "mulStat") writeStat(entity, field.key, readStat(entity, field.key) * field.factor);
-      else if (field.kind === "setFlag") entity.flags[field.key] = field.value;
-      else if (field.kind === "setEnum") entity.enums[field.key] = field.value;
-      else if (field.kind === "setPhrase") entity.phrases[field.key] = field.value;
-      else if (field.kind === "clearLink") clearLink(entity, field.key);
-      else if (field.kind === "setFuse") entity.fuses[field.key] = { remaining: field.remaining, targetId: field.targetId || field.key };
-      else if (field.kind === "listOp") applyListOp(entity, field.list, field.op, field.value);
-      else if (field.kind === "setLink") {
-        const dest = resolveChangeTarget(next, field.value, triggerId);
+        const fromView = fromEntity ? withInheritedDrawers(fromEntity, next, taxonomy) : undefined;
+        const amount = fromView ? readStat(fromView, field.stat) : 0;
+        ensureStat(entity, view, field.key);
+        writeStat(entity, field.key, readStat(view, field.key) + field.sign * amount);
+      } else if (field.kind === "mulStat") {
+        ensureStat(entity, view, field.key);
+        writeStat(entity, field.key, readStat(view, field.key) * field.factor);
+      } else if (field.kind === "setFlag") entity.flags[field.key] = field.value;
+      else if (field.kind === "setEnum") {
+        ensureEnum(entity, view, field.key);
+        assignEnum(entity, field.key, field.value, change.line ?? 1);
+      } else if (field.kind === "setPhrase") entity.phrases[field.key] = field.value;
+      else if (field.kind === "clearLink") {
+        const inherited =
+          !(field.key in entity.hardLinks) &&
+          !(field.key in entity.softLinks) &&
+          (view.hardLinks[field.key] || view.softLinks[field.key] || view.links[field.key]);
+        if (inherited) {
+          entity.softLinks[field.key] = "";
+          syncLinks(entity);
+        } else clearLink(entity, field.key);
+      } else if (field.kind === "setFuse") entity.fuses[field.key] = { remaining: field.remaining, targetId: field.targetId || field.key };
+      else if (field.kind === "listOp") {
+        if (!entity.lists[field.list] && view.lists[field.list]) entity.lists[field.list] = [...view.lists[field.list]!];
+        applyListOp(entity, field.list, field.op, field.value);
+      } else if (field.kind === "setLink") {
+        const dest = resolveChangeTarget(next, field.value, triggerId, taxonomy);
         if (dest == null) continue;
         if (field.linkKind === "hard") assignLink(entity, field.key, dest, "hard");
         else if (field.linkKind === "soft") assignLink(entity, field.key, dest, "soft");
-        else if (Object.prototype.hasOwnProperty.call(entity.enums, field.key)) entity.enums[field.key] = dest;
-        else if (Object.prototype.hasOwnProperty.call(entity.phrases, field.key)) entity.phrases[field.key] = dest;
+        else if (entity.enums[field.key] || view.enums[field.key]) {
+          ensureEnum(entity, view, field.key);
+          assignEnum(entity, field.key, dest, change.line ?? 1);
+        } else if (field.key in entity.phrases || field.key in view.phrases) entity.phrases[field.key] = dest;
         else assignLink(entity, field.key, dest);
       }
     }

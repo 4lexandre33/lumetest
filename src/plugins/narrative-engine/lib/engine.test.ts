@@ -4,10 +4,10 @@ import { coerceProject, compileProject, createProject, fingerprintProject, proje
 import { createExampleProject } from "./examples.ts";
 import { bootGame, createGame, interactWith, rewindTo } from "./runtime.ts";
 import { parseNarrative } from "./narrative.ts";
-import { blankEntityBlock, compileEntityFile, isStartDecl, parseEntityLine, primaryTag } from "./world-model.ts";
-import { applyChanges, compileRuleFile, findMatchingRule, parseChangeLine } from "./rule-engine.ts";
+import { blankEntityBlock, compileEntityFile, isStartDecl, parseEntityLine, primaryTag, readStat } from "./world-model.ts";
+import { applyChanges, compileRuleFile, findMatchingRule, parseChangeLine, parseDoLine } from "./rule-engine.ts";
 import { migrateLegacyTags } from "./types.ts";
-import { fieldListShouldComma, insertRule, insertEntity } from "./source-ops.ts";
+import { fieldListShouldComma, insertRule, insertEntity, ctrlJumpDrawer, expandRuleStub } from "./source-ops.ts";
 import { compileTaxonomy, effectiveTags, explainTagMatch, impactOfTag, inheritedTags, matchesTag, taxonomyForest } from "./taxonomy.ts";
 import { explainMatcher, parseMatcher, query, specificityOf } from "./query.ts";
 import { highlightSource } from "./highlight.ts";
@@ -741,7 +741,7 @@ narrativa: "x"
   });
 
   it("highlights lowercase rule keywords", () => {
-    for (const line of ["on: start", "if: @jogador", "do: @jogador.explored", "narrativa: 'oi'"]) {
+    for (const line of ["on: start", "if: @jogador", "do: @jogador.explored", "text: 'oi'", "narrativa: 'oi'"]) {
       const rows = highlightSource(line, "rules");
       assert.ok(
         rows.flat().some((s) => s.cls === "syn-kw"),
@@ -756,8 +756,9 @@ narrativa: "x"
     assert.equal(ctx.slot, "rule-keyword");
     const labels = items.map((i) => i.label);
     const inserts = items.map((i) => i.insert);
-    assert.deepEqual(labels, ["on:", "if:", "do:", "narrativa:"]);
-    assert.deepEqual(inserts, ["on: ", "if: ", "do: ", "narrativa: "]);
+    assert.deepEqual(labels, ["on:", "if:", "do:", "text:"]);
+    assert.deepEqual(inserts, ["on: ", "if: ", "do: ", "text: "]);
+    assert.equal(items.some((i) => i.label === "narrativa:" || i.insert.startsWith("narrativa")), false);
     assert.equal(items.some((i) => i.insert.startsWith("ON:")), false);
   });
 
@@ -768,11 +769,22 @@ narrativa: "x"
     assert.equal(iff?.source, "if: ");
     const doit = tabAfterKeyword("do", "rules", 2);
     assert.equal(doit?.source, "do: ");
+    assert.equal(tabAfterKeyword("text", "rules", 4)?.source, "text: ");
+    assert.equal(tabAfterKeyword("narrativa", "rules", 9), null);
+  });
+
+  it("text: is the same field as narrativa: and narrative:", () => {
+    const read = (kw: string) => compileRuleFile(`# r\non: start\n${kw}: 'oi'\n`).rules[0]?.narrative;
+    assert.equal(read("text"), "oi");
+    assert.equal(read("narrativa"), "oi");
+    assert.equal(read("narrative"), "oi");
   });
 
   it("Nova regra writes on:", () => {
     const out = insertRule("", "entrar");
     assert.match(out.source, /\non: entrar\n/);
+    assert.match(out.source, /text: "/);
+    assert.equal(out.source.includes("narrativa:"), false);
     assert.equal(out.source.includes("ON:"), false);
   });
 
@@ -784,5 +796,174 @@ narrativa: "x"
     const again = insertEntity(src);
     assert.match(again.source, /@nova\.\{/);
     assert.ok(again.source.indexOf("@nova.{") < again.source.indexOf("start()"));
+  });
+});
+
+describe("H1 ctrl drawer", () => {
+  it("jumps name → description → … → struct → name, and ignores the outside", () => {
+    const src = blankEntityBlock("@pessoa");
+    const at = (needle: string) => src.indexOf(needle);
+    const must = (n: number | null) => {
+      assert.ok(n != null);
+      return n;
+    };
+    let pos = must(ctrlJumpDrawer(src, 0));
+    assert.equal(src[pos], ";");
+    assert.ok(src.slice(at("name:"), pos).startsWith("name: "));
+    assert.equal(src.slice(at("name:"), pos), "name: ");
+
+    pos = must(ctrlJumpDrawer(src, pos));
+    assert.equal(src.slice(at("description:"), pos), "description: ");
+
+    const order = ["tags", "stats", "flags", "enums", "phrases", "hardLinks", "softLinks", "lists", "fuses", "struct"];
+    for (const key of order) {
+      pos = must(ctrlJumpDrawer(src, pos));
+      assert.equal(src.slice(at(`${key}:`), pos), `${key}: `, key);
+    }
+    pos = must(ctrlJumpDrawer(src, pos));
+    assert.equal(src.slice(at("name:"), pos), "name: ");
+
+    const idLine = src.indexOf("id:");
+    const fromId = must(ctrlJumpDrawer(src, idLine));
+    assert.equal(src.slice(at("name:"), fromId), "name: ");
+
+    const filled = `@pessoa.{\n  name: Guarda;\n  tags: ;\n  stats: hp=10;\n}\n`;
+    const nameEnd = must(ctrlJumpDrawer(filled, 0));
+    assert.equal(filled.slice(nameEnd - 6, nameEnd), "Guarda");
+    assert.equal(filled[nameEnd], ";");
+    const tagsEnd = must(ctrlJumpDrawer(filled, nameEnd));
+    assert.equal(filled.slice(filled.indexOf("tags:"), tagsEnd), "tags: ");
+    const statsEnd = must(ctrlJumpDrawer(filled, tagsEnd));
+    assert.equal(filled.slice(statsEnd - 5, statsEnd), "hp=10");
+
+    assert.equal(ctrlJumpDrawer("start()\n", 1), null);
+    assert.equal(ctrlJumpDrawer(`${src}\nfora\n`, src.length + 2), null);
+  });
+});
+
+describe("H3 rule stub", () => {
+  it("turns a lone # into a waiting rule and keeps every filled if", () => {
+    const stub = expandRuleStub("#", 1);
+    assert.ok(stub);
+    assert.equal(stub.source, "# regra_nova\non:\nif:\ndo:\ntext:");
+    assert.equal(stub.caret, stub.source.indexOf("on:") + "on:".length);
+    const quiet = compileRuleFile(stub.source);
+    assert.equal(quiet.errors.length, 0);
+    assert.equal(quiet.rules.length, 0);
+
+    const againSrc = `${stub.source}\n#`;
+    const again = expandRuleStub(againSrc, againSrc.length);
+    assert.ok(again);
+    assert.match(again.source, /# regra_nova2\non:\nif:\ndo:\ntext:/);
+    assert.equal(expandRuleStub("# ja", 4), null);
+
+    const world = compileEntityFile("@jogador.{ tags: a, b, c, d; }").worldModel;
+    const four = compileRuleFile(`# quatro
+on: @jogador
+if: @jogador.tags.a
+if: @jogador.tags.b
+if: @jogador.tags.c
+if: @jogador.tags.d
+do:
+text: 'ok'
+`);
+    assert.equal(four.errors.length, 0, four.errors.map((e) => e.message).join("\n"));
+    assert.equal(four.rules[0]?.conditions.length, 4);
+    assert.equal(four.rules[0]?.narrative, "ok");
+    assert.equal(findMatchingRule("@jogador", four.rules, world)?.id, "quatro");
+
+    const miss = compileRuleFile(four.rules[0]!.source.replace("tags.d", "tags.z"));
+    assert.equal(findMatchingRule("@jogador", miss.rules, world), null);
+
+    const skipped = compileRuleFile(`# s
+on: @jogador
+if:
+if: @jogador.tags.a
+if:
+do:
+text:
+`);
+    assert.equal(skipped.errors.length, 0);
+    assert.equal(skipped.rules[0]?.conditions.length, 1);
+    assert.equal(findMatchingRule("@jogador", skipped.rules, world)?.id, "s");
+    assert.equal(compileRuleFile("# sem_on\ntext: 'x'").errors.some((e) => e.code === "E002"), true);
+  });
+});
+
+describe("H6 data inheritance", () => {
+  const entities = `@pessoa.{
+tags: pessoa, humano;
+stats: hp=10;
+flags: mortal=true;
+enums: posto=[SENTINELA, RONDA];
+phrases: fala='oi';
+softLinks: casa=@sala;
+lists: bolso=[chave];
+fuses: sopro=2;
+struct: nota=1;
+}
+@guarda.{
+tags: guarda;
+stats: hp=20;
+flags: alerta=true;
+}
+@escudeiro.{
+tags: escudeiro;
+flags: alerta=false;
+}
+@sala.{
+tags: place;
+}
+start()
+`;
+
+  it("reads parent drawers in rules and leaves the child source untouched", () => {
+    const project = createProject("h6", {
+      entitiesSource: entities,
+      taxonomySource: "escudeiro → guarda\nguarda → pessoa\n",
+      rulesSource: `# ver
+on: @escudeiro
+if: @escudeiro.stats.hp>15
+text: '{@escudeiro.fala}'
+`,
+    });
+    const compiled = compileProject(project);
+    assert.equal(compiled.errors.length, 0, compiled.errors.map((e) => e.message).join("\n"));
+    const child = entities.slice(entities.indexOf("@escudeiro"));
+    assert.equal(child.includes("hp"), false);
+    const esc = compiled.worldModel.get("@escudeiro")!;
+    assert.deepEqual([...esc.tags].sort(), ["escudeiro"]);
+    assert.equal("hp" in esc.stats, false);
+    assert.equal(esc.flags.alerta, false);
+    assert.equal(esc.flags.mortal, undefined);
+    const world = compiled.worldModel;
+    const tax = compiled.taxonomy;
+    const hit = (q: string) => query(q, world, "", tax).map(([id]) => id);
+    assert.deepEqual(hit("@escudeiro.stats.hp>15"), ["@escudeiro"]);
+    assert.deepEqual(hit("@escudeiro.stats.hp>25"), []);
+    assert.deepEqual(hit("@escudeiro.flags.mortal=true"), ["@escudeiro"]);
+    assert.deepEqual(hit("@escudeiro.flags.alerta=false"), ["@escudeiro"]);
+    assert.deepEqual(hit("@escudeiro.enums.posto=SENTINELA"), ["@escudeiro"]);
+    assert.deepEqual(hit("@escudeiro.phrases.fala=oi"), ["@escudeiro"]);
+    assert.deepEqual(hit("@escudeiro.softLinks.casa=@sala"), ["@escudeiro"]);
+    assert.deepEqual(hit("@escudeiro.lists.bolso=chave"), ["@escudeiro"]);
+    assert.deepEqual(hit("@escudeiro.humano"), []);
+    assert.deepEqual(hit("*.humano"), ["@pessoa"]);
+    assert.ok(hit("*.pessoa").includes("@escudeiro"));
+    assert.equal(findMatchingRule("@escudeiro", compiled.rules, world, tax)?.id, "ver");
+    assert.equal(parseNarrative("{@escudeiro.fala}", { worldModel: world, triggerId: "@escudeiro", cycleIndex: 0, taxonomy: tax }), "oi");
+
+    const bumped = applyChanges(world, [parseChangeLine("@escudeiro.hp+2")], "@escudeiro", tax);
+    assert.equal(readStat(bumped.get("@escudeiro")!, "hp"), 22);
+    assert.equal(readStat(bumped.get("@guarda")!, "hp"), 20);
+    assert.equal("hp" in world.get("@escudeiro")!.stats, false);
+
+    const set = applyChanges(world, [parseChangeLine("@escudeiro.enums.posto=RONDA")], "@escudeiro", tax);
+    assert.equal(set.get("@escudeiro")!.enums.posto?.current, "RONDA");
+    assert.equal(world.get("@pessoa")!.enums.posto?.current, "SENTINELA");
+
+    const pushed = applyChanges(world, [parseDoLine("PUSH @escudeiro.bolso moeda").change!], "@escudeiro", tax);
+    assert.deepEqual(pushed.get("@escudeiro")!.lists.bolso, ["chave", "moeda"]);
+    assert.deepEqual([...world.get("@pessoa")!.lists.bolso!], ["chave"]);
   });
 });

@@ -43,7 +43,7 @@ description: Uma tocha no chão.
     title: "Uma tag pode herdar de outra",
     body: [
       "A aba Taxonomia classifica tags. Não muda a entidade: o goblin continua só com a tag goblin. Na hora de casar regras, o motor também vê os pais.",
-      "Uma linha, um pai: goblin → monster. monster → agent. Assim, *.monster e *.agent encontram o goblin. hidden nunca é herdada. Stats e links também não.",
+      "Uma linha, um pai: goblin → monster. monster → agent. Assim, *.monster e *.agent encontram o goblin. hidden nunca é herdada, nem as tags da entidade pai. Stats, flags, enums, phrases, links, lists, fuses e struct do pai vêem-se na regra, não no caderno da filha. A chave da filha ganha.",
       "Se a taxonomia estiver vazia, o motor funciona como antes. A regra mais específica vence: on: @goblin > *.goblin > *.monster.",
       "A árvore ao lado do caderno mostra os pais. Clique numa tag para ver quem herda e quais regras citam. No depurador, Efetiva encontra descendentes; Direta só a tag escrita na entidade.",
     ],
@@ -57,24 +57,24 @@ tags: goblin, sleeping;
 }
 
 on: *.monster.!sleeping
-narrativa: "O goblin já acordou."`,
+text: "O goblin já acordou."`,
     },
   },
   {
     kicker: "5 · Regras",
-    title: "on, if, do, narrativa",
+    title: "on, if, do, text",
     body: [
       "on: o que o jogador clicou. Pode ser um id (@caverna), um filtro (*.object) ou start (o boot da história).",
       "if: condição extra. Só dispara se essa pergunta for verdadeira agora no mundo. Pode haver vários if:.",
       "do: o que muda no mundo. No editor, usa verbos nomeados (ADD_TAG, SET_STAT, SET_FLAG…). Compacto continua a compilar.",
-      "narrativa: o único parágrafo que o jogador lê.",
+      "text: o único parágrafo que o jogador lê.",
     ],
     sample: {
       label: "Entrar só com luz",
       code: `on: @caverna.!explored
 if: *.object.current_location=@jogador.illumination>5
 do: SET_LINK @jogador.softLinks.current_location @caverna
-narrativa: "Você entra, com a tocha à frente."`,
+text: "Você entra, com a tocha à frente."`,
     },
   },
   {
@@ -90,7 +90,7 @@ narrativa: "Você entra, com a tocha à frente."`,
       label: "Pegar qualquer objeto que não está com você",
       code: `on: *.object.!current_location=@jogador
 do: $.current_location=@jogador
-narrativa: "Você pega {$.name}."`,
+text: "Você pega {$.name}."`,
     },
   },
   {
@@ -118,7 +118,7 @@ narrativa: "Você pega {$.name}."`,
     sample: {
       label: "Três falas do zelador",
       code: `on: @zelador
-narrativa: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' | 'Não peço a chave. A cúpula é que pede.' | Ele já varreu o suficiente.}"`,
+text: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' | 'Não peço a chave. A cúpula é que pede.' | Ele já varreu o suficiente.}"`,
     },
   },
   {
@@ -142,7 +142,7 @@ narrativa: "{O zelador sacode um pano. 'A lente está aí, embaixo da poeira.' |
       code: `start()
 
 on: start
-narrativa: "A sessão das nove não começou. A {@astronoma.name} não levanta a luneta."`,
+text: "A sessão das nove não começou. A {@astronoma.name} não levanta a luneta."`,
     },
   },
   {
@@ -150,7 +150,7 @@ narrativa: "A sessão das nove não começou. A {@astronoma.name} não levanta a
     title: "Quatro cantos",
     body: [
       "À esquerda, o índice. Clique numa entidade para saltar no caderno, no começo exato da linha. Categorias usam a taxonomia: um goblin com tag goblin aparece em Agent se goblin → agent.",
-      "No centro, três cadernos: Entidades, Taxonomia e Regras. Ponto (.) abre sugestões. Tab confirma (com espaço). Enter desce de linha. Na taxonomia, complete uma tag e a Lume oferece →.",
+      "No centro, o caderno. Entidades, taxonomia e regras ficam no motor. O menu de sugestões abre no cursor com ponto (.) ou Ctrl+Espaço. Cada item tem nome, uma linha e um selo: entidade, gaveta, lei ou frase. Enter substitui o trecho.",
       "À direita, o preview. Cada parágrafo já lido tem um ícone para voltar àquele ponto e seguir por outro caminho. O círculo no canto recomeça do zero.",
       "O documento completo — todos os métodos do editor de entidades, do editor de regras e do caderno, com exemplos — está em Ajuda → Rever guia, e dá para descarregar.",
     ],

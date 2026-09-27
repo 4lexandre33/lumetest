@@ -228,13 +228,12 @@ export function createIdeZustandStore(
           set({
             ...openWith(draft.project),
             tab: draft.tab,
-            ideMode: draft.ideMode,
+            ideMode: 'write',
             settings: { ...get().settings, onboarding: draft.onboarding },
             booted: true
           });
           get().recompile();
           get().bootPreview(true);
-          if (draft.screen === 'play') set({ screen: 'play' });
         } else if (draft) {
           set({
             settings: { ...get().settings, onboarding: draft.onboarding },

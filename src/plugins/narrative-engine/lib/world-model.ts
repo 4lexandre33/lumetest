@@ -3,6 +3,7 @@ import { effectiveTags, type CompiledTaxonomy } from "./taxonomy.ts";
 import {
   CATEGORY_TAGS,
   type Entity,
+  type EnumState,
   type Issue,
   type StatValue,
   type TickFuse,
@@ -103,7 +104,7 @@ export function createEmptyEntity(id: string, patch: EntityPatch = {}): Entity {
     tags: new Set(patch.tags ?? []),
     stats: cloneStats(patch.stats ?? {}),
     flags: { ...(patch.flags ?? {}) },
-    enums: { ...(patch.enums ?? {}) },
+    enums: cloneEnums(patch.enums),
     phrases: { ...(patch.phrases ?? {}) },
     hardLinks: { ...(patch.hardLinks ?? {}) },
     softLinks: { ...(patch.softLinks ?? {}) },
@@ -182,10 +183,13 @@ export function cloneWorldModel(world: WorldModel): WorldModel {
   return next;
 }
 
-export function getLink(world: WorldModel, id: string, key: string): string | null {
-  const entity = world.get(id) ?? findEntityByQuad(world, id);
-  if (!entity) return null;
-  return entity.links[key] ?? entity.softLinks[key] ?? entity.hardLinks[key] ?? null;
+export function getLink(world: WorldModel, id: string, key: string, taxonomy?: CompiledTaxonomy | null): string | null {
+  const raw = world.get(id) ?? findEntityByQuad(world, id);
+  if (!raw) return null;
+  const entity = withInheritedDrawers(raw, world, taxonomy);
+  const value = entity.links[key] ?? entity.softLinks[key] ?? entity.hardLinks[key];
+  if (value == null || value === "") return null;
+  return value;
 }
 
 /** Resolve Quad-ID: HumanSlug, shortCode `#A8F2` ou systemId UUID. */
@@ -201,6 +205,92 @@ export function findEntityByQuad(world: WorldModel, token: string): Entity | und
     if (entity.systemId === raw) return entity;
   }
   return undefined;
+}
+
+function donorForTag(world: WorldModel, tag: string): Entity | undefined {
+  if (tag === "hidden") return undefined;
+  const id = tag.startsWith("@") ? tag : `@${tag}`;
+  return world.get(id) ?? world.get(tag) ?? findEntityByQuad(world, id);
+}
+
+function copyStat(value: StatValue): StatValue {
+  return typeof value === "number" ? value : { ...value };
+}
+
+/** Preenche gavetas em falta. Não copia tags, name nem description. A chave já presente ganha. */
+function takeMissingDrawers(dst: Entity, src: Entity): boolean {
+  let took = false;
+  for (const [key, value] of Object.entries(src.stats)) {
+    if (key in dst.stats) continue;
+    dst.stats[key] = copyStat(value);
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.flags)) {
+    if (key in dst.flags) continue;
+    dst.flags[key] = value;
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.enums)) {
+    if (key in dst.enums) continue;
+    dst.enums[key] = { current: value.current, states: [...value.states] };
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.phrases)) {
+    if (key in dst.phrases) continue;
+    dst.phrases[key] = value;
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.hardLinks)) {
+    if (key in dst.hardLinks || key in dst.softLinks) continue;
+    dst.hardLinks[key] = value;
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.softLinks)) {
+    if (key in dst.softLinks || key in dst.hardLinks) continue;
+    dst.softLinks[key] = value;
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.lists)) {
+    if (key in dst.lists) continue;
+    dst.lists[key] = [...value];
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.fuses)) {
+    if (key in dst.fuses) continue;
+    dst.fuses[key] = { ...value };
+    took = true;
+  }
+  for (const [key, value] of Object.entries(src.struct)) {
+    if (key in dst.struct) continue;
+    dst.struct[key] = value;
+    took = true;
+  }
+  return took;
+}
+
+/**
+ * Vista de leitura. O objeto guardado no mundo não muda.
+ * O pai é a entidade com o mesmo nome da tag ancestral (`escudeiro → guarda` lê `@guarda`).
+ */
+export function withInheritedDrawers(entity: Entity, world: WorldModel, taxonomy?: CompiledTaxonomy | null): Entity {
+  if (!taxonomy || taxonomy.parents.size === 0 || entity.tags.size === 0) return entity;
+  const donors: Entity[] = [];
+  const seen = new Set<string>([entity.id]);
+  for (const tag of entity.tags) {
+    const chain = taxonomy.ancestors.get(tag);
+    if (!chain) continue;
+    for (const ancestor of chain) {
+      const donor = donorForTag(world, ancestor);
+      if (!donor || seen.has(donor.id)) continue;
+      seen.add(donor.id);
+      donors.push(donor);
+    }
+  }
+  if (!donors.length) return entity;
+  const next = cloneEntity(entity);
+  let took = false;
+  for (const donor of donors) took = takeMissingDrawers(next, donor) || took;
+  return took ? syncLinks(next) : entity;
 }
 
 export function readStat(entity: Entity, key: string): number {
@@ -242,6 +332,25 @@ export function clearLink(entity: Entity, key: string): void {
   delete entity.hardLinks[key];
   delete entity.softLinks[key];
   syncLinks(entity);
+}
+
+function cloneEnums(src: Record<string, EnumState> | undefined): Record<string, EnumState> {
+  const out: Record<string, EnumState> = {};
+  if (!src) return out;
+  for (const [key, value] of Object.entries(src)) {
+    if (!value || !Array.isArray(value.states)) continue;
+    const states = value.states.map((item) => String(item)).filter(Boolean);
+    const current = states.includes(value.current) ? value.current : states[0];
+    if (!current || states.length < 2) continue;
+    out[key] = { current, states };
+  }
+  return out;
+}
+
+export function assignEnum(entity: Entity, key: string, value: string, line = 1): void {
+  const slot = entity.enums[key];
+  if (!slot || !slot.states.includes(value)) fail(`enum ${key} não aceita ${value}`, line);
+  slot.current = value;
 }
 
 function fail(detail: string, line: number, column = 1): never {
@@ -447,6 +556,41 @@ function parsePairs(raw: string, line: number): { key: string; value: string }[]
   return pairs;
 }
 
+function parseEnumDrawer(raw: string, line: number): Record<string, EnumState> {
+  const enums: Record<string, EnumState> = {};
+  const s = raw.trim();
+  if (!s) return enums;
+  let i = 0;
+  while (i < s.length) {
+    while (i < s.length && (s[i] === "," || /\s/.test(s[i]!))) i += 1;
+    if (i >= s.length) break;
+    const rest = s.slice(i);
+    const head = rest.match(/^([\p{L}_][\p{L}\p{N}\p{M}_]*)\s*=\s*/u);
+    if (!head) fail(`enum precisa de nome=[estado, estado]: ${rest}`, line);
+    i += head[0].length;
+    const name = head[1]!;
+    if (s[i] !== "[") fail(`enum ${name} precisa de nome=[estado, estado]`, line);
+    i += 1;
+    let inner = "";
+    let closed = false;
+    while (i < s.length) {
+      const ch = s[i]!;
+      if (ch === "]") {
+        closed = true;
+        i += 1;
+        break;
+      }
+      inner += ch;
+      i += 1;
+    }
+    if (!closed) fail(`enum ${name} sem ]`, line);
+    const states = splitList(inner).map((item) => unquote(item)).filter(Boolean);
+    if (states.length < 2) fail(`enum ${name} precisa de pelo menos 2 estados`, line);
+    enums[name] = { current: states[0]!, states };
+  }
+  return enums;
+}
+
 function parseListDrawer(raw: string, line: number): Record<string, Array<string | number>> {
   const lists: Record<string, Array<string | number>> = {};
   const s = raw.trim();
@@ -571,11 +715,7 @@ export function parseBlockEntity(id: string, body: string, startLine = 1): Entit
       entity.flags[key] = /^true$/i.test(val);
     }
   }
-  if (sections.enums) {
-    for (const { key, value } of parsePairs(sections.enums, startLine)) {
-      entity.enums[key] = unquote(value);
-    }
-  }
+  if (sections.enums) Object.assign(entity.enums, parseEnumDrawer(sections.enums, startLine));
   if (sections.phrases) {
     for (const { key, value } of parsePairs(sections.phrases, startLine)) {
       entity.phrases[key] = unquote(value);
@@ -769,7 +909,9 @@ function overlayTemplate(proto: Entity, overlay: Entity): Entity {
   for (const tag of overlay.tags) next.tags.add(tag);
   Object.assign(next.stats, overlay.stats);
   Object.assign(next.flags, overlay.flags);
-  Object.assign(next.enums, overlay.enums);
+  for (const [key, value] of Object.entries(overlay.enums)) {
+    next.enums[key] = { current: value.current, states: [...value.states] };
+  }
   Object.assign(next.phrases, overlay.phrases);
   Object.assign(next.hardLinks, overlay.hardLinks);
   Object.assign(next.softLinks, overlay.softLinks);
@@ -834,6 +976,12 @@ function emitDrawer(key: string, value: string, always = false): string {
   return `\n  ${key}: ${value};`;
 }
 
+function formatEnumDrawer(enums: Entity["enums"]): string {
+  return Object.entries(enums)
+    .map(([key, value]) => `${key}=[${value.states.join(", ")}]`)
+    .join(", ");
+}
+
 function formatListDrawer(lists: Entity["lists"]): string {
   return Object.entries(lists)
     .map(([key, items]) => `${key}=[${items.join(", ")}]`)
@@ -863,9 +1011,7 @@ export function serializeEntityBlock(entity: Entity): string {
   const flags = Object.entries(entity.flags)
     .map(([k, v]) => `${k}=${v ? "true" : "false"}`)
     .join(", ");
-  const enums = Object.entries(entity.enums)
-    .map(([k, v]) => `${k}=${v}`)
-    .join(", ");
+  const enums = formatEnumDrawer(entity.enums);
   const phrases = Object.entries(entity.phrases)
     .map(([k, v]) => `${k}=${quoteSingle(v)}`)
     .join(", ");

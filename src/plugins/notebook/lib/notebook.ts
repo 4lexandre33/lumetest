@@ -58,6 +58,7 @@ type RuleDraft = {
   ifs: string[];
   dos: string[];
   narrative: string;
+  sempre?: boolean;
 };
 
 type PatternDraft = {
@@ -313,6 +314,10 @@ export function isRegrasFence(line: string): boolean {
   return /^##\s+\/?regras\s*$/i.test(line.trim());
 }
 
+export function isMoldesFence(line: string): boolean {
+  return /^##\s+\/?moldes\s*$/i.test(line.trim());
+}
+
 function isSkipLine(folded: string): boolean {
   if (!folded) return true;
   if (folded === "---") return true;
@@ -371,6 +376,20 @@ function blankDraft(id: string, name: string): Draft {
   };
 }
 
+function emitEnums(rec: Record<string, string>): string {
+  return Object.entries(rec)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .flatMap(([key, value]) => {
+      const raw = value.trim();
+      const inner = raw.startsWith("[") && raw.endsWith("]") ? raw.slice(1, -1) : "";
+      if (!inner) return [];
+      const states = inner.split(",").map((item) => item.trim()).filter(Boolean);
+      if (states.length < 2) return [];
+      return [`${key}=[${states.join(", ")}]`];
+    })
+    .join(", ");
+}
+
 function emitPairs(rec: Record<string, string>): string {
   return Object.entries(rec)
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
@@ -422,7 +441,7 @@ function emitDraft(draft: Draft): string {
     `  tags: ${tags};`,
     `  stats: ${stats};`,
     `  flags: ${emitFlags(draft.flags)};`,
-    `  enums: ${emitPairs(draft.enums)};`,
+    `  enums: ${emitEnums(draft.enums)};`,
     `  phrases: ${emitPairs(draft.phrases)};`,
     `  hardLinks: ${emitPairs(draft.hardLinks)};`,
     `  softLinks: ${links};`,
@@ -444,7 +463,8 @@ function emitPattern(pattern: PatternDraft): string {
 }
 
 function emitRule(rule: RuleDraft): string {
-  const lines = [`# ${rule.id}`, `on: ${rule.on}`];
+  const mark = rule.sempre ? " /* sempre */" : "";
+  const lines = [`# ${rule.id}${mark}`, `on: ${rule.on}`];
   for (const cond of rule.ifs) lines.push(`if: ${cond}`);
   if (rule.dos.length) {
     lines.push(`do: ${rule.dos[0]}`);
@@ -487,6 +507,9 @@ export function compileNotebookFresh(text: string): NotebookCompile {
   const rules: RuleDraft[] = [];
   let currentId: string | null = null;
   let inRegrasFence = false;
+  let inMoldesFence = false;
+  let pendingSempre = false;
+  let armedForLaw = false;
   let sectionKind: SectionKind = null;
   const frames: { rule: RuleDraft; indent: number }[] = [];
   let ruleSerial = 0;
@@ -731,6 +754,8 @@ export function compileNotebookFresh(text: string): NotebookCompile {
   };
 
   const pushFrame = (rule: RuleDraft, indent: number, lineNo?: number) => {
+    if (armedForLaw) rule.sempre = true;
+    armedForLaw = false;
     frames.push({ rule, indent });
     if (lineNo != null) noteRule(lineNo, rule);
   };
@@ -1416,11 +1441,26 @@ export function compileNotebookFresh(text: string): NotebookCompile {
     if (isSkipLine(folded)) continue;
     if (isAnotacoesMarker(trimmed)) continue;
     if (!liveAt(lineNo)) continue;
+    if (inMoldesFence && !isMoldesFence(trimmed)) continue;
+    if (inRegrasFence && /^sempre$/i.test(trimmed)) {
+      pendingSempre = true;
+      continue;
+    }
+    const lawLine = /^(quando|se)\b/i.test(folded) || /\sacontece quando\b/i.test(folded);
+    if (pendingSempre && !lawLine) pendingSempre = false;
+
+    const openLaw = (): boolean => {
+      if (lawLine) {
+        armedForLaw = pendingSempre;
+        pendingSempre = false;
+      }
+      const hit = startAconteceQuando(trimmed, lineNo, indent) || startQuando(trimmed, lineNo, indent) || startSe(trimmed, lineNo, indent);
+      armedForLaw = false;
+      return hit;
+    };
 
     if (indent > 0 && frames.length) {
-      if (startAconteceQuando(trimmed, lineNo, indent)) continue;
-      if (startQuando(trimmed, lineNo, indent)) continue;
-      if (startSe(trimmed, lineNo, indent)) continue;
+      if (openLaw()) continue;
       applyBody(trimmed, lineNo, indent);
       continue;
     }
@@ -1435,6 +1475,10 @@ export function compileNotebookFresh(text: string): NotebookCompile {
     collectingGroupTag = null;
     collectingTemplateKey = null;
       currentChannelId = null;
+      if (isMoldesFence(trimmed)) {
+        inMoldesFence = !/\/moldes/i.test(trimmed);
+        continue;
+      }
       if (isRegrasFence(trimmed)) {
         inRegrasFence = !/\/regras/i.test(trimmed);
       } else {
@@ -1533,9 +1577,7 @@ export function compileNotebookFresh(text: string): NotebookCompile {
     collectingTemplateKey = null;
     if (collectingTransitions && parseTransition(trimmed, lineNo)) continue;
 
-    if (startAconteceQuando(trimmed, lineNo, indent)) continue;
-    if (startQuando(trimmed, lineNo, indent)) continue;
-    if (startSe(trimmed, lineNo, indent)) continue;
+    if (openLaw()) continue;
 
     if (isDeferredLine(folded)) {
       closeRule();

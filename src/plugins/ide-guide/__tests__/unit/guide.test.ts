@@ -53,13 +53,13 @@ describe('IDE Guide Plugin', () => {
     assert.ok(escrita);
     assert.ok(guideService.searchReference('lume-anotacoes').some((s) => s.id === 'escrita'));
     assert.ok(guideService.searchReference('cloneWorldModel').some((s) => s.id === 'escrita'));
-    assert.ok(guideService.searchReference('ideMode').some((s) => s.id === 'escrita'));
-    assert.ok(guideService.searchReference('Vista do jogador').some((s) => s.id === 'escrita'));
+    assert.ok(guideService.searchReference('manuscrito').some((s) => s.id === 'escrita'));
+    assert.ok(guideService.searchReference('mundo desta linha').some((s) => s.id === 'escrita'));
     assert.ok(guideService.searchReference('## regras').some((s) => s.id === 'escrita'));
     assert.ok(guideService.searchReference('CREATE').some((s) => s.id === 'escrita'));
     assert.ok(guideService.searchReference('current_location').some((s) => s.id === 'bloco' || s.id === 'start'));
     assert.ok(guideService.searchReference('CREATE ID.tag').some((s) => s.id === 'bloco' || s.id === 'escrita'));
-    assert.ok(guideService.searchReference('Modo Escrita').some((s) => s.id === 'escrita'));
+    assert.ok(guideService.searchReference('caderno').some((s) => s.id === 'escrita' || s.id === 'caderno'));
   });
 
   it("G9 Rever guia markdown lists every method with examples", () => {
@@ -93,9 +93,14 @@ describe('IDE Guide Plugin', () => {
       "WAIT",
       "TICK",
       "LIVE",
+      "EMIT",
+      "INTENT",
+      "KNOW",
+      "THEN",
     ]) {
       assert.ok(md.includes(verb), `missing ${verb}`);
     }
+    assert.equal(/on: @fuse_porta\s*\n\s*do: TICK/.test(md), false);
     assert.match(md, /Quando o jogador pega a espada/);
     assert.match(md, /é um Agent/);
     assert.match(md, /@pessoa\./);

@@ -5,12 +5,12 @@ UI canónica do IDE. Fonte da verdade dos componentes.
 ## Abrir
 - `lib/components/ProjectTree.tsx` — sidebar ENTITIES/RULES/pastas
 - `lib/components/CommandBar.tsx` — autocomplete `intent.`
-- `lib/components/PreviewPane.tsx` — Jogo (`ideMode` ou Vista): beat + CommandBar; Escrita: estado + badge
+- `lib/components/PreviewPane.tsx` — leitura no IDE (`mode="ide"`): texto até a linha e o mundo dela
 - `lib/components/Skein.tsx` — árvore de `history` + ramos
 - `lib/components/WorldMap.tsx` — SVG de salas a partir de `exit_*` / `in`
 - `lib/components/BeatDebug.tsx` — intent, regra, candidatos, efeitos, vivo
 - `lib/components/WorldIndex.tsx` — índice gerado + becos
-- `lib/components/PlaySkin.tsx` — Vista do jogador (`>`), menu Executar; modo Jogo é o IDE (`ideMode`)
+- `lib/components/PlaySkin.tsx` — ecrã de partilha, fora do caminho principal; sem interruptor e sem Vista do jogador
 - `lib/components/NotebookPane.tsx` — vista caderno (C9): capa, índice, página, margem
 - `lib/components/NotebookNotes.tsx` — notas do caderno (C8), prosa, sob o motor
 - `lib/play-html.ts` — HTML estático do play-skin
@@ -25,7 +25,7 @@ NarrativeEngine, ProjectCloud, IdeStore
 
 ## Não fazer
 - Não copiar componentes para `src/components/ide/` (lá só `export { X } from plugins/...`)
-- Não mostrar atalhos de escolha sempre visíveis; autocomplete só após `.`
+- Não mostrar atalhos de escolha sempre visíveis; o menu único abre no cursor só com `.` ou Ctrl+Espaço. Um ponto, um nível — não o catálogo inteiro. Enter substitui o trecho.
 - Não lógica de compile/interact aqui — store
 
 ## Fora de âmbito
