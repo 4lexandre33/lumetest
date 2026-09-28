@@ -4,18 +4,31 @@ import { createCore } from "../../../../core/index.ts";
 import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../../narrative-engine/index.ts";
 import { EXT_HOST_MANIFEST, createExtHostPlugin } from "../../index.ts";
 import { createExtHostService } from "../../lib/registry.ts";
+import { vistaAutorizada } from "../../lib/vista.ts";
 import { fingerprintFiles, renderKit } from "../../lib/kit.ts";
 import { zipStore } from "../../lib/zip.ts";
 import { runGuestSource } from "../../lib/sandbox.ts";
 import type { SandboxHost } from "../../types.ts";
 
+function grantOf(core: ReturnType<typeof createCore>) {
+  return vistaAutorizada(
+    (name) => {
+      try {
+        return core.getService<Record<string, unknown>>(name);
+      } catch {
+        return null;
+      }
+    },
+    () => undefined,
+  );
+}
 function silentHost(over: Partial<SandboxHost> = {}): SandboxHost {
   const logs: string[] = [];
   const bag = new Map<string, string>();
   return {
     pluginName: "ext-hello",
     log: (m) => logs.push(m),
-    inspect: () => ({ plugins: [], capabilities: [], events: [], world: null }),
+    inspect: () => ({ plugins: [], capabilities: [], slots: [], events: [], world: null }),
     call: () => null,
     on: () => undefined,
     emit: () => undefined,
@@ -63,7 +76,7 @@ describe("ext-host sandbox", () => {
     globalThis.__LUME_CORE__ = core;
     core.registerPlugin(NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin);
     await core.activatePlugin("lume-narrative-engine");
-    const { service } = createExtHostService(core);
+    const { service } = createExtHostService(grantOf(core));
     assert.throws(
       () =>
         service.load({
@@ -102,8 +115,9 @@ describe("ext-host kit is deterministic and kernel-live", () => {
     const core = createCore();
     globalThis.__LUME_CORE__ = core;
     core.registerPlugin(NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin);
+    core.registerCapability({ name: "Kernel", version: "1.0.0", provider: "core", api: { ping: () => "segredo" } });
     await core.activatePlugin("lume-narrative-engine");
-    const { service } = createExtHostService(core);
+    const { service } = createExtHostService(grantOf(core));
     const installed = service.load({
       manifest: { name: "ext-hello", version: "1.0.0" },
       source: `function activate(host) {
@@ -111,6 +125,10 @@ describe("ext-host kit is deterministic and kernel-live", () => {
         host.log(caps);
         try { host.call("NarrativeEngine", "getStore"); host.log("leaked"); }
         catch (e) { host.log("denied"); }
+        try { host.call("Kernel", "ping"); host.log("kernel"); }
+        catch (e) { host.log("sem-kernel"); }
+        try { host.on("lume:project-compiled", function () {}); host.log("evento"); }
+        catch (e) { host.log("evento-recusado"); }
         var project = host.call("NarrativeEngine", "createProject", "ViaGuest");
         host.log(project && project.meta && project.meta.name);
       }`,
@@ -118,7 +136,18 @@ describe("ext-host kit is deterministic and kernel-live", () => {
     assert.equal(installed.status, "active");
     assert.ok(installed.logs.some((line) => line.includes("NarrativeEngine")));
     assert.ok(installed.logs.includes("denied"));
+    assert.ok(installed.logs.includes("sem-kernel"));
+    assert.ok(installed.logs.includes("evento-recusado"));
     assert.ok(installed.logs.includes("ViaGuest"));
+    const visto = service.inspect();
+    assert.deepEqual(visto.plugins, []);
+    assert.equal(visto.capabilities.some((item) => item.name === "Kernel"), false);
+    assert.deepEqual(visto.slots, [
+      { name: "narrative", capability: "NarrativeEngine" },
+      { name: "effects", capability: "RuleEffects" },
+    ]);
+    assert.equal(visto.events.includes("lume:game-beat"), true);
+    assert.equal(visto.events.includes("lume:project-compiled"), false);
     const before = core.listActivePlugins();
     service.unload("ext-hello");
     assert.deepEqual(core.listActivePlugins(), before);
@@ -129,7 +158,7 @@ describe("ext-host kit is deterministic and kernel-live", () => {
     globalThis.__LUME_CORE__ = core;
     core.registerPlugin(NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin);
     await core.activatePlugin("lume-narrative-engine");
-    const { service } = createExtHostService(core);
+    const { service } = createExtHostService(grantOf(core));
     service.load({
       manifest: { name: "ext-one", version: "1.0.0" },
       source: "function activate(host) { host.log('one'); }",
@@ -153,6 +182,7 @@ describe("kit render", () => {
       plugins: [{ name: "lume-narrative-engine", version: "1.0.0", provides: [{ name: "NarrativeEngine", version: "1.0.0" }] }],
       capabilities: [{ name: "NarrativeEngine", version: "1.0.0", provider: "lume-narrative-engine", methods: ["compileProject", "createProject"] }],
       events: ["lume:ext-plugin"],
+      slots: [],
       world: null,
     };
     assert.equal(renderKit(inspect).fingerprint, renderKit(inspect).fingerprint);

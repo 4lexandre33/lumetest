@@ -16,7 +16,7 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import { entityDisplayName, ruleSpecificity, type Entity, type Rule, type SidebarBucket } from "../../../narrative-engine/lib/index.ts";
+import { entityDisplayName, ruleSpecificity, type Entity, type Rule, type SidebarBucket } from "../../../narrative-engine/index.ts";
 import {
   ENTITY_SECTIONS,
   ENTITY_SECTION_LABEL,
@@ -27,8 +27,8 @@ import {
   type EntitySection,
   type RuleSection,
   type TreeKind,
-} from "../../../ide-state/lib/tree.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+} from "../../../ide-state/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { Button } from "../ui/button.tsx";
 import { cn } from "../utils.ts";
 

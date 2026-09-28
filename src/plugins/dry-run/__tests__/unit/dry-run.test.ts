@@ -4,10 +4,10 @@ import { createCore, type Core } from "../../../../core/index.ts";
 import { WorldEventOccurredEvent } from "../../../../core/contracts/typed-event.ts";
 import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../../narrative-engine/index.ts";
 import type { GameState, NarrativeEngineService } from "../../../narrative-engine/types.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
 import { WORLD_EVENTS_MANIFEST, createWorldEventsPlugin } from "../../../world-events/index.ts";
 import { KNOWLEDGE_MANIFEST, createKnowledgePlugin } from "../../../knowledge/index.ts";
-import { knowledgeTag } from "../../../knowledge/lib/store.ts";
+import { knowledgeTag } from "../../../knowledge/index.ts";
 import { DRY_RUN_MANIFEST, createDryRunPlugin } from "../../index.ts";
 import type { DryRunService } from "../../types.ts";
 

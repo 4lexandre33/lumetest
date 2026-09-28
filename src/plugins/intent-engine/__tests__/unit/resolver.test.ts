@@ -1,9 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { compileProject, createProject } from "../../../narrative-engine/lib/project.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
-import { createGame } from "../../../narrative-engine/lib/runtime.ts";
-import { query } from "../../../narrative-engine/lib/query.ts";
+import { compileProject, createProject } from "../../../narrative-engine/index.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
+import { createGame } from "../../../narrative-engine/index.ts";
+import { query } from "../../../narrative-engine/index.ts";
 import type { GameState } from "../../../narrative-engine/types.ts";
 import { resolveIntent, suggestIntent, type QueryFn } from "../../lib/resolver.ts";
 

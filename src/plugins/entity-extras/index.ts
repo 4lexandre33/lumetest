@@ -8,8 +8,8 @@ import type { PluginContext } from '../../core/contracts/plugin-context.ts';
 import { ENTITY_EXTRAS_MANIFEST } from './manifest.ts';
 import type { EntityExtrasService } from './types.ts';
 import type { Project, WorldModel } from '../narrative-engine/types.ts';
-import { attachEntityExtras } from '../narrative-engine/lib/world-model.ts';
-import { entityDisplayName, entityDescription } from '../narrative-engine/lib/runtime.ts';
+import { attachEntityExtras } from "../narrative-engine/index.ts";
+import { entityDisplayName, entityDescription } from "../narrative-engine/index.ts";
 
 export * from './manifest.ts';
 export * from './types.ts';

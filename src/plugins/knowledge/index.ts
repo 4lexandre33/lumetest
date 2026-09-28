@@ -7,9 +7,9 @@ import type { IPlugin, IPluginManifest } from "../../core/contracts/plugin-manif
 import type { PluginContext } from "../../core/contracts/plugin-context.ts";
 import { KnowledgeUpdatedEvent } from "../../core/contracts/typed-event.ts";
 import type { EffectContext, GameState, RuleEffectsService } from "../narrative-engine/types.ts";
-import type { EffectOp } from "../narrative-engine/lib/rule-engine.ts";
+import type { EffectOp } from "../narrative-engine/index.ts";
 import { KNOWLEDGE_MANIFEST } from "./manifest.ts";
-import { factsFor, knows, remember } from "./lib/store.ts";
+import { beliefsFor, believes, factsFor, ignorantOf, ignores, knows, remember } from "./lib/store.ts";
 import type { KnowledgeService } from "./types.ts";
 
 export * from "./manifest.ts";
@@ -28,6 +28,10 @@ export class KnowledgePlugin implements IPlugin {
       remember,
       knows,
       factsFor,
+      believes,
+      beliefsFor,
+      ignores,
+      ignorantOf,
     };
   }
 

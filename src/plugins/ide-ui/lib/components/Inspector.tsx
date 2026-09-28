@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { query, entityDisplayName, inheritedTags, explainMatcher, parseMatcher, formatStat, findEntityByQuad, type CompiledTaxonomy, type Entity, type StatValue } from "../../../narrative-engine/lib/index.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { query, entityDisplayName, inheritedTags, explainMatcher, parseMatcher, formatStat, findEntityByQuad, type CompiledTaxonomy, type Entity, type StatValue } from "../../../narrative-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { cn } from "../utils.ts";
 
 const CHIPS = ["*.place", "*.object", "*.agent", "*.monster", "@jogador", "*.object.current_location=@jogador"];

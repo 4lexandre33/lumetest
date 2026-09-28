@@ -7,7 +7,7 @@ import type { IPlugin, IPluginManifest } from "../../core/contracts/plugin-manif
 import type { PluginContext } from "../../core/contracts/plugin-context.ts";
 import { IntentDispatchedEvent } from "../../core/contracts/typed-event.ts";
 import type { EffectContext, GameState, RuleEffectsService } from "../narrative-engine/types.ts";
-import type { EffectOp } from "../narrative-engine/lib/rule-engine.ts";
+import type { EffectOp } from "../narrative-engine/index.ts";
 import type { IntentEngineService } from "../intent-engine/types.ts";
 import { AGENCY_MANIFEST } from "./manifest.ts";
 import { commandFromEffectArgs } from "./lib/command.ts";

@@ -1,7 +1,7 @@
-import type { Entity, StatValue } from "../../narrative-engine/lib/types.ts";
-import { canonicalEntityId, cloneEntity, compileEntityFile, formatFuseValue, formatStatInput, isCanonicalEntityId, isSystemEntityId, serializeEntityBlock, shortCodeFromSlug } from "../../narrative-engine/lib/world-model.ts";
-import { deleteEntityBlock, handwrittenInsertAt, inCadernoSlice, insertEntity, locateEntityBlock } from "../../narrative-engine/lib/source-ops.ts";
-import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/lib/types.ts";
+import type { Entity, StatValue } from "../../narrative-engine/index.ts";
+import { canonicalEntityId, cloneEntity, compileEntityFile, descerMutacao, formatFuseValue, formatStatInput, isCanonicalEntityId, isSystemEntityId, serializeEntityBlock, shortCodeFromSlug } from "../../narrative-engine/index.ts";
+import { deleteEntityBlock, handwrittenInsertAt, inCadernoSlice, insertEntity, locateEntityBlock } from "../../narrative-engine/index.ts";
+import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/index.ts";
 import { authorshipTimeline, leituraAte } from "./timeline.ts";
 import { headingOf, rebindAnnotation } from "./annotations.ts";
 
@@ -191,11 +191,15 @@ function mutDe(parts: string[], entities: string): EfeitoComando | null {
   if (!id) return fail(`Não achei ${path.id}.`, entities);
 
   const keyFrom = (fallback: string | undefined): string | null => path.key || identOf(fallback);
-  const gloss = (text: string, doLine: string): EfeitoComando => ({
-    cartao: { ok: true, titulo: "Marquei ¹", linhas: [text] },
-    entities,
-    mut: { do: doLine, linhas: [text], id },
-  });
+  const gloss = (text: string, doLine: string): EfeitoComando => {
+    const decision = descerMutacao("comando", doLine, mundo(entities), "", false);
+    if (!decision.ok) return fail(decision.error ?? "política recusou", entities);
+    return {
+      cartao: { ok: true, titulo: "Marquei ¹", linhas: [text] },
+      entities,
+      mut: { do: doLine, linhas: [text], id },
+    };
+  };
 
   if (op === "add" || op === "sub") {
     if (drawer !== "stats" || args.length !== 2 || !path.key) return fail("Não entendi.", entities);
@@ -729,11 +733,15 @@ function linkDe(parts: string[], entities: string): EfeitoComando | null {
     const id = asId(raw);
     return id ? fail(`Não achei ${id}.`, entities) : fail("Id inválido.", entities);
   };
-  const marcar = (text: string, doLine: string, id: string): EfeitoComando => ({
-    cartao: { ok: true, titulo: "Marquei ¹", linhas: [text] },
-    entities,
-    mut: { do: doLine, linhas: [text], id },
-  });
+  const marcar = (text: string, doLine: string, id: string): EfeitoComando => {
+    const decision = descerMutacao("comando", doLine, mundo(entities), "", false);
+    if (!decision.ok) return fail(decision.error ?? "política recusou", entities);
+    return {
+      cartao: { ok: true, titulo: "Marquei ¹", linhas: [text] },
+      entities,
+      mut: { do: doLine, linhas: [text], id },
+    };
+  };
 
   if (op === "from" || op === "where" || op === "tree") {
     if (bits.length !== 2 || args.length !== 1) return fail("Não entendi.", entities);

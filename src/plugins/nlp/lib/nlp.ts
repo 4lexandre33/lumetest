@@ -1,8 +1,8 @@
 import type { WorldModel } from "../../narrative-engine/types.ts";
-import { lines, lookup } from "../../vocab/lib/vocab.ts";
-import { verbPrefixes } from "../../vocab/lib/grammar.ts";
-import { VOCAB_ENTITY_ID } from "../../vocab/lib/tokens.ts";
-import { arityOf } from "../../vocab/lib/verbs.ts";
+import { lines, lookup } from "../../vocab/index.ts";
+import { verbPrefixes } from "../../vocab/index.ts";
+import { VOCAB_ENTITY_ID } from "../../vocab/index.ts";
+import { arityOf } from "../../vocab/index.ts";
 import type { GrammarLine } from "../../vocab/types.ts";
 import type { NlpHit, NlpScope } from "../types.ts";
 

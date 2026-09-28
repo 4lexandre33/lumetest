@@ -1,4 +1,4 @@
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { playHud } from "../play.ts";
 import { PreviewPane } from "./PreviewPane.tsx";
 

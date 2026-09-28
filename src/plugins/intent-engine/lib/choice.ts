@@ -1,4 +1,4 @@
-import { matchesTag } from "../../narrative-engine/lib/taxonomy.ts";
+import { matchesTag } from "../../narrative-engine/index.ts";
 import type { GameState } from "../../narrative-engine/types.ts";
 
 /**

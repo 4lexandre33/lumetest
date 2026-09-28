@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useIdeStore } from "../../ide-state/lib/orchestrator.ts";
+import { useIdeStore } from "../../ide-state/index.ts";
 import { parseCadernoLibrary, replaceBookSource, appendCaderno } from "../lib/pages.ts";
 import { addAnnotation, doFromDraft, nextAnnotationId, parseAnotacoesSlice } from "../lib/annotations.ts";
 import { authorshipTimeline } from "../lib/timeline.ts";

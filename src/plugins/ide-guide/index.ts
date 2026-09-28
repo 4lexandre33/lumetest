@@ -10,6 +10,8 @@ import type { IdeGuideService, GuideSlide, RefSection } from './types.ts';
 import { GUIDE_SLIDES } from './lib/guide.ts';
 import { SYNTAX_REF, syntaxRefMarkdown } from './lib/syntax-ref.ts';
 
+export * from './lib/guide.ts';
+export * from './lib/syntax-ref.ts';
 export * from './manifest.ts';
 export * from './types.ts';
 

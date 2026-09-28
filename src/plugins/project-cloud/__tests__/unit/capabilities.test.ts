@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createCore, Core } from '../../../../core/index.ts';
 import { PROJECT_CLOUD_MANIFEST, createProjectCloudPlugin } from '../../index.ts';
 import type { ProjectCloudService, ProjectHistoryService } from '../../types.ts';
-import { createProject } from '../../../narrative-engine/lib/project.ts';
+import { createProject } from "../../../narrative-engine/index.ts";
 
 describe('Project Cloud Capabilities', () => {
   let core: Core;

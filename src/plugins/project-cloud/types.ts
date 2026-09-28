@@ -2,7 +2,7 @@
  * Project Cloud Plugin Capability Interfaces & Types
  */
 
-import type { Project, ProjectIndexEntry, WireProject } from '../narrative-engine/lib/project.ts';
+import type { Project, ProjectIndexEntry, WireProject } from "../narrative-engine/index.ts";
 
 export type IdeSettings = {
   locale: string;

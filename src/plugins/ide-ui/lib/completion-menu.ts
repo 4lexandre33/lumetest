@@ -1,4 +1,4 @@
-import { caretAnchor } from "../../notebook/lib/prose-triggers.ts";
+import { caretAnchor } from "../../notebook/index.ts";
 
 export type MenuSeal = "entidade" | "gaveta" | "lei" | "frase";
 

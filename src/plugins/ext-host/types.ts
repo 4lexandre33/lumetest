@@ -24,6 +24,7 @@ export type InstalledExternalPlugin = {
 export type HostInspect = {
   plugins: { name: string; version: string; provides: { name: string; version: string }[] }[];
   capabilities: { name: string; version: string; provider: string; methods: string[] }[];
+  slots: { name: string; capability: string }[];
   events: string[];
   world: JsonEntity[] | null;
 };

@@ -1,6 +1,6 @@
-import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/lib/types.ts";
-import { formatStatInput, isCanonicalEntityId, isLinkTarget, canonicalEntityId } from "../../narrative-engine/lib/world-model.ts";
-import { locateEntityBlock } from "../../narrative-engine/lib/source-ops.ts";
+import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/index.ts";
+import { formatStatInput, isCanonicalEntityId, isLinkTarget, canonicalEntityId } from "../../narrative-engine/index.ts";
+import { locateEntityBlock } from "../../narrative-engine/index.ts";
 import { correrComando, type EfeitoComando } from "./comando.ts";
 
 export { FBE_DRAWERS, type FbeDrawer, isLinkTarget, formatStatInput };

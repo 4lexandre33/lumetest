@@ -78,6 +78,9 @@ export class PluginRegistry {
       if (instance.manifest.hooks?.init) {
         await instance.manifest.hooks.init();
       }
+      if (entry.manifest.hooks?.start) {
+        await entry.manifest.hooks.start();
+      }
 
       entry.state = 'active';
       this.logger.info(`Plugin activated: ${pluginName}@${entry.manifest.version}`);
@@ -102,6 +105,9 @@ export class PluginRegistry {
     if (!entry || !entry.instance) return;
 
     try {
+      if (entry.manifest.hooks?.stop) {
+        await entry.manifest.hooks.stop();
+      }
       if (typeof entry.instance.deactivate === 'function') {
         await entry.instance.deactivate();
       }

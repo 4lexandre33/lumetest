@@ -1,5 +1,5 @@
-import { findMatchingRule } from "../../narrative-engine/lib/rule-engine.ts";
-import { cloneWorldModel } from "../../narrative-engine/lib/world-model.ts";
+import { findMatchingRule } from "../../narrative-engine/index.ts";
+import { cloneWorldModel } from "../../narrative-engine/index.ts";
 import type { CompiledTaxonomy, GameState, WorldModel } from "../../narrative-engine/types.ts";
 import type {
   CatalogNode,

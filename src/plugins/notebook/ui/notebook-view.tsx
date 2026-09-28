@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { useIdeStore } from "../../ide-state/lib/orchestrator.ts";
+import { useIdeStore } from "../../ide-state/index.ts";
 import { parseCadernoLibrary } from "../lib/pages.ts";
 import type { CartaoComando } from "../lib/comando.ts";
 

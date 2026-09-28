@@ -7,7 +7,7 @@ import type { IPlugin, IPluginManifest } from "../../core/contracts/plugin-manif
 import type { PluginContext } from "../../core/contracts/plugin-context.ts";
 import { WorldEventOccurredEvent } from "../../core/contracts/typed-event.ts";
 import type { EffectContext, GameState, RuleEffectsService } from "../narrative-engine/types.ts";
-import type { EffectOp } from "../narrative-engine/lib/rule-engine.ts";
+import type { EffectOp } from "../narrative-engine/index.ts";
 import { WORLD_EVENTS_MANIFEST } from "./manifest.ts";
 import { ensureEventEntity } from "./lib/events.ts";
 import type { WorldEventsService } from "./types.ts";

@@ -4,11 +4,11 @@ import { createCore, type Core } from "../../../../core/index.ts";
 import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../../narrative-engine/index.ts";
 import type { NarrativeEngineService } from "../../../narrative-engine/types.ts";
 import { INTENT_ENGINE_MANIFEST, createIntentEnginePlugin } from "../../../intent-engine/index.ts";
-import { query } from "../../../narrative-engine/lib/query.ts";
-import { createGame, interactWith } from "../../../narrative-engine/lib/runtime.ts";
-import { cloneWorldModel } from "../../../narrative-engine/lib/world-model.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
-import { executeIntent, type QueryFn } from "../../../intent-engine/lib/index.ts";
+import { query } from "../../../narrative-engine/index.ts";
+import { createGame, interactWith } from "../../../narrative-engine/index.ts";
+import { cloneWorldModel } from "../../../narrative-engine/index.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
+import { executeIntent, type QueryFn } from "../../../intent-engine/index.ts";
 import { KIT_SOCIAL_MANIFEST, createKitSocialPlugin, KIT_MARK, RELATION_CATEGORIES } from "../../index.ts";
 import type { SocialKitService } from "../../types.ts";
 

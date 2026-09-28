@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { createCore, type Core } from "../../../../core/index.ts";
 import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../../narrative-engine/index.ts";
 import type { NarrativeEngineService } from "../../../narrative-engine/types.ts";
-import { createGame, interactWith } from "../../../narrative-engine/lib/runtime.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
-import { findMatchingRule, parseRuleBlock, ruleSpecificity } from "../../../narrative-engine/lib/rule-engine.ts";
+import { createGame, interactWith } from "../../../narrative-engine/index.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
+import { findMatchingRule, parseRuleBlock, ruleSpecificity } from "../../../narrative-engine/index.ts";
 import { KIT_PROSE_MANIFEST, createKitProsePlugin, NARRATIVE_FUNCTIONS } from "../../index.ts";
 import type { ProseService } from "../../types.ts";
 

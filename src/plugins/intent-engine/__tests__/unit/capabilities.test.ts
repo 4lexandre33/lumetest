@@ -5,7 +5,7 @@ import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../..
 import type { NarrativeEngineService } from "../../../narrative-engine/types.ts";
 import { INTENT_ENGINE_MANIFEST, createIntentEnginePlugin } from "../../index.ts";
 import type { IntentCatalogService, IntentEngineService } from "../../types.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
 
 describe("Intent Engine capabilities", () => {
   let core: Core;

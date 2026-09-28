@@ -1,6 +1,6 @@
 import { Download, X } from "lucide-react";
-import { SYNTAX_REF, syntaxRefMarkdown } from "../../../ide-guide/lib/syntax-ref.ts";
-import { triggerBrowserDownload } from "../../../ext-host/lib/download.ts";
+import { SYNTAX_REF, syntaxRefMarkdown } from "../../../ide-guide/index.ts";
+import { triggerBrowserDownload } from "../../../ext-host/index.ts";
 import { Button } from "../ui/button.tsx";
 
 export const GUIDE_DOWNLOAD_NAME = "lume-guia.md";

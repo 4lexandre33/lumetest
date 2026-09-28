@@ -1,5 +1,5 @@
-import type { GameBeat } from "../narrative-engine/lib/runtime.ts";
-import type { SiftHit, SiftPattern } from "../narrative-engine/lib/sift.ts";
+import type { GameBeat } from "../narrative-engine/index.ts";
+import type { SiftHit, SiftPattern } from "../narrative-engine/index.ts";
 
 export interface SiftService {
   id: "sift";

@@ -1,8 +1,8 @@
 import { intentLeaf, pathOfLeaf } from "./verbs.ts";
-import { lineWarning } from "../../vocab/lib/grammar.ts";
-import { VOCAB_ENTITY_ID, VOCAB_LOCALE } from "../../vocab/lib/tokens.ts";
+import { lineWarning } from "../../vocab/index.ts";
+import { VOCAB_ENTITY_ID, VOCAB_LOCALE } from "../../vocab/index.ts";
 import type { GrammarLine } from "../../vocab/types.ts";
-import { formatFuseValue, formatStatInput, isLinkTarget, shortCodeFromSlug } from "../../narrative-engine/lib/world-model.ts";
+import { formatFuseValue, formatStatInput, isLinkTarget, shortCodeFromSlug } from "../../narrative-engine/index.ts";
 import { compileNotebookCached, resetNotebookCache } from "./cache.ts";
 import {
   applyNamedDoToDraft,

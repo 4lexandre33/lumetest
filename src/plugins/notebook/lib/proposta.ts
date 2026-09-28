@@ -1,4 +1,4 @@
-import type { WorldModel } from "../../narrative-engine/lib/types.ts";
+import type { WorldModel } from "../../narrative-engine/index.ts";
 import type { WriteRule } from "./prose-triggers.ts";
 import {
   addAnnotation,

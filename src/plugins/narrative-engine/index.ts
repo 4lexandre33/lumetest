@@ -208,7 +208,9 @@ export class NarrativeEnginePlugin implements IPlugin {
       getExampleCatalog: () => engine.EXAMPLE_CATALOG,
       blankEntities: engine.BLANK_ENTITIES,
       blankRules: engine.BLANK_RULES,
-      blankTaxonomy: engine.BLANK_TAXONOMY
+      blankTaxonomy: engine.BLANK_TAXONOMY,
+      worldPort: (world) => engine.worldPort(world),
+      submitMutation: (world, doLine, prose, policy) => engine.mutationGateway(engine.worldPort(world), policy).submit(doLine, prose)
     };
   }
 

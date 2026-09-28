@@ -3,7 +3,7 @@
 Dono do verbo `KNOW`. Cognição do agent, não entidade `information`.
 
 ## Abrir
-- `lib/store.ts` — tag `knows_<id>` no agent
+- `lib/store.ts` — `knows_`, `believes_` e `ignores_`. Crença não é saber. Ignorância só a que foi declarada.
 - `index.ts` — handler `know`
 
 ## Provides

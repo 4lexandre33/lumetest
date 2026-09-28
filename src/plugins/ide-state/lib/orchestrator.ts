@@ -27,7 +27,7 @@ import {
   replaySession,
   resetGame,
   rewindTo as rewindGame
-} from '../../narrative-engine/lib/index.ts';
+} from "../../narrative-engine/index.ts";
 import {
   deleteEntityBlock,
   deleteRuleBlock,
@@ -35,7 +35,7 @@ import {
   insertRule,
   locateEntityBlock,
   locateRuleBlock
-} from '../../narrative-engine/lib/source-ops.ts';
+} from "../../narrative-engine/index.ts";
 import {
   listProjects,
   loadProject,
@@ -46,12 +46,12 @@ import {
   savePlaytest,
   loadPlaytest,
   DEFAULT_IDE_SETTINGS
-} from '../../project-cloud/lib/persistence.ts';
+} from "../../project-cloud/index.ts";
 import { readSessionDraft, writeSessionDraft } from './draft.ts';
-import { applyNotebookToProjectWithIssues, applyNotebookToProjectWithIssuesAsync, notebooksHash } from '../../notebook/lib/pages.ts';
-import { importCaderno } from '../../notebook/lib/share.ts';
+import { applyNotebookToProjectWithIssues, applyNotebookToProjectWithIssuesAsync, notebooksHash } from "../../notebook/index.ts";
+import { importCaderno } from "../../notebook/index.ts";
 import type { IdeStore, SourceFocus } from '../types.ts';
-import { commandFromChoice, executeIntent, resolveIntent, suggestIntent, scopeFromHost, looksLikeIntent, DRY_RUN_NOTICE, HUMAN_FALLBACK, type QueryFn } from '../../intent-engine/lib/index.ts';
+import { commandFromChoice, executeIntent, resolveIntent, suggestIntent, scopeFromHost, looksLikeIntent, DRY_RUN_NOTICE, HUMAN_FALLBACK, type QueryFn } from "../../intent-engine/index.ts";
 import { addFolder, deleteFolder, placeItem, renameFolder } from './tree.ts';
 
 const queryFn: QueryFn = (matcher, world, triggerId, taxonomy) =>

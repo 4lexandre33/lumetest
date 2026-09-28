@@ -4,10 +4,10 @@ import { createCore, type Core } from "../../../../core/index.ts";
 import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../../narrative-engine/index.ts";
 import type { NarrativeEngineService } from "../../../narrative-engine/types.ts";
 import { INTENT_ENGINE_MANIFEST, createIntentEnginePlugin } from "../../../intent-engine/index.ts";
-import { query } from "../../../narrative-engine/lib/query.ts";
-import { createGame, interactWith } from "../../../narrative-engine/lib/runtime.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
-import { executeIntent, type QueryFn } from "../../../intent-engine/lib/index.ts";
+import { query } from "../../../narrative-engine/index.ts";
+import { createGame, interactWith } from "../../../narrative-engine/index.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
+import { executeIntent, type QueryFn } from "../../../intent-engine/index.ts";
 import { KIT_ADVENTURE_MANIFEST, createKitAdventurePlugin, KIT_MARK } from "../../index.ts";
 import type { AdventureKitService } from "../../types.ts";
 

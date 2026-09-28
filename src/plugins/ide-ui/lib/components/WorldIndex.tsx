@@ -1,5 +1,5 @@
-import { buildWorldIndex } from "../../../narrative-engine/lib/world-index.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { buildWorldIndex } from "../../../narrative-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { Button } from "../ui/button.tsx";
 import { X } from "lucide-react";
 

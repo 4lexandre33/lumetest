@@ -1,6 +1,6 @@
-import { FBE_DRAWERS, type Entity, type FbeDrawer, type WorldModel } from "../../narrative-engine/lib/types.ts";
-import { applyChanges, parseDoLine } from "../../narrative-engine/lib/rule-engine.ts";
-import { cloneWorldModel, compileEntityFile, isSystemEntityId } from "../../narrative-engine/lib/world-model.ts";
+import { FBE_DRAWERS, type Entity, type FbeDrawer, type WorldModel } from "../../narrative-engine/index.ts";
+import { applyChanges, parseDoLine } from "../../narrative-engine/index.ts";
+import { cloneWorldModel, compileEntityFile, isSystemEntityId } from "../../narrative-engine/index.ts";
 import { compileNotebook } from "./notebook.ts";
 import {
   cadernoBookRanges,

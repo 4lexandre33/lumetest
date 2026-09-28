@@ -1,4 +1,4 @@
-import type { GameBeat } from "../../narrative-engine/lib/runtime.ts";
+import type { GameBeat } from "../../narrative-engine/index.ts";
 
 export type RecapOrder = "chrono" | "reverse";
 

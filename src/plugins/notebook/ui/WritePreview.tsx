@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FBE_DRAWERS } from "../../narrative-engine/lib/types.ts";
-import { useIdeStore } from "../../ide-state/lib/orchestrator.ts";
+import { FBE_DRAWERS } from "../../narrative-engine/index.ts";
+import { useIdeStore } from "../../ide-state/index.ts";
 import { authorshipTimeline, changedSnaps, entityHistory, entityOrigin, leituraAte, mapaDe, snapDrawer, type ArestaMapa } from "../lib/timeline.ts";
 import { leisSempre, writeSuggestions, type WriteSuggestion } from "../lib/prose-triggers.ts";
 import { aceitarProposta, decidirSempre, dosNaLinha, propostasAbertas } from "../lib/proposta.ts";

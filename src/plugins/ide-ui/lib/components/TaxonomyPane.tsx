@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { GitBranch, ChevronRight } from "lucide-react";
-import { entityDisplayName, impactOfTag, taxonomyForest, type TaxonomyNode } from "../../../narrative-engine/lib/index.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { entityDisplayName, impactOfTag, taxonomyForest, type TaxonomyNode } from "../../../narrative-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { SourceEditor } from "./SourceEditor.tsx";
 import { cn } from "../utils.ts";
 

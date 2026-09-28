@@ -1,6 +1,6 @@
 import { RotateCcw, Undo2 } from "lucide-react";
-import { renderMarkdown, bannerOf } from "../../../narrative-engine/lib/index.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { renderMarkdown, bannerOf } from "../../../narrative-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { Button } from "../ui/button.tsx";
 import { WritePreview } from "../../../notebook/ui/WritePreview.tsx";
 import { CommandBar } from "./CommandBar.tsx";

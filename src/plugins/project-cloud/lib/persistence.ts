@@ -10,7 +10,7 @@ import {
   type Project,
   type ProjectIndexEntry,
   type WireProject
-} from '../../narrative-engine/lib/project.ts';
+} from "../../narrative-engine/index.ts";
 import type { IdeSettings, PlaytestSnapshotRecord } from '../types.ts';
 
 export const DEFAULT_IDE_SETTINGS: IdeSettings = {

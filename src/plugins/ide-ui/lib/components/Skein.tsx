@@ -1,5 +1,5 @@
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
-import type { SkeinNode } from "../../../narrative-engine/lib/skein.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
+import type { SkeinNode } from "../../../narrative-engine/index.ts";
 import { cn } from "../utils.ts";
 
 function SkeinBranch({

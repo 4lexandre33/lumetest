@@ -4,8 +4,8 @@
 
 import type { IdeComponentsMap, MenuDefinition } from '../types.ts';
 import type { Issue, SourceKind, HighlightSpan } from '../../narrative-engine/types.ts';
-import { highlightSource } from '../../narrative-engine/lib/highlight.ts';
-import { renderMarkdown } from '../../narrative-engine/lib/narrative.ts';
+import { highlightSource } from "../../narrative-engine/index.ts";
+import { renderMarkdown } from "../../narrative-engine/index.ts";
 
 export const REGISTERED_VIEW_NAMES: (keyof IdeComponentsMap)[] = [
   'IdeApp',

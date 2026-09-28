@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { compileProject, createProject, diagnose } from "./project.ts";
 import { createExampleProject } from "./examples.ts";
 import { buildWorldIndex, formatWorldIndex, validateWorld } from "./world-index.ts";
-import { applyAdventureKit } from "../../kit-adventure/lib/kit.ts";
-import { applyChannelKit } from "../../kit-channel/lib/kit.ts";
+import { applyAdventureKit } from "../../kit-adventure/index.ts";
+import { applyChannelKit } from "../../kit-channel/index.ts";
 
 describe("world index and dialogue dead-ends", () => {
   it("lists rooms objects agents rules tags channels and patterns", () => {

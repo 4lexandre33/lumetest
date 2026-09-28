@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { compileProject, coerceProject, createProject } from "../../../narrative-engine/lib/project.ts";
-import { parseRuleBlock } from "../../../narrative-engine/lib/rule-engine.ts";
+import { compileProject, coerceProject, createProject } from "../../../narrative-engine/index.ts";
+import { parseRuleBlock } from "../../../narrative-engine/index.ts";
 import {
   ENTITY_SECTIONS,
   RULE_SECTIONS,

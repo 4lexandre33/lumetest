@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createCore, type Core } from "../../../../core/index.ts";
 import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../../narrative-engine/index.ts";
 import type { NarrativeEngineService } from "../../../narrative-engine/types.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
 import { PROCESS_MANIFEST, createProcessPlugin, PROCESS_TAG } from "../../index.ts";
 import type { ProcessService } from "../../types.ts";
 

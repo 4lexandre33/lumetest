@@ -1,6 +1,5 @@
-import type { Core } from "../../../core/index.ts";
-import { ExternalPluginEvent } from "../../../core/contracts/typed-event.ts";
-import { DENIED_METHODS, inspectFromCore, renderKit } from "./kit.ts";
+import { DENIED_METHODS, renderKit } from "./kit.ts";
+import { ver, type HostGrant } from "./vista.ts";
 import { toJson } from "./json.ts";
 import { runGuestSource } from "./sandbox.ts";
 import { zipStore } from "./zip.ts";
@@ -66,7 +65,7 @@ function guessName(source: string): string | null {
   return match?.[1] ?? null;
 }
 
-export function createExtHostService(core: Core): { service: ExtHostService; dispatch: (type: string, payload: unknown) => void } {
+export function createExtHostService(grant: HostGrant): { service: ExtHostService; dispatch: (type: string, payload: unknown) => void } {
   const guests = new Map<string, Runtime>();
   const listeners = new Map<string, Set<(payload: Json) => void>>();
   const guestStorage = new Map<string, Map<string, string>>();
@@ -99,29 +98,31 @@ export function createExtHostService(core: Core): { service: ExtHostService; dis
         if (runtime.logs.length > 200) runtime.logs.splice(0, runtime.logs.length - 200);
       },
       inspect() {
-        return inspectFromCore(core);
+        return ver(grant);
       },
       call(capability: string, method: string, ...args: Json[]) {
-        if ((DENIED_METHODS as readonly string[]).includes(method)) {
+        const granted = grant.capabilities.find((item) => item.name === capability);
+        if (!granted) throw new Error(`Capability não autorizada: ${capability}`);
+        if ((DENIED_METHODS as readonly string[]).includes(method) || !granted.methods.includes(method)) {
           throw new Error(`Método recusado no sandbox: ${capability}.${method}`);
         }
-        const service = core.getService<Record<string, unknown>>(capability);
-        const fn = service[method];
+        const fn = granted.api[method];
         if (typeof fn !== "function") throw new Error(`Sem método ${capability}.${method}`);
-        const result = (fn as (...xs: unknown[]) => unknown).apply(service, args);
+        const result = (fn as (...xs: unknown[]) => unknown).apply(granted.api, args);
         if (result && typeof (result as Promise<unknown>).then === "function") {
           throw new Error(`call() síncrono apenas; ${capability}.${method} é async`);
         }
         return toJson(result);
       },
       on(eventType: string, handler: (payload: Json) => void) {
+        if (!grant.events.includes(eventType)) throw new Error(`Evento não autorizado: ${eventType}`);
         const set = listeners.get(eventType) ?? new Set();
         set.add(handler);
         listeners.set(eventType, set);
         runtime.unsubs.push(() => set.delete(handler));
       },
       emit(topic: string, payload?: Json) {
-        void core.emitEvent(new ExternalPluginEvent({ plugin: name, topic: String(topic), payload: payload ?? null }), name);
+        grant.emit(name, String(topic), payload ?? null);
       },
       storage: {
         get(key: string) {
@@ -212,9 +213,9 @@ export function createExtHostService(core: Core): { service: ExtHostService; dis
   }
 
   const service: ExtHostService = {
-    inspect: () => inspectFromCore(core),
+    inspect: () => ver(grant),
     buildKit(): PluginKit {
-      return renderKit(inspectFromCore(core), 2);
+      return renderKit(ver(grant), 2);
     },
     kitZip() {
       const kit = service.buildKit();

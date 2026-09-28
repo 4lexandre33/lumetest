@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { bootGame, createGame } from "../../../narrative-engine/lib/runtime.ts";
-import { compileProject, createProject } from "../../../narrative-engine/lib/project.ts";
-import { buildPlayBundle } from "../../../narrative-engine/lib/play-bundle.ts";
+import { bootGame, createGame } from "../../../narrative-engine/index.ts";
+import { compileProject, createProject } from "../../../narrative-engine/index.ts";
+import { buildPlayBundle } from "../../../narrative-engine/index.ts";
 import { playShareUrl, sessionShareUrl, staticPlayHtml } from "../../lib/play-html.ts";
 
 describe("static play html", () => {

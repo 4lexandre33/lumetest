@@ -1,0 +1,6 @@
+src/plugins/ide-ui/lib/components/ExtPluginsWindow.tsx -> ext-host/lib/ensure.ts
+src/plugins/ide-ui/lib/components/IdeApp.tsx -> ext-host/lib/ensure.ts
+src/plugins/ide-ui/lib/components/IdeApp.tsx -> notebook/ui/NotebookPane.tsx
+src/plugins/ide-ui/lib/components/IdeApp.tsx -> notebook/ui/notebook-view.tsx
+src/plugins/ide-ui/lib/components/PreviewPane.tsx -> notebook/ui/WritePreview.tsx
+src/plugins/notebook/ui/NotebookEditor.tsx -> ide-ui/lib/components/CompletionMenu.tsx

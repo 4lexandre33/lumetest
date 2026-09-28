@@ -1,4 +1,4 @@
-import type { StatValue } from "../../narrative-engine/lib/types.ts";
+import type { StatValue } from "../../narrative-engine/index.ts";
 
 export type PlayHud = {
   title: string;

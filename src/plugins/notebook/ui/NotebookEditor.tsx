@@ -10,8 +10,8 @@ import {
   addLineNote,
   noteOnLine,
   type CompletionItem,
-} from "../../narrative-engine/lib/index.ts";
-import { useIdeStore } from "../../ide-state/lib/orchestrator.ts";
+} from "../../narrative-engine/index.ts";
+import { useIdeStore } from "../../ide-state/index.ts";
 import { MutationSheet, PhraseSheet, emptyDraft } from "./WriteShell.tsx";
 import {
   entityGuess,
@@ -41,7 +41,7 @@ import { leituraAte } from "../lib/timeline.ts";
 import { aplicarLinhaComando } from "../lib/comando.ts";
 import { replaceBookSource } from "../lib/pages.ts";
 import { useNotebookView } from "./notebook-view.tsx";
-import { menuAnchor, menuDetail, menuOpens, menuSeal } from "../../ide-ui/lib/completion-menu.ts";
+import { menuAnchor, menuDetail, menuOpens, menuSeal } from "../../ide-ui/index.ts";
 import { CompletionMenu } from "../../ide-ui/lib/components/CompletionMenu.tsx";
 
 const LINE_PX = 24;

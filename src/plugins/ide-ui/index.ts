@@ -29,6 +29,7 @@ import {
   getAllRegisteredViewNames
 } from './lib/view-registry.ts';
 
+export * from './lib/completion-menu.ts';
 export * from './manifest.ts';
 export * from './types.ts';
 export * from './lib/view-registry.ts';

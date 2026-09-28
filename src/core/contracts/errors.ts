@@ -77,6 +77,19 @@ export class PluginNotFoundError extends AppError {
   }
 }
 
+export class PermissionError extends AppError {
+  pluginName: string;
+  action: string;
+
+  constructor(pluginName: string, action: string, message: string) {
+    super('PERMISSION_DENIED', `[${pluginName}] ${message}`, { pluginName, action });
+    this.name = 'PermissionError';
+    this.pluginName = pluginName;
+    this.action = action;
+    Object.setPrototypeOf(this, PermissionError.prototype);
+  }
+}
+
 export class DependencyError extends AppError {
   pluginName: string;
   missingCapabilities: string[];

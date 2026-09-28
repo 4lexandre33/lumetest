@@ -1,5 +1,5 @@
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
-import { graphOf, placeOf } from "../../../spatial/lib/map.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
+import { graphOf, placeOf } from "../../../spatial/index.ts";
 
 const CELL_W = 120;
 const CELL_H = 76;

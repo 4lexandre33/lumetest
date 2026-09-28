@@ -17,10 +17,12 @@ import { PlaySkin } from "./PlaySkin.tsx";
 import { ExtPluginsWindow } from "./ExtPluginsWindow.tsx";
 import { NotebookPane, NotebookTabstrip } from "../../../notebook/ui/NotebookPane.tsx";
 import { NotebookViewProvider } from "../../../notebook/ui/notebook-view.tsx";
-import { useIdeStore, AUTOSAVE_MS } from "../../../ide-state/lib/orchestrator.ts";
-import { toWireProject, buildPlayBundle, encodeSessionHash } from "../../../narrative-engine/lib/index.ts";
-import { applyNotebookToProject } from "../../../notebook/lib/pages.ts";
-import { exportCadernoMd, cadernoFilename } from "../../../notebook/lib/share.ts";
+import { SalaPainel } from "./SalaPainel.tsx";
+import { ROTULO, salasVisiveis, type Superficie } from "../superficie.ts";
+import { useIdeStore, AUTOSAVE_MS } from "../../../ide-state/index.ts";
+import { toWireProject, buildPlayBundle, encodeSessionHash } from "../../../narrative-engine/index.ts";
+import { applyNotebookToProject } from "../../../notebook/index.ts";
+import { exportCadernoMd, cadernoFilename } from "../../../notebook/index.ts";
 import { staticPlayHtml, playShareUrl, sessionShareUrl } from "../play-html.ts";
 import { cn } from "../utils.ts";
 import { ensureExtHost } from "../../../ext-host/lib/ensure.ts";
@@ -105,7 +107,9 @@ export function IdeApp() {
   const [openMenu, setOpenMenu] = useState<MenuId | null>(null);
   const [showIndex, setShowIndex] = useState(false);
   const [showExt, setShowExt] = useState(false);
-  const [motor, setMotor] = useState(false);
+  const [sala, setSala] = useState<Superficie>("escrever");
+  const [tecnicoPedido, setTecnicoPedido] = useState(false);
+  const visiveis = salasVisiveis(tecnicoPedido);
   const barRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cadernoRef = useRef<HTMLInputElement>(null);
@@ -382,14 +386,25 @@ export function IdeApp() {
         >
           Guardar
         </button>
-        <button
-          type="button"
-          onClick={() => setMotor((cur) => !cur)}
-          className={cn("hidden h-8 shrink-0 rounded-xs px-2.5 text-sm sm:inline-flex sm:items-center", motor ? "bg-elevated text-fg" : "text-muted hover:bg-elevated hover:text-fg")}
-        >
-          {motor ? "Ocultar motor" : "Mostrar motor"}
-        </button>
       </div>
+
+      <nav aria-label="Superfície" className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2">
+        {visiveis.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setSala(id)}
+            className={cn("h-7 shrink-0 rounded-xs px-2.5 text-sm", sala === id ? "bg-elevated text-fg" : "text-muted hover:text-fg")}
+          >
+            {ROTULO[id]}
+          </button>
+        ))}
+        {!tecnicoPedido ? (
+          <button type="button" onClick={() => { setTecnicoPedido(true); setSala("tecnico"); }} className="ml-auto h-7 shrink-0 px-2 text-xs text-subtle hover:text-fg">
+            Pedir o técnico
+          </button>
+        ) : null}
+      </nav>
 
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border px-2 md:hidden">
         {(
@@ -419,7 +434,7 @@ export function IdeApp() {
                 </Panel>
                 <Separator className="w-px bg-border" />
                 <Panel defaultSize="52" minSize="30" className="min-h-0">
-                  <EditorColumn tab={tab} setTab={setTab} project={project} setEntities={setEntities} setTaxonomy={setTaxonomy} setRules={setRules} motor={motor} />
+                  <EditorColumn tab={tab} setTab={setTab} project={project} setEntities={setEntities} setTaxonomy={setTaxonomy} setRules={setRules} sala={sala} />
                 </Panel>
                 <Separator className="w-px bg-border" />
                 <Panel defaultSize="28" minSize="18" className="min-h-0">
@@ -463,7 +478,7 @@ export function IdeApp() {
         <div className="flex min-h-0 min-w-0 flex-1 md:hidden">
           {mobilePane === "tree" ? <ProjectTree /> : null}
           {mobilePane === "editor" ? (
-            <EditorColumn tab={tab} setTab={setTab} project={project} setEntities={setEntities} setTaxonomy={setTaxonomy} setRules={setRules} motor={motor} />
+            <EditorColumn tab={tab} setTab={setTab} project={project} setEntities={setEntities} setTaxonomy={setTaxonomy} setRules={setRules} sala={sala} />
           ) : null}
           {mobilePane === "play" ? (
             <div className="flex h-full min-h-0 flex-col">
@@ -549,7 +564,7 @@ function EditorColumn({
   setEntities,
   setTaxonomy,
   setRules,
-  motor,
+  sala,
 }: {
   tab: "entities" | "taxonomy" | "rules" | "config";
   setTab: (t: "entities" | "taxonomy" | "rules" | "config") => void;
@@ -557,22 +572,25 @@ function EditorColumn({
   setEntities: (s: string) => void;
   setTaxonomy: (s: string) => void;
   setRules: (s: string) => void;
-  motor: boolean;
+  sala: Superficie;
 }) {
+  const escrever = sala === "escrever";
+  const tecnico = sala === "tecnico";
   return (
     <NotebookViewProvider>
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      {!motor ? (
+      {escrever ? (
         <div className="flex h-9 shrink-0 items-center gap-1 overflow-hidden border-b border-border px-2">
           <NotebookTabstrip />
         </div>
       ) : null}
-      {!motor ? (
+      {escrever ? (
         <div className="min-h-0 flex-1">
           <NotebookPane />
         </div>
       ) : null}
-      {motor ? (
+      {!escrever && !tecnico ? <SalaPainel sala={sala} /> : null}
+      {tecnico ? (
         <>
           <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border px-2">
             {(

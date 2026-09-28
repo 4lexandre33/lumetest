@@ -5,11 +5,11 @@ import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../..
 import type { NarrativeEngineService } from "../../../narrative-engine/types.ts";
 import { INTENT_ENGINE_MANIFEST, createIntentEnginePlugin } from "../../../intent-engine/index.ts";
 import type { IntentEngineService } from "../../../intent-engine/types.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
 import { NLP_MANIFEST, createNlpPlugin, interpret, looksLikeIntent } from "../../index.ts";
 import { VOCAB_MANIFEST, createVocabPlugin } from "../../../vocab/index.ts";
 import type { NlpService } from "../../types.ts";
-import { DRY_RUN_NOTICE } from "../../../intent-engine/lib/notices.ts";
+import { DRY_RUN_NOTICE } from "../../../intent-engine/index.ts";
 
 describe("Nlp", () => {
   let core: Core;

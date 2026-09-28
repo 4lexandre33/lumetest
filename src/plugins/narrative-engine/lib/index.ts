@@ -19,3 +19,5 @@ export * from "./skein.ts";
 export * from "./beat.ts";
 export * from "./world-index.ts";
 export * from "./play-bundle.ts";
+export * from "./world-port.ts";
+export * from "./mutation-gateway.ts";

@@ -5,6 +5,7 @@
  */
 
 import type { TypedEvent } from './contracts/typed-event.ts';
+import type { DispatchResult, Envelope, CapabilityHandler } from './contracts/envelope.ts';
 import type { Logger } from './logger.ts';
 
 export type TypedEventConstructor<E extends TypedEvent<any> = TypedEvent<any>> = new (...args: any[]) => E;
@@ -78,6 +79,17 @@ export interface CoreAPI {
    * const result = await engine.compileProject(project);
    */
   getService<T>(name: string, version?: string): T;
+
+  /**
+   * Capability pequena, um método. Não substitui getService.
+   */
+  registerHandler(handler: CapabilityHandler): void;
+
+  /**
+   * Entrega um envelope ao método da capability ou do slot.
+   * Não lança: devolve ok ou erro.
+   */
+  dispatch<T = unknown>(envelope: Envelope): Promise<DispatchResult<T>>;
 
   /**
    * Logger com contexto automático do plugin.

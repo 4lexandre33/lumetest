@@ -1,4 +1,4 @@
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 
 export function ConfigPane() {
   const project = useIdeStore((s) => s.project);

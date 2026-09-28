@@ -1,0 +1,5329 @@
+# LUME — CONTEXT MACHINE MESTRE
+
+## 0. PROPÓSITO DESTE DOCUMENTO
+
+Este documento é um **Context Machine operacional para uma IA de desenvolvimento** responsável por refatorar, reorganizar, atualizar, corrigir, substituir, ampliar e implementar o Lume.
+
+A IA deve tratar este documento como o **contexto mestre de execução** para qualquer alteração arquitetural ou funcional de grande porte.
+
+A fonte concreta do estado atual do projeto é:
+
+`lumetest_c1.md`
+
+Esse arquivo contém a implementação existente, contratos, plugins, documentação interna, invariantes, contexto de plugins, planos e partes legadas.
+
+O objetivo não é apenas “consertar o projeto atual”.
+
+O objetivo é **transformar arquiteturalmente o Lume** em:
+
+> **um editor narrativo linear, dinâmico e profissional para escritores, no qual o manuscrito é a superfície principal do produto e todo o restante existe para compreender, estruturar, acompanhar, verificar e enriquecer a obra.**
+
+O Lume **não deve mais ser conceitualmente tratado como uma ferramenta de criação de jogos interativos que também possui um editor de texto**.
+
+A direção correta é o oposto:
+
+> **Lume é um editor narrativo para escritores que possui um runtime narrativo estruturado por baixo.**
+
+O runtime pode simular estado, regras, causalidade, entidades, intenções, conhecimento, acontecimentos e consequências.
+
+Isso é infraestrutura da autoria.
+
+Não é a identidade do produto.
+
+---
+
+# 1. ORDEM DE PRIORIDADE DA IA
+
+Quando houver conflito entre documentação, código antigo, comentário, teste, invariante ou objetivo novo, seguir esta hierarquia:
+
+1. Objetivo explícito do usuário nesta tarefa.
+2. Produto-alvo definido neste Context Machine.
+3. Arquitetura-alvo definida neste Context Machine.
+4. Contratos arquiteturais novos e decisões de migração.
+5. Comportamentos funcionais que devem ser preservados.
+6. Invariantes antigas do projeto.
+7. Implementação atual.
+8. Comentários antigos, documentos antigos e decisões históricas.
+
+Portanto:
+
+**uma invariante antiga pode ser alterada.**
+
+Mas não deve ser simplesmente ignorada.
+
+Quando uma invariante precisar mudar:
+
+```text
+INVARIANTE ANTIGA
+        ↓
+verificar por que existe
+        ↓
+verificar se ainda serve ao produto
+        ↓
+definir nova regra
+        ↓
+alterar contrato
+        ↓
+alterar implementação
+        ↓
+alterar testes
+        ↓
+alterar documentação
+        ↓
+validar migração
+        ↓
+registrar nova invariante
+```
+
+Nunca faça:
+
+```text
+"o documento mandou não alterar"
+```
+
+sem verificar:
+
+```text
+"isso ainda é necessário para a arquitetura-alvo?"
+```
+
+As invariantes antigas são **proteções contra regressão**, não barreiras contra evolução.
+
+---
+
+# 2. NOVA IDENTIDADE DO PRODUTO
+
+## 2.1 Lume não é mais definido pelo paradigma de jogo
+
+A antiga arquitetura possui conceitos como:
+
+* jogador;
+* play;
+* turn;
+* score;
+* command prompt;
+* regras interativas;
+* combate;
+* viagem;
+* NPC;
+* LIVE;
+* WAIT;
+* TICK;
+* sessão de jogo;
+* Skein;
+* dry-run;
+* play-skin.
+
+Esses recursos não precisam desaparecer.
+
+O que muda é sua **posição conceitual**.
+
+Eles passam a ser:
+
+```text
+recursos de runtime narrativo
+```
+
+e não:
+
+```text
+centro da experiência do usuário
+```
+
+---
+
+# 2.2 O centro do produto
+
+O centro do Lume passa a ser:
+
+```text
+MANUSCRITO
+```
+
+O manuscrito é a fonte principal da autoria.
+
+Ao redor dele existem:
+
+```text
+PERSONAGENS
+ENTIDADES
+CENAS
+LOCALIDADES
+TEMPO
+LINHA NARRATIVA
+CONTINUIDADE
+CONHECIMENTO
+RELACIONAMENTOS
+CAUSALIDADE
+EVENTOS
+FOCALIZAÇÃO
+VOZ
+DIÁLOGO
+CONTEXTOS
+NOTAS
+REFERÊNCIAS
+REGRAS NARRATIVAS
+ASSISTENTE
+DIAGNÓSTICOS
+HISTÓRICO
+```
+
+O runtime fica abaixo disso.
+
+---
+
+# 2.3 O que significa “editor linear”
+
+Linear significa:
+
+```text
+o manuscrito é escrito e lido em sequência.
+```
+
+A unidade principal é:
+
+```text
+documento
+→ capítulo
+→ cena
+→ bloco
+→ parágrafo
+→ sentença
+```
+
+O fluxo principal é:
+
+```text
+escrever
+→ interpretar
+→ atualizar contexto
+→ atualizar entidades
+→ atualizar linha temporal
+→ atualizar relações
+→ verificar continuidade
+→ fornecer feedback
+```
+
+Não significa:
+
+```text
+jogo linear
+```
+
+Não significa:
+
+```text
+narrativa sem estrutura interna
+```
+
+Não significa:
+
+```text
+proibir ramificações conceituais
+```
+
+Significa que a **experiência de autoria é centrada no texto sequencial**.
+
+---
+
+# 2.4 O que significa “dinâmico”
+
+Dinâmico significa que o sistema acompanha a escrita em tempo real ou quase tempo real:
+
+```text
+texto alterado
+→ análise atualizada
+→ referências resolvidas
+→ estado narrativo atualizado
+→ timeline atualizada
+→ continuidade recalculada
+→ sugestões atualizadas
+→ diagnósticos atualizados
+```
+
+O dinamismo principal não é um loop de jogo.
+
+É um:
+
+```text
+NARRATIVE AUTHORING RUNTIME
+```
+
+---
+
+# 3. VISÃO CONCEITUAL FINAL
+
+A arquitetura desejada deve convergir para:
+
+```text
+                 ┌──────────────────────────┐
+                 │          AUTOR           │
+                 │      escreve texto       │
+                 └────────────┬─────────────┘
+                              │
+                              ▼
+                 ┌──────────────────────────┐
+                 │       MANUSCRIPT         │
+                 │ documento linear         │
+                 │ capítulos / cenas        │
+                 └────────────┬─────────────┘
+                              │
+                              ▼
+                 ┌──────────────────────────┐
+                 │   CONTEXT / LANGUAGE     │
+                 │ interpretação narrativa  │
+                 └────────────┬─────────────┘
+                              │
+                              ▼
+                 ┌──────────────────────────┐
+                 │       NARRATIVE IR       │
+                 └────────────┬─────────────┘
+                              │
+              ┌───────────────┼────────────────┐
+              ▼               ▼                ▼
+        ENTIDADES         CONTINUIDADE      TIMELINE
+              │               │                │
+              └───────────────┼────────────────┘
+                              ▼
+                 ┌──────────────────────────┐
+                 │   NARRATIVE RUNTIME      │
+                 │ rules / state / events   │
+                 └────────────┬─────────────┘
+                              │
+                              ▼
+                 ┌──────────────────────────┐
+                 │ PROJEÇÕES / DIAGNÓSTICO  │
+                 │ visualizações / revisão  │
+                 └──────────────────────────┘
+```
+
+Por baixo de tudo:
+
+```text
+KERNEL 0
+ENVELOPE
+SLOT
+CAPABILITY
+REGISTRY
+MATCHER
+RESOLVER
+DISPATCHER
+EVENT BUS
+PERMISSION
+LIFECYCLE
+DIAGNOSTICS
+```
+
+---
+
+# 4. REGRA FUNDAMENTAL DE ARQUITETURA
+
+O Lume deve funcionar como:
+
+> **uma plataforma de capacidades desacopladas que colaboram por contratos.**
+
+Nenhum módulo deve depender da implementação concreta de outro módulo.
+
+O fluxo correto é:
+
+```text
+Plugin A
+   ↓
+Capability / Slot
+   ↓
+Envelope
+   ↓
+Dispatcher
+   ↓
+Plugin B
+```
+
+ou:
+
+```text
+Plugin A
+   ↓
+Event
+   ↓
+Event Bus
+   ↓
+Plugin B
+```
+
+Nunca:
+
+```text
+Plugin A
+   ↓
+import "../../plugin-b/lib/..."
+```
+
+Código novo nunca deve ampliar esse padrão de dependência direta.
+
+Código antigo que ainda possui dependência direta deve ser migrado gradualmente.
+
+---
+
+# 5. KERNEL 0
+
+## 5.1 Responsabilidade
+
+Kernel 0 não conhece narrativa.
+
+Não conhece escritor.
+
+Não conhece regra de jogo.
+
+Não conhece personagem.
+
+Não conhece manuscrito.
+
+Não conhece NLP.
+
+Não conhece IA.
+
+Não conhece UI.
+
+Kernel 0 fornece apenas mecanismos:
+
+```text
+plugin lifecycle
+registry
+capability registry
+slot registry
+envelope transport
+dispatcher
+event bus
+permission
+storage isolation
+diagnostics
+logging
+health
+```
+
+---
+
+# 5.2 Kernel 0 NÃO PODE virar um “super serviço”
+
+Evitar:
+
+```text
+Core.narrative()
+Core.editor()
+Core.ai()
+Core.world()
+Core.rules()
+Core.nlp()
+Core.manuscript()
+```
+
+Isso destruiria o isolamento.
+
+Kernel 0 não é um god object.
+
+---
+
+# 5.3 Objetos fundamentais
+
+A arquitetura deve possuir explicitamente:
+
+```text
+Kernel
+Plugin
+Capability
+Requirement
+Slot
+Envelope
+Registry
+Matcher
+Resolver
+Dispatcher
+Event
+Permission
+Context
+Diagnostic
+```
+
+---
+
+# 6. ENVELOPE
+
+Todas as comunicações importantes entre capacidades devem poder trafegar através de um envelope comum.
+
+Modelo conceitual:
+
+```ts
+Envelope<T> {
+  id
+  type
+  version
+
+  source
+  target?
+
+  capability?
+  slot?
+
+  mode?
+
+  correlationId?
+  causationId?
+
+  timestamp
+
+  permissions?
+
+  context?
+
+  payload
+}
+```
+
+O envelope deve permitir:
+
+```text
+request
+response
+event
+command
+query
+proposal
+mutation
+diagnostic
+projection
+analysis
+```
+
+O envelope não deve conter conhecimento específico da narrativa.
+
+---
+
+# 7. SLOT
+
+Capability define:
+
+```text
+o que um plugin oferece
+```
+
+Slot define:
+
+```text
+o que um plugin precisa conectar
+```
+
+Exemplo conceitual:
+
+```text
+NarrativeAnalyzer
+    provides:
+        narrative.analysis@1
+
+ManuscriptRuntime
+    requires slot:
+        narrative-analysis
+```
+
+O plugin consumidor não deve conhecer a implementação real.
+
+O binding acontece pelo kernel.
+
+---
+
+# 8. CAPABILITY
+
+Capabilities devem ser:
+
+```text
+pequenas
+estáveis
+versionadas
+com responsabilidade única
+substituíveis
+testáveis
+```
+
+Evitar:
+
+```text
+NarrativeEngine
+```
+
+como uma gigantesca capability que contém tudo.
+
+Preferir:
+
+```text
+WorldQuery
+WorldMutation
+NarrativeRules
+NarrativeAnalysis
+ReferenceResolver
+Timeline
+Continuity
+Manuscript
+Authoring
+Intent
+Vocabulary
+Diagnostics
+```
+
+A divisão final deve seguir responsabilidade real.
+
+---
+
+# 9. REGISTRY
+
+O registry deve catalogar pelo menos:
+
+```text
+Plugin
+Capability
+Slot
+Handler
+Event
+Command
+View
+Analyzer
+Model
+Policy
+Projection
+```
+
+O registry deve ser consultável sem necessidade de importar implementação.
+
+---
+
+# 10. MATCHER
+
+A arquitetura deve possuir um conceito claro de Matcher.
+
+Porém:
+
+**“um matcher” não significa obrigatoriamente que nunca poderá existir mais de um algoritmo especializado.**
+
+A regra arquitetural correta é:
+
+> Não criar motores paralelos que produzam decisões conflitantes sem um contrato único de resolução.
+
+Para regras narrativas, deve existir uma **fonte canônica de decisão de regra**.
+
+Se o matcher atual precisar ser alterado para suportar o produto-alvo:
+
+```text
+alterar.
+```
+
+Mas então:
+
+```text
+atualizar contrato
+→ atualizar testes
+→ preservar comportamento não afetado
+→ atualizar diagnósticos
+→ atualizar Replay
+→ atualizar DryRun
+→ atualizar documentação
+```
+
+Não preservar uma implementação simplesmente porque uma documentação antiga diz:
+
+```text
+não mexer
+```
+
+---
+
+# 11. MATCHER SEMÂNTICO
+
+Uma classificação como:
+
+```text
+agency
+constraint
+transformation
+```
+
+não deve alterar silenciosamente o resultado da seleção de uma regra.
+
+Porém, isso também é uma decisão revisável.
+
+Se no futuro a arquitetura definir que:
+
+```text
+semântica
+```
+
+passará a participar da resolução:
+
+isso deve ser tratado como:
+
+```text
+mudança de contrato do resolver
+```
+
+e não como uma alteração escondida do matcher.
+
+---
+
+# 12. RESOLVER
+
+Separar responsabilidades sempre que necessário.
+
+Resolver conceitualmente pode ser dividido em:
+
+```text
+CapabilityResolver
+SlotResolver
+ReferenceResolver
+EntityResolver
+IntentResolver
+ContextResolver
+RuleResolver
+```
+
+O objetivo é evitar:
+
+```text
+resolver.ts
+```
+
+como um mecanismo gigantesco.
+
+---
+
+# 13. DISPATCHER
+
+O Dispatcher passa a ser o mecanismo central que decide:
+
+```text
+qual capability
+qual slot
+qual handler
+qual permissão
+qual contexto
+qual modo
+```
+
+Fluxo:
+
+```text
+Envelope
+   ↓
+validate
+   ↓
+permission check
+   ↓
+resolve
+   ↓
+match
+   ↓
+dispatch
+   ↓
+handler
+   ↓
+result
+   ↓
+event / response / diagnostic
+```
+
+O Dispatcher não deve conter lógica narrativa.
+
+---
+
+# 14. REGRA DE ISOLAMENTO
+
+Código novo:
+
+```text
+NÃO importar implementação de outro plugin.
+```
+
+Pode importar:
+
+```text
+contracts
+shared kernel types
+domain-neutral types
+```
+
+Mas não:
+
+```text
+../../other-plugin/lib/foo
+```
+
+Quando uma dependência for necessária:
+
+```text
+criar capability
+ou
+criar slot
+ou
+usar event
+```
+
+Código antigo pode continuar temporariamente.
+
+Mas deve entrar numa lista de:
+
+```text
+LEGACY DIRECT DEPENDENCIES
+```
+
+e ser migrado progressivamente.
+
+---
+
+# 15. WORLD AUTHORITY
+
+O mundo narrativo precisa possuir uma autoridade canônica.
+
+Conceitualmente:
+
+```text
+WorldState
+```
+
+ou
+
+```text
+NarrativeWorld
+```
+
+O mundo é responsável por:
+
+```text
+entities
+tags
+stats
+links
+state
+relationships
+properties
+```
+
+Mas outros sistemas não devem manipular o mundo diretamente.
+
+A escrita deve passar por:
+
+```text
+WorldQuery
+WorldMutation
+MutationGateway
+```
+
+---
+
+# 16. MUTATION GATEWAY
+
+Toda mutação significativa deve passar por uma porta única.
+
+Fluxo:
+
+```text
+AI
+NLP
+Command
+Rule
+Narrative IR
+User Action
+    ↓
+Mutation Proposal
+    ↓
+Validation
+    ↓
+Policy
+    ↓
+MutationGateway
+    ↓
+World
+```
+
+Isso permite:
+
+```text
+preview
+suggest
+approve
+apply
+undo
+replay
+audit
+```
+
+---
+
+# 17. IA NUNCA ALTERA O MUNDO DIRETAMENTE
+
+A IA pode:
+
+```text
+interpretar
+sugerir
+classificar
+resumir
+extrair
+detectar
+propor
+inferir
+```
+
+Mas não deve possuir:
+
+```text
+AI → world.mutate()
+```
+
+O caminho é:
+
+```text
+AI
+→ Narrative IR
+→ validation
+→ policy
+→ mutation proposal
+→ MutationGateway
+→ world
+```
+
+---
+
+# 18. NARRATIVE IR É O CENTRO SEMÂNTICO
+
+O `narrativeIR` existente deve evoluir para ser o principal contrato entre:
+
+```text
+texto
+```
+
+e:
+
+```text
+runtime narrativo
+```
+
+A implementação atual já define operações:
+
+```text
+represent
+describe
+enunciate
+expose
+evaluate
+interiorize
+structure
+focalize
+```
+
+e dimensões para:
+
+```text
+voice
+focalization
+discourse
+semantic roles
+epistemic kinds
+story time
+discourse time
+simulation time
+aspect
+modality
+negation
+```
+
+Preservar essa direção.
+
+---
+
+# 19. NARRATIVE IR NÃO É ECS
+
+Nunca transformar o IR em:
+
+```text
+um saco de componentes
+```
+
+O IR descreve:
+
+```text
+o que a escrita está fazendo
+```
+
+Exemplo:
+
+```text
+"Maria entrou na sala."
+
+pode produzir:
+
+represent
+  actor = Maria
+  action = enter
+  destination = sala
+  aspect = punctual
+  tense = past
+```
+
+Isso não significa que o IR deva virar diretamente:
+
+```text
+EntityComponentSystem
+```
+
+O IR deve permanecer semântico e narrativo.
+
+---
+
+# 20. SOURCE MAP
+
+Toda interpretação textual relevante deve ser rastreável.
+
+Manter a relação:
+
+```text
+texto
+↔ span
+↔ narrative act
+↔ entity
+↔ event
+↔ diagnostic
+↔ mutation
+```
+
+Isso permite:
+
+```text
+clicar no problema
+→ localizar sentença
+→ localizar entidade
+→ localizar evento
+→ localizar regra
+```
+
+A capacidade de rastreamento é central para um editor profissional.
+
+---
+
+# 21. MANUSCRIPT É O PRIMEIRO CIDADÃO
+
+O plugin ou subsistema `manuscript` deve se tornar uma entidade arquitetural central.
+
+Ele deve representar:
+
+```text
+Project
+  → Manuscript
+      → Document
+          → Chapter
+              → Scene
+                  → Block
+                      → Paragraph
+                          → Sentence
+```
+
+Não significa que toda essa árvore precisa existir imediatamente.
+
+Significa que essa é a direção.
+
+---
+
+# 22. NOTEBOOK DEVE EVOLUIR PARA MANUSCRIPT
+
+O notebook existente foi concebido como caderno em linguagem humana e compilador para fontes Lume.
+
+Essa direção continua válida.
+
+O notebook não deve continuar sendo percebido apenas como uma ferramenta secundária.
+
+Ele deve convergir para:
+
+```text
+Authoring / Manuscript subsystem
+```
+
+A escrita humana continua podendo produzir:
+
+```text
+entitiesSource
+rulesSource
+taxonomy
+intent
+semantic structure
+```
+
+mas o autor não precisa ver isso.
+
+---
+
+# 23. REGRA FUNDAMENTAL DO MANUSCRITO
+
+Nunca forçar:
+
+```text
+texto humano
+↓
+DSL técnica
+↓
+autor precisa editar DSL
+```
+
+O fluxo desejado é:
+
+```text
+texto humano
+↓
+interpretação
+↓
+modelo narrativo
+```
+
+A DSL técnica continua existindo, mas como interface avançada.
+
+---
+
+# 24. DOIS MODOS DE AUTORIA
+
+O Lume deve possuir pelo menos:
+
+## Modo Autor
+
+O escritor trabalha com:
+
+```text
+texto
+capítulos
+cenas
+personagens
+timeline
+continuidade
+notas
+assistente
+```
+
+O sistema traduz internamente a escrita.
+
+## Modo Técnico
+
+Usuário avançado pode editar diretamente:
+
+```text
+ON:
+IF:
+DO:
+intent.*
+@entity.stat
+@entity.link
+EMIT
+KNOW
+WAIT
+TICK
+THEN
+LIVE
+```
+
+Esses comandos **não devem ser removidos**.
+
+A existência desses comandos continua sendo parte importante do poder do sistema.
+
+A diferença é:
+
+```text
+Autor comum:
+    quase nunca precisa vê-los.
+
+Autor avançado:
+    pode usá-los conscientemente.
+```
+
+---
+
+# 25. OS DOIS MODOS NÃO PODEM GERAR DOIS MOTORES
+
+Não criar:
+
+```text
+motor do escritor
+```
+
+e:
+
+```text
+motor técnico
+```
+
+Devem ser duas interfaces do mesmo runtime.
+
+```text
+Texto humano
+      ↓
+Narrative IR
+      ↓
+runtime
+
+DSL técnica
+      ↓
+parser técnico
+      ↓
+IR / intent / runtime
+```
+
+---
+
+# 26. NLP
+
+O NLP atual possui a filosofia:
+
+```text
+frase humana
+→ intent.*
+```
+
+Essa ideia continua válida para comandos técnicos ou interativos.
+
+O problema é apenas de escopo.
+
+No novo Lume:
+
+```text
+NLP rápido
+```
+
+serve para:
+
+```text
+comandos
+intenção operacional
+atalhos
+linguagem técnica naturalizada
+```
+
+Enquanto:
+
+```text
+Narrative Language Pipeline
+```
+
+serve para:
+
+```text
+prosa
+narrador
+personagem
+descrição
+interioridade
+discurso
+tempo
+focalização
+referência
+continuidade
+```
+
+Não misturar as duas funções.
+
+---
+
+# 27. PIPELINE NARRATIVO DESEJADO
+
+```text
+Texto do Autor
+      ↓
+Lexer
+      ↓
+Parser
+      ↓
+Análise Linguística
+      ↓
+Análise Narrativa
+      ↓
+Reference Resolution
+      ↓
+Narrative IR
+      ↓
+Context Assembly
+      ↓
+Continuity
+      ↓
+Timeline
+      ↓
+Entity / World projection
+      ↓
+Rules / Events / Knowledge
+      ↓
+Diagnostics
+      ↓
+Authoring UI
+```
+
+---
+
+# 28. ANÁLISE LINGUÍSTICA
+
+A máquina deve progressivamente reconhecer:
+
+```text
+sujeito
+verbo
+objeto
+tempo
+aspecto
+negação
+modalidade
+referência
+voz
+focalização
+estrutura discursiva
+papéis semânticos
+```
+
+Não é necessário implementar tudo em uma única fase.
+
+Mas a arquitetura deve ser capaz de suportar essas dimensões.
+
+---
+
+# 29. REFERENCE RESOLUTION
+
+Esse subsistema é fundamental para um editor literário.
+
+Exemplo:
+
+```text
+João entrou na sala.
+Ele fechou a porta.
+Depois colocou o livro sobre a mesa.
+```
+
+A IA deve poder produzir relações como:
+
+```text
+Ele → João
+a porta → objeto previamente introduzido
+a mesa → entidade contextual
+```
+
+Com estados:
+
+```text
+resolved
+ambiguous
+unresolved
+```
+
+Os diagnósticos já existentes para referências ambíguas e não resolvidas devem ser preservados/evoluídos.
+
+---
+
+# 30. CONTEXT ASSEMBLY
+
+O sistema precisa construir contexto para cada trecho do manuscrito.
+
+Contexto pode reunir:
+
+```text
+personagens ativos
+local atual
+cena atual
+entidades mencionadas
+tempo narrativo
+tempo da história
+relações
+conhecimento
+eventos recentes
+eventos anteriores
+focalização
+voz
+objetivos
+estado físico
+estado emocional quando explicitamente modelado
+objetos presentes
+regras relevantes
+continuidade
+```
+
+Esse contexto deve ser determinístico sempre que possível.
+
+---
+
+# 31. CONTEXTO NÃO É SINÔNIMO DE “MANDAR O DOCUMENTO INTEIRO PARA A IA”
+
+Construir contexto significa:
+
+```text
+selecionar contexto relevante
+```
+
+e não:
+
+```text
+enviar o manuscrito inteiro sempre
+```
+
+Criar:
+
+```text
+Context Index
+Context Resolver
+Context Window
+Context Assembly
+```
+
+---
+
+# 32. AI RUNTIME
+
+A IA deve existir como uma capability substituível:
+
+```text
+AIProvider
+```
+
+ou equivalente.
+
+O resto do Lume não deve depender de:
+
+```text
+OpenAI
+Claude
+Gemini
+DeepSeek
+modelo local
+```
+
+diretamente.
+
+Arquitetura:
+
+```text
+Authoring
+    ↓
+AI Runtime
+    ↓
+Provider Adapter
+    ↓
+Modelo
+```
+
+Trocar modelo não deve exigir reescrever o editor.
+
+---
+
+# 33. IA LOCAL E IA REMOTA
+
+A arquitetura deve suportar:
+
+```text
+local model
+remote model
+mock provider
+rule-based provider
+small model
+large model
+```
+
+sempre atrás do mesmo contrato.
+
+---
+
+# 34. MODOS DO SUBSISTEMA NARRATIVO
+
+A implementação atual define:
+
+```text
+off
+preview
+suggest
+auto
+```
+
+e isso é uma base muito boa para a nova arquitetura.
+
+O comportamento desejado:
+
+### off
+
+Nada é inferido automaticamente.
+
+### preview
+
+Mostra:
+
+```text
+interpretação
+IR
+entidades detectadas
+referências
+consequências
+```
+
+sem aplicar.
+
+### suggest
+
+O sistema propõe:
+
+```text
+criar personagem
+atualizar atributo
+registrar acontecimento
+corrigir referência
+adicionar nota
+marcar inconsistência
+```
+
+O autor decide.
+
+### auto
+
+Mudanças de alta confiança podem ser aplicadas conforme política configurável.
+
+---
+
+# 35. PROJEÇÃO
+
+A configuração existente já possui:
+
+```text
+none
+literary
+simulate
+```
+
+Essa ideia deve evoluir.
+
+Sugestão de semântica:
+
+```text
+none
+    → somente análise
+
+literary
+    → atualiza representação narrativa segura
+
+simulate
+    → projeta consequências no runtime
+```
+
+Não assumir que essas políticas precisam permanecer com os mesmos nomes para sempre.
+
+Mas preservar o conceito:
+
+> **analisar não é o mesmo que aplicar.**
+
+---
+
+# 36. O PRODUTO NÃO DEVE OBRIGAR O ESCRITOR A PENSAR EM “SIMULAÇÃO”
+
+O usuário pode simplesmente escrever:
+
+```text
+João abriu a porta.
+```
+
+O sistema pode internamente atualizar:
+
+```text
+João
+porta
+estado da porta
+evento de abertura
+linha temporal
+causalidade
+```
+
+O autor não precisa conhecer:
+
+```text
+ChangeAST
+RuleEffects
+MutationGateway
+```
+
+---
+
+# 37. RUNTIME NARRATIVO
+
+O antigo `narrative-engine` possui atualmente responsabilidades muito amplas: mundo, taxonomia, query, compilação, `ON/IF/DO`, `interact` e rewind, além das capabilities correspondentes.
+
+Ele deve ser **desmembrado progressivamente**.
+
+Destino conceitual:
+
+```text
+world-runtime
+world-query
+world-mutation
+taxonomy
+rule-runtime
+rule-effects
+event-runtime
+replay
+timeline-runtime
+causality
+```
+
+Não fazer big bang.
+
+Usar migração incremental.
+
+---
+
+# 38. ESTRATÉGIA DE MIGRAÇÃO DO NARRATIVE-ENGINE
+
+Primeiro:
+
+```text
+preservar API
+```
+
+Depois:
+
+```text
+mover implementação interna
+```
+
+Depois:
+
+```text
+introduzir capabilities novas
+```
+
+Depois:
+
+```text
+migrar consumidores
+```
+
+Depois:
+
+```text
+deprecate old facade
+```
+
+Finalmente:
+
+```text
+remover facade quando seguro
+```
+
+Não quebrar tudo de uma vez.
+
+---
+
+# 39. REPLAY
+
+O replay existente é importante.
+
+Hoje a lógica conceitual é:
+
+```text
+initialWorld
++
+triggerIds
+→ replay
+```
+
+Isso deve evoluir para o editor narrativo.
+
+Replay deixa de significar apenas:
+
+```text
+"reexecutar um jogo"
+```
+
+e passa a permitir:
+
+```text
+ver como o estado narrativo chegou até aqui
+```
+
+Exemplo:
+
+```text
+Por que João está ferido?
+```
+
+Resposta estrutural:
+
+```text
+evento A
+→ evento B
+→ consequência C
+→ estado atual
+```
+
+---
+
+# 40. TIMELINE
+
+Criar um subsistema explícito de timeline narrativa.
+
+Deve distinguir pelo menos:
+
+```text
+story time
+discourse time
+simulation time
+```
+
+Essa separação já existe conceitualmente no Narrative IR e deve ser preservada.
+
+---
+
+# 41. CAUSALIDADE
+
+Criar um modelo de:
+
+```text
+Event
+Cause
+Effect
+Dependency
+Precondition
+Consequence
+```
+
+Exemplo:
+
+```text
+João perdeu a espada
+```
+
+pode ter:
+
+```text
+causa:
+  goblin roubou a espada
+
+consequência:
+  João não possui mais a espada
+```
+
+Isso é extremamente importante para revisão narrativa.
+
+---
+
+# 42. CONTINUIDADE
+
+Criar um subsistema capaz de detectar:
+
+```text
+personagem em dois lugares ao mesmo tempo
+objeto inexistente
+personagem morto aparecendo depois
+idade incompatível
+evento fora da ordem
+contradição de estado
+nome inconsistente
+relação impossível
+tempo impossível
+```
+
+A continuidade não deve reescrever o texto automaticamente sem consentimento.
+
+Ela deve primeiro produzir:
+
+```text
+diagnóstico
+```
+
+---
+
+# 43. DIAGNÓSTICOS
+
+Os diagnósticos já possuem fases:
+
+```text
+lexical
+syntactic
+semantic
+referential
+narrative
+epistemic
+continuity
+execution
+validation
+```
+
+Essa taxonomia deve ser mantida ou evoluída, pois é adequada a um editor narrativo.
+
+---
+
+# 44. DIAGNÓSTICO NÃO É ERRO DE COMPILAÇÃO APENAS
+
+No Lume novo, diagnóstico pode significar:
+
+```text
+erro
+aviso
+inconsistência
+ambiguidade
+sugestão
+observação
+oportunidade de revisão
+```
+
+Exemplo:
+
+```text
+"Ela entrou novamente na casa."
+```
+
+Sistema:
+
+```text
+warning:
+referência "Ela" ambígua.
+Candidatas: Maria, Ana.
+```
+
+---
+
+# 45. CONTEXTO DA CENA
+
+Cada cena deve poder possuir contexto próprio:
+
+```text
+setting
+characters
+location
+time
+focalization
+voice
+goals
+knowledge
+active entities
+recent events
+```
+
+A cena deve ser uma unidade de análise útil.
+
+---
+
+# 46. PERSONAGENS
+
+Criar um subsistema de Character.
+
+Ele deve permitir:
+
+```text
+identity
+aliases
+attributes
+relationships
+knowledge
+memory
+goals
+states
+appearance
+voice
+history
+arc
+```
+
+Não criar um “Character Engine gigantesco”.
+
+Usar capabilities.
+
+---
+
+# 47. ARC
+
+Uma ferramenta para escritor precisa acompanhar:
+
+```text
+estado inicial
+eventos importantes
+mudanças
+conflitos
+decisões
+consequências
+estado final
+```
+
+Isso pode alimentar:
+
+```text
+character arc
+plot review
+continuity
+assistant
+```
+
+---
+
+# 48. KNOWLEDGE
+
+A distinção atual entre:
+
+```text
+information
+```
+
+e:
+
+```text
+knowledge
+```
+
+deve permanecer conceitualmente correta.
+
+Uma informação existir no mundo não significa que um personagem saiba dela.
+
+Isso é importante para:
+
+```text
+mistério
+suspense
+dramatic irony
+focalization
+```
+
+---
+
+# 49. FOCALIZAÇÃO
+
+A focalização deixa de ser apenas um campo técnico.
+
+Ela passa a ser uma propriedade importante do manuscrito.
+
+Exemplo:
+
+```text
+POV:
+Maria
+```
+
+O sistema pode verificar:
+
+```text
+Maria conhece esta informação?
+```
+
+Se não:
+
+```text
+warning epistemológico
+```
+
+---
+
+# 50. VOZ
+
+A distinção:
+
+```text
+narrator
+character
+group
+document
+external
+unknown
+```
+
+deve permanecer disponível para análise narrativa.
+
+---
+
+# 51. DISCURSO
+
+O sistema deve reconhecer gradualmente:
+
+```text
+narration
+description
+direct speech
+indirect speech
+thought
+free indirect discourse
+exposition
+commentary
+```
+
+Isso permite ferramentas literárias reais.
+
+---
+
+# 52. MANUSCRIPT UI
+
+A UX deve ser redesenhada em torno de algo como:
+
+```text
+┌─────────────────────────────────────────────┐
+│ Lume                         Assistente     │
+├─────────────┬─────────────────┬─────────────┤
+│ Estrutura   │                 │ Contexto    │
+│             │   MANUSCRITO    │ Personagem  │
+│ Capítulos   │                 │ Cena        │
+│ Cenas       │   texto         │ Timeline    │
+│ Notas       │   texto         │ Relações    │
+│ Personagens │   texto         │ Diagnóstico │
+│             │                 │             │
+├─────────────┴─────────────────┴─────────────┤
+│ Revisão / Continuidade / Histórico          │
+└─────────────────────────────────────────────┘
+```
+
+A arquitetura interna continua complexa.
+
+A interface não.
+
+---
+
+# 53. PRINCÍPIO DE UX
+
+O escritor deve pensar:
+
+```text
+"estou escrevendo"
+```
+
+e não:
+
+```text
+"estou programando um agente".
+```
+
+A aplicação deve esconder:
+
+```text
+ECS
+plugin registry
+capabilities
+dispatcher
+envelopes
+matcher
+resolver
+dependency graph
+```
+
+exceto no modo técnico.
+
+---
+
+# 54. COMMAND SURFACE
+
+O CommandBar atual não deve desaparecer.
+
+Ele deve evoluir para:
+
+```text
+Command Surface
+```
+
+Com dois contextos:
+
+```text
+autor
+técnico
+```
+
+No modo autor:
+
+```text
+Criar personagem
+Mostrar linha do tempo
+Ver problemas desta cena
+Explicar esta inconsistência
+Revisar diálogo
+```
+
+No modo técnico:
+
+```text
+intent.look
+intent.talk.@joao
+@joao.hp-10
+DO: EMIT porta_aberta
+```
+
+---
+
+# 55. DSL TÉCNICA
+
+Preservar a linguagem Lume existente quando possível.
+
+Exemplos atualmente documentados:
+
+```text
+ON: @porta
+IF: @jogador.intent=open
+DO: @porta.aberta
+
+CREATE @fumaca.event.current_location=$
+
+DESTROY @trava
+
+EMIT porta_aberta
+
+KNOW @jogador.@porta
+
+INTENT @goblin.attack.@jogador
+
+WAIT 3.@fuse_porta
+
+TICK
+
+THEN @corredor
+
+LIVE
+
+LIVE @goblin
+```
+
+Também continuam válidos conceitos como:
+
+```text
+@jogador.hp-10
+$.hp-@jogador.force
+intent.a; intent.b
+```
+
+O projeto documenta deliberadamente essa linguagem e sua distinção em relação a abordagens de Elm/Allegory.
+
+---
+
+# 56. NÃO REMOVER OS COMANDOS TÉCNICOS
+
+Mesmo que o foco passe para escritores:
+
+```text
+intent.*
+ON
+IF
+DO
+EMIT
+KNOW
+WAIT
+TICK
+THEN
+LIVE
+```
+
+continuam fazendo sentido.
+
+Eles serão:
+
+```text
+advanced authoring API
+```
+
+e:
+
+```text
+debug / precise control API
+```
+
+---
+
+# 57. REGRAS DE DOMÍNIO
+
+Não transformar o sistema em uma floresta de engines:
+
+```text
+FearEngine
+AttackEngine
+ConversationEngine
+ConstraintEngine
+EmotionEngine
+LifecycleEngine
+CombatEngine
+```
+
+Preferir:
+
+```text
+primitives
++
+capabilities
++
+rules
++
+data
++
+narrative semantics
+```
+
+Mas isso também não significa proibir novos subsistemas reais.
+
+Um novo subsistema é válido quando possui:
+
+```text
+responsabilidade própria
+contrato claro
+necessidade real
+fronteira independente
+```
+
+---
+
+# 58. KITS
+
+Os kits existentes:
+
+```text
+adventure
+social
+channel
+combat
+prose
+```
+
+não devem desaparecer automaticamente.
+
+Devem ser classificados como:
+
+```text
+domain packs
+```
+
+ou:
+
+```text
+optional narrative capabilities
+```
+
+O autor não precisa ativar “combate” para escrever um romance.
+
+Se uma obra usa violência, isso pode simplesmente existir como narrativa.
+
+O `kit-combat` deve ser necessário apenas quando o autor quer **modelar mecanicamente** isso.
+
+---
+
+# 59. REPOSICIONAMENTO DOS KITS
+
+Exemplo:
+
+```text
+CombatKit
+```
+
+não significa:
+
+```text
+Lume é jogo de combate.
+```
+
+Significa:
+
+```text
+há uma capability opcional para modelar sistemas de combate.
+```
+
+O mesmo vale para:
+
+```text
+SocialKit
+ChannelKit
+AdventureKit
+Process
+Life
+```
+
+---
+
+# 60. PLAY-SKIN
+
+A play-skin não precisa ser removida.
+
+Deve ser tratada como:
+
+```text
+Narrative Simulation View
+```
+
+ou:
+
+```text
+Interactive Preview
+```
+
+Ela é útil para:
+
+```text
+testar regras
+simular cenas
+ver consequências
+experimentar diálogos
+```
+
+Mas não deve ser a Home principal.
+
+---
+
+# 61. DRY-RUN
+
+Dry-run é extremamente valioso para escritores.
+
+Transformar:
+
+```text
+"posso abrir esta porta?"
+```
+
+em uma ferramenta de:
+
+```text
+"o que aconteceria se..."
+```
+
+Isso pode ser usado para:
+
+```text
+previsão narrativa
+análise de consequência
+teste de continuidade
+teste de regra
+```
+
+A implementação atual garante que DryRun não muta o mundo vivo e não executa determinadas cadeias de efeitos. Isso deve ser preservado enquanto essa semântica continuar desejável.
+
+---
+
+# 62. MUDANÇA IMPORTANTE SOBRE AS INVARIANTES
+
+Quando uma regra antiga disser:
+
+```text
+NÃO ALTERAR X
+```
+
+a IA deve perguntar internamente:
+
+```text
+X é:
+A) princípio arquitetural ainda necessário?
+B) proteção temporária de uma implementação antiga?
+C) workaround?
+D) dependência de uma fase anterior?
+E) decisão que o novo produto tornou obsoleta?
+```
+
+Somente A deve ser tratada como forte.
+
+B, C, D e E podem ser refatoradas.
+
+---
+
+# 63. PROCESSO PARA ALTERAR UMA INVARIANTE
+
+Criar uma pequena decisão arquitetural:
+
+```text
+ADR
+```
+
+com:
+
+```text
+INVARIANTE ANTIGA
+MOTIVO ORIGINAL
+PROBLEMA ATUAL
+NOVA NECESSIDADE
+NOVA REGRA
+IMPACTOS
+PLANO DE MIGRAÇÃO
+TESTES
+```
+
+Não esconder alterações de contratos.
+
+---
+
+# 64. EXEMPLO: MATCHER
+
+Antiga:
+
+```text
+Não alterar findMatchingRule.
+```
+
+Nova decisão possível:
+
+```text
+findMatchingRule continua como autoridade semântica,
+mas sua implementação interna será substituída por
+RuleResolver + RuleMatcher + indexed candidate selection.
+```
+
+Nesse caso:
+
+```text
+API pode ser preservada
+implementação pode mudar
+```
+
+---
+
+# 65. REGRA DE COMPATIBILIDADE
+
+Toda grande mudança deve responder:
+
+```text
+O comportamento antigo precisa continuar?
+```
+
+Classificar:
+
+```text
+PRESERVE
+MIGRATE
+DEPRECATE
+REPLACE
+REMOVE
+```
+
+Nunca fazer:
+
+```text
+alterar tudo sem classificação
+```
+
+---
+
+# 66. MAPA DOS PLUGINS ATUAIS
+
+A arquitetura atual possui um conjunto amplo de plugins, incluindo:
+
+```text
+narrative-engine
+project-cloud
+ide-state
+intent-engine
+rule-semantics
+world-events
+knowledge
+agency
+spatial
+senses
+kit-adventure
+kit-social
+kit-channel
+kit-combat
+kit-prose
+sift
+dry-run
+process
+chain
+life
+vocab
+nlp
+notebook
+ide-ui
+ide-guide
+ide-settings
+entity-extras
+multiplayer
+ext-host
+```
+
+O bootstrap atual registra/ativa esse ecossistema diretamente.
+
+Isso é uma fotografia do estado atual.
+
+Não deve ser tratado automaticamente como arquitetura final.
+
+---
+
+# 67. BOOTSTRAP ALVO
+
+O bootstrap deve evoluir de:
+
+```text
+lista manual gigantesca
+```
+
+para algo próximo de:
+
+```text
+Kernel
+→ registries
+→ manifest discovery
+→ validation
+→ dependency graph
+→ capability graph
+→ slot binding
+→ permission graph
+→ core infrastructure
+→ authoring infrastructure
+→ language
+→ narrative runtime
+→ optional packs
+→ UI
+```
+
+---
+
+# 68. BOOT NÃO DEVE CONHECER DETALHES DE DOMÍNIO
+
+Evitar:
+
+```ts
+activateNarrativeEngine()
+activateSocialKit()
+activateCombatKit()
+...
+```
+
+como única forma de descoberta.
+
+Preferir:
+
+```text
+plugin descriptors
++
+resolver
++
+dependency graph
+```
+
+Mesmo que durante a migração o bootstrap antigo continue temporariamente.
+
+---
+
+# 69. CURRENT CORE
+
+O Core atual já funciona como uma fachada de microkernel e coordena:
+
+```text
+EventBus
+PluginRegistry
+CapabilityRegistry
+ErrorBoundary
+```
+
+e expõe operações para registrar, ativar, consultar plugins e capabilities.
+
+Essa é uma fundação aproveitável.
+
+Não jogar fora sem necessidade.
+
+---
+
+# 70. CURRENT CAPABILITY REGISTRY
+
+O `CapabilityRegistry` atual registra:
+
+```text
+name
+version
+provider
+api
+```
+
+e disponibiliza a API diretamente.
+
+Esse ponto deve evoluir para uma abstração mais forte de:
+
+```text
+capability
+contract
+proxy
+permissions
+version
+binding
+slot
+```
+
+Não expor automaticamente a implementação concreta quando isso comprometer isolamento.
+
+---
+
+# 71. CURRENT PLUGIN CONTRACT
+
+O contrato existente já possui:
+
+```text
+IPluginManifest
+IPlugin
+PluginFactory
+PluginContext
+permissions
+capabilities
+requires
+hooks
+```
+
+Essa infraestrutura deve ser reaproveitada.
+
+---
+
+# 72. PLUGIN MANIFEST ALVO
+
+Evoluir gradualmente para algo como:
+
+```ts
+PluginManifest {
+
+  identity
+
+  version
+
+  provides[]
+
+  requires[]
+
+  slots[]
+
+  events {
+    emits[]
+    consumes[]
+  }
+
+  commands[]
+
+  views[]
+
+  policies[]
+
+  permissions
+
+  lifecycle
+
+  compatibility
+
+}
+```
+
+---
+
+# 73. CONTEXT.md DOS PLUGINS
+
+Todo plugin deve manter:
+
+```text
+CONTEXT.md
+```
+
+contendo:
+
+```text
+owner
+purpose
+public capabilities
+dependencies
+events
+files importantes
+não fazer
+fora de escopo
+```
+
+A IA deve ler:
+
+```text
+EFICIENCIA
+MAPA
+ROTEAMENTO
+plugin CONTEXT
+manifest
+types
+implementation
+```
+
+nessa ordem quando estiver investigando o projeto. O próprio projeto estabelece essa estratégia de busca para reduzir exploração desnecessária.
+
+---
+
+# 74. CONTEXT MACHINE DE CADA PLUGIN
+
+Cada plugin novo deve responder:
+
+```text
+O que ele possui?
+O que ele fornece?
+O que ele precisa?
+Quem pode falar com ele?
+O que ele nunca deve fazer?
+Onde está sua implementação?
+Quais eventos produz?
+Quais eventos consome?
+Qual estado é dele?
+Qual estado não é dele?
+```
+
+---
+
+# 75. MIGRAÇÃO DO IDE-STATE
+
+O `ide-state` atual concentra muito orchestration e possui imports diretos para várias partes do sistema.
+
+Isso deve ser progressivamente dividido em:
+
+```text
+workspace-state
+authoring-state
+manuscript-state
+session-state
+editor-state
+selection-state
+```
+
+e seus accessos devem usar capabilities.
+
+Não tentar reescrever tudo em uma etapa.
+
+---
+
+# 76. MIGRAÇÃO DO IDE-UI
+
+O `ide-ui` deve permanecer como dono da UI.
+
+Mas sua responsabilidade muda de:
+
+```text
+UI de IDE de ferramenta técnica
+```
+
+para:
+
+```text
+UI do estúdio de autoria narrativa
+```
+
+---
+
+# 77. COMPONENTES PRINCIPAIS DO NOVO UI
+
+Prioridade:
+
+```text
+ManuscriptEditor
+ChapterTree
+SceneTree
+CharacterPanel
+TimelinePanel
+ContinuityPanel
+ContextPanel
+AssistantPanel
+DiagnosticPanel
+EntityInspector
+TechnicalMode
+HistoryPanel
+```
+
+---
+
+# 78. UI TÉCNICA CONTINUA EXISTINDO
+
+Componentes como:
+
+```text
+CommandBar
+PreviewPane
+BeatDebug
+WorldIndex
+WorldMap
+Skein
+```
+
+não precisam ser destruídos.
+
+Eles devem ser reposicionados como:
+
+```text
+Advanced
+Developer
+Simulation
+Analysis
+Technical
+```
+
+---
+
+# 79. HOME DO LUME
+
+A tela inicial deve comunicar:
+
+```text
+comece a escrever
+```
+
+não:
+
+```text
+comece a configurar um jogo.
+```
+
+Exemplo conceitual:
+
+```text
+Novo Manuscrito
+Abrir Manuscrito
+Continuar escrita
+Personagens
+Projetos recentes
+```
+
+---
+
+# 80. O QUE O ESCRITOR DEVE CONSEGUIR SEM DSL
+
+Sem escrever:
+
+```text
+ON
+IF
+DO
+intent
+```
+
+o autor deve conseguir:
+
+```text
+criar personagem
+descrever personagem
+definir relação
+escrever diálogo
+mencionar local
+registrar acontecimento
+criar cena
+adicionar flashback
+mudar focalização
+estabelecer fato
+estabelecer crença
+criar evento
+registrar consequência
+```
+
+---
+
+# 81. EXEMPLO DO FLUXO ALVO
+
+Autor escreve:
+
+```text
+João entrou na cozinha.
+Maria já estava lá, esperando por ele.
+— Precisamos conversar — disse ela.
+```
+
+Lume pode inferir:
+
+```text
+Entity:
+João
+
+Entity:
+Maria
+
+Place:
+cozinha
+
+Event:
+João entra na cozinha
+
+Relation:
+João ↔ Maria
+
+Dialogue:
+Maria → João
+
+Scene state:
+João present
+Maria present
+
+Discourse:
+direct speech
+
+Continuity:
+valid
+
+Knowledge:
+uncertain
+
+Timeline:
+ordered
+```
+
+Tudo isso sem exigir comandos técnicos.
+
+---
+
+# 82. SUGESTÕES
+
+No modo `suggest`, o sistema pode sugerir:
+
+```text
+"João" parece ser uma nova personagem.
+Criar personagem?
+```
+
+ou:
+
+```text
+"ela" pode se referir a Maria.
+Confirmar?
+```
+
+ou:
+
+```text
+A cena anterior diz que Maria estava no hospital.
+Quer registrar uma transição?
+```
+
+---
+
+# 83. AUTO
+
+No modo `auto`, apenas mudanças com política de confiança adequada podem ocorrer.
+
+Os thresholds atuais são apenas valores iniciais; a documentação diz explicitamente que podem precisar ser recalibrados usando dados reais.
+
+Portanto:
+
+```text
+threshold != dogma
+```
+
+Eles são política configurável.
+
+---
+
+# 84. EDIÇÃO NÃO PODE SER DESTRUTIVA
+
+A IA nunca deve silenciosamente alterar um manuscrito do autor.
+
+Mudanças automáticas devem ser:
+
+```text
+rastreáveis
+reversíveis
+auditáveis
+visualizáveis
+desfazíveis
+```
+
+---
+
+# 85. HISTÓRICO
+
+Criar histórico de:
+
+```text
+text change
+semantic change
+entity change
+world change
+rule change
+AI proposal
+user approval
+```
+
+Não apenas:
+
+```text
+Ctrl+Z textual.
+```
+
+---
+
+# 86. DIFF NARRATIVO
+
+O editor deve futuramente conseguir mostrar:
+
+```text
+Texto alterado
+
++
+Entidade adicionada
+
++
+Estado alterado
+
++
+Evento criado
+```
+
+ou:
+
+```text
+esta frase causou estas alterações.
+```
+
+---
+
+# 87. IMPACT ANALYSIS
+
+Criar:
+
+```text
+ImpactAnalysis
+```
+
+capaz de responder:
+
+```text
+Se eu mudar esta entidade, o que será afetado?
+```
+
+Exemplo:
+
+```text
+remover personagem X
+
+→ 14 referências
+→ 3 cenas
+→ 2 relações
+→ 1 evento
+→ 4 regras
+```
+
+Esse tipo de ferramenta é muito mais importante para escritores do que conceitos tradicionais de engine.
+
+---
+
+# 88. CONTINUIDADE INTERESSA MAIS QUE SCORE
+
+Na experiência padrão do escritor:
+
+```text
+score
+turn
+HP
+combat
+```
+
+devem ser secundários.
+
+No lugar deles:
+
+```text
+continuity
+timeline
+character state
+plot state
+scene state
+```
+
+---
+
+# 89. O QUE FAZER COM SCORE / TURN
+
+Não necessariamente remover.
+
+Pode continuar em:
+
+```text
+simulation view
+```
+
+ou:
+
+```text
+technical view
+```
+
+---
+
+# 90. O QUE FAZER COM MULTIPLAYER
+
+O `multiplayer` não deve ser removido automaticamente.
+
+Mas deve deixar de ser assumido como prioridade central.
+
+Pode evoluir para:
+
+```text
+collaborative authoring
+```
+
+em vez de:
+
+```text
+multiplayer game
+```
+
+---
+
+# 91. EXT-HOST
+
+O plugin externo atual deve continuar sendo tratado como área isolada.
+
+O mecanismo existente de execução com `new Function` não deve ser confundido com uma sandbox de segurança forte.
+
+Portanto:
+
+```text
+ext-host
+```
+
+deve ser tratado como:
+
+```text
+extensibility boundary
+```
+
+e não como:
+
+```text
+security boundary perfeita
+```
+
+A arquitetura de plugins externos deve ser endurecida apenas quando isso virar requisito explícito.
+
+---
+
+# 92. REGRAS DE SEGURANÇA ARQUITETURAL
+
+Código externo nunca deve ganhar automaticamente:
+
+```text
+world mutation
+storage unrestricted
+network unrestricted
+AI unrestricted
+```
+
+Capacidades devem ser concedidas explicitamente.
+
+---
+
+# 93. AUTORIA COMO SISTEMA DE CAPACIDADES
+
+O escritor deve poder ter:
+
+```text
+Narrative Authoring
+Language Analysis
+Character Analysis
+Timeline
+Continuity
+Knowledge
+Causality
+Assistant
+Technical Commands
+Simulation
+```
+
+como capabilities internas.
+
+---
+
+# 94. ARQUITETURA ALVO DE PLUGINS
+
+Uma decomposição desejada, não obrigatoriamente final, é:
+
+```text
+kernel-0
+
+platform:
+  registry
+  event
+  dispatch
+  diagnostics
+  permissions
+
+authoring:
+  manuscript
+  authoring-runtime
+  workspace
+  command-surface
+
+language:
+  vocab
+  prose-nlu
+  narrative-parser
+  narrative-analysis
+  narrative-ir
+  source-map
+  reference-resolution
+
+narrative:
+  world-runtime
+  world-query
+  world-mutation
+  rules
+  rule-effects
+  taxonomy
+  knowledge
+  events
+  timeline
+  causality
+  continuity
+  character
+  discourse
+  style
+  setup-payoff
+
+ai:
+  ai-runtime
+  context-assembly
+  suggestion-policy
+
+tools:
+  dry-run
+  replay
+  impact-analysis
+  diagnostics
+  sift
+
+ui:
+  ide-ui
+```
+
+Isso é uma direção arquitetural.
+
+Não é obrigatório implementar todas essas pastas exatamente assim antes de avaliar o código real.
+
+---
+
+# 95. REGRA DE GRANULARIDADE
+
+Não criar plugins simplesmente porque uma palavra parece importante.
+
+Criar um plugin quando:
+
+```text
+há fronteira de responsabilidade
+```
+
+Não:
+
+```text
+emotion-plugin
+chair-plugin
+door-plugin
+dialogue-plugin
+```
+
+simplesmente por nomenclatura.
+
+---
+
+# 96. ENTITY
+
+Entidade deve continuar sendo uma abstração simples.
+
+A arquitetura documentada já trabalha com:
+
+```text
+tags
+stats
+links
+extra
+```
+
+e IDs canônicos.
+
+Não converter automaticamente entidade em ECS apenas porque isso parece arquiteturalmente sofisticado.
+
+---
+
+# 97. RECONHECER O LEGADO
+
+A base atual contém:
+
+```text
+arquitetura microkernel
+plugins
+capabilities
+event bus
+narrative engine
+intent engine
+NLP
+notebook
+narrative IR
+dry-run
+replay
+world model
+kits
+UI
+```
+
+O problema principal não é ausência total de arquitetura.
+
+É:
+
+```text
+responsabilidades sobrepostas
+acoplamentos históricos
+fronteiras imprecisas
+experiência de produto orientada pelo legado
+```
+
+A IA deve **evoluir a fundação existente**, não descartá-la por estética.
+
+---
+
+# 98. ESTRATÉGIA DE REFACTOR
+
+Usar:
+
+```text
+Strangler Migration
+```
+
+Sempre que possível.
+
+Padrão:
+
+```text
+LEGACY
+  ↓
+ADAPTER
+  ↓
+NEW CONTRACT
+  ↓
+NEW IMPLEMENTATION
+```
+
+Depois:
+
+```text
+LEGACY
+  ↓
+deprecate
+  ↓
+remove
+```
+
+---
+
+# 99. NÃO FAZER BIG-BANG
+
+Nunca realizar simultaneamente:
+
+```text
+novo kernel
++
+novo editor
++
+novo parser
++
+novo runtime
++
+novo AI
++
+novo world
+```
+
+sem ponte.
+
+Isso é alto risco.
+
+Fazer por camadas.
+
+---
+
+# 100. ORDEM MACRO DE IMPLEMENTAÇÃO
+
+A ordem recomendada é:
+
+```text
+FASE 0
+baseline e testes
+
+FASE 1
+Kernel 0
+
+FASE 2
+Envelope / Slot / Capability / Registry
+
+FASE 3
+Resolver / Matcher / Dispatcher
+
+FASE 4
+isolamento dos plugins
+
+FASE 5
+World Query / Mutation Gateway
+
+FASE 6
+Narrative IR
+
+FASE 7
+Manuscript / Authoring Runtime
+
+FASE 8
+Reference Resolution / Context Assembly
+
+FASE 9
+Timeline / Causality / Continuity
+
+FASE 10
+AI Runtime
+
+FASE 11
+Authoring UI
+
+FASE 12
+Technical Mode
+
+FASE 13
+Simulation / Dry-run / Replay
+
+FASE 14
+migração dos kits
+
+FASE 15
+desligamento gradual do legado
+```
+
+---
+
+# 101. FASE 0 — BASELINE
+
+Antes de qualquer grande refatoração:
+
+```text
+rodar testes
+catalogar falhas
+catalogar capacidades
+catalogar plugins
+catalogar dependências
+catalogar eventos
+catalogar imports diretos
+catalogar APIs públicas
+catalogar invariantes
+```
+
+Criar:
+
+```text
+ARCHITECTURE_BASELINE.md
+```
+
+---
+
+# 102. BASELINE NÃO DEVE SER “LIMPAR O CÓDIGO”
+
+Objetivo:
+
+```text
+saber onde estamos.
+```
+
+Não:
+
+```text
+refatorar tudo já.
+```
+
+---
+
+# 103. FASE 1 — KERNEL 0
+
+Implementar:
+
+```text
+Envelope
+Slot
+Dispatcher
+permission model
+capability binding
+```
+
+sem mexer no domínio narrativo ainda.
+
+---
+
+# 104. FASE 2 — REGISTRY
+
+Tornar explícitos:
+
+```text
+PluginRegistry
+CapabilityRegistry
+SlotRegistry
+HandlerRegistry
+EventRegistry
+CommandRegistry
+```
+
+---
+
+# 105. FASE 3 — DISPATCH
+
+Criar o fluxo:
+
+```text
+resolve
+→ authorize
+→ dispatch
+```
+
+com:
+
+```text
+correlationId
+causationId
+diagnostics
+```
+
+---
+
+# 106. FASE 4 — ISOLAMENTO
+
+Migrar primeiro plugins pequenos.
+
+Exemplo:
+
+```text
+dry-run
+sift
+process
+chain
+life
+```
+
+Depois:
+
+```text
+vocab
+nlp
+intent
+knowledge
+spatial
+senses
+```
+
+Depois:
+
+```text
+narrative-engine
+ide-state
+```
+
+---
+
+# 107. FASE 5 — WORLD
+
+Criar:
+
+```text
+WorldQuery
+WorldMutation
+MutationGateway
+```
+
+Migrar o acesso direto.
+
+---
+
+# 108. FASE 6 — NARRATIVE IR
+
+Transformar IR em contrato oficial da linguagem narrativa.
+
+Criar:
+
+```text
+versioning
+validator
+source-map
+diagnostics
+projection
+```
+
+A evolução do schema deve manter versionamento explícito; o schema atual já estabelece `narrativeIR@1.0` e a necessidade de bump para evoluções incompatíveis.
+
+---
+
+# 109. FASE 7 — MANUSCRIPT
+
+Criar a camada:
+
+```text
+Document
+Chapter
+Scene
+Block
+Paragraph
+Sentence
+```
+
+e conectar ao estado atual.
+
+---
+
+# 110. FASE 8 — REFERENCE + CONTEXT
+
+Adicionar:
+
+```text
+reference resolution
+context assembly
+entity memory
+scene context
+character context
+```
+
+---
+
+# 111. FASE 9 — TIMELINE
+
+Adicionar:
+
+```text
+story timeline
+event graph
+causality
+continuity
+```
+
+---
+
+# 112. FASE 10 — AI
+
+Somente depois dos contratos estarem claros:
+
+```text
+AI Runtime
+Provider
+Prompt builder
+Context assembly
+AI response parser
+IR conversion
+Suggestion engine
+```
+
+---
+
+# 113. FASE 11 — NOVO EDITOR
+
+Redesenhar a UI ao redor de:
+
+```text
+Manuscript
+```
+
+e não:
+
+```text
+Game / Player
+```
+
+---
+
+# 114. FASE 12 — MODO TÉCNICO
+
+Dar acesso explícito a:
+
+```text
+DSL
+debug
+commands
+rules
+world
+events
+simulation
+```
+
+sem contaminar a interface padrão.
+
+---
+
+# 115. FASE 13 — SIMULAÇÃO
+
+Reintegrar:
+
+```text
+Dry-run
+Play Preview
+Replay
+Skein
+Beat Debug
+```
+
+como ferramentas de análise narrativa.
+
+---
+
+# 116. FASE 14 — KITS
+
+Converter kits em:
+
+```text
+optional packs
+```
+
+e verificar quais precisam realmente existir.
+
+---
+
+# 117. FASE 15 — REMOÇÃO DO LEGADO
+
+Só remover quando houver:
+
+```text
+replacement
+parity
+migration
+tests
+```
+
+Nunca remover por estética.
+
+---
+
+# 118. TESTE DE CADA MIGRAÇÃO
+
+Toda alteração grande precisa de:
+
+```text
+unit test
+integration test
+contract test
+migration test
+regression test
+```
+
+quando aplicável.
+
+---
+
+# 119. CONTRATO É MAIS IMPORTANTE QUE IMPLEMENTAÇÃO
+
+Para cada capability definir:
+
+```text
+input
+output
+errors
+version
+permissions
+side effects
+events
+```
+
+A IA deve poder substituir a implementação sem alterar consumidores.
+
+---
+
+# 120. EVENTOS
+
+Eventos devem ser usados para:
+
+```text
+facts
+notifications
+lifecycle
+cross-plugin reactions
+```
+
+Não para tudo.
+
+Não transformar o sistema em:
+
+```text
+event spaghetti
+```
+
+---
+
+# 121. EVENTO VS CAPABILITY
+
+Usar:
+
+```text
+Capability
+```
+
+quando se quer:
+
+```text
+consultar
+executar
+obter serviço
+```
+
+Usar:
+
+```text
+Event
+```
+
+quando se quer:
+
+```text
+notificar
+reagir
+propagar fato
+```
+
+---
+
+# 122. COMMAND VS INTENT
+
+Distinguir:
+
+```text
+command
+```
+
+de:
+
+```text
+intent
+```
+
+Command:
+
+```text
+o autor solicita uma operação ao sistema.
+```
+
+Intent:
+
+```text
+descrição da intenção que será resolvida pelo runtime.
+```
+
+Os dois podem compartilhar infraestrutura, mas não devem ser semanticamente confundidos.
+
+---
+
+# 123. RULE VS NARRATIVE ACT
+
+Rule:
+
+```text
+comportamento operacional
+```
+
+Narrative Act:
+
+```text
+operação de escrita/narração
+```
+
+Exemplo:
+
+```text
+"Maria entrou na sala."
+```
+
+pode virar:
+
+```text
+Narrative Act
+```
+
+e gerar uma mudança de estado.
+
+A mudança de estado não transforma o texto inteiro numa “regra”.
+
+---
+
+# 124. AUTHORING RUNTIME
+
+Criar uma camada que coordene:
+
+```text
+manuscript
+analysis
+IR
+context
+suggestions
+projection
+diagnostics
+history
+```
+
+Ela é o equivalente narrativo do runtime de autoria.
+
+Não deve ser colocada no Kernel 0.
+
+---
+
+# 125. MANUSCRIPT ENGINE VS NARRATIVE ENGINE
+
+Separar claramente:
+
+```text
+Manuscript Engine
+```
+
+cuida de:
+
+```text
+documentos
+texto
+estrutura
+edição
+seleção
+versionamento
+```
+
+Enquanto:
+
+```text
+Narrative Runtime
+```
+
+cuida de:
+
+```text
+mundo
+eventos
+regras
+estado
+consequências
+```
+
+Eles cooperam.
+
+Não se fundem.
+
+---
+
+# 126. PRODUCT LAYER
+
+Criar mentalmente quatro níveis:
+
+```text
+LEVEL 0
+Kernel
+
+LEVEL 1
+Platform
+
+LEVEL 2
+Narrative Runtime
+
+LEVEL 3
+Authoring Product
+```
+
+O usuário enxerga principalmente:
+
+```text
+LEVEL 3
+```
+
+---
+
+# 127. O PRODUTO DEVE PARECER SIMPLES MESMO SENDO COMPLEXO
+
+Internamente:
+
+```text
+plugins
+capabilities
+resolver
+dispatcher
+IR
+world
+timeline
+AI
+```
+
+Externamente:
+
+```text
+escrever
+organizar
+entender
+revisar
+explorar
+corrigir
+```
+
+---
+
+# 128. AI ASSISTANT
+
+O Assistente deve poder responder:
+
+```text
+Quem é este personagem?
+O que ele sabe?
+Onde ele estava?
+O que aconteceu nesta cena?
+Por que isso está inconsistente?
+Que eventos levaram a isso?
+Quais personagens aparecem pouco?
+Quem mudou mais?
+Há algum foreshadowing sem payoff?
+```
+
+A arquitetura deve ser capaz de responder isso através dos índices e modelos internos.
+
+---
+
+# 129. SETUP / PAYOFF
+
+Adicionar posteriormente:
+
+```text
+setup
+foreshadowing
+promise
+payoff
+unresolved thread
+```
+
+Exemplo:
+
+```text
+Capítulo 2:
+"Maria viu uma chave estranha."
+```
+
+Depois:
+
+```text
+Capítulo 17:
+nenhum uso.
+```
+
+Sistema:
+
+```text
+possível thread narrativa sem resolução.
+```
+
+---
+
+# 130. STYLE
+
+Criar capability para:
+
+```text
+style analysis
+```
+
+mas nunca alterar o estilo do autor automaticamente por padrão.
+
+Pode analisar:
+
+```text
+repetição
+ritmo
+frases
+diálogos
+voz
+descrição
+densidade
+```
+
+---
+
+# 131. PROSE
+
+O `kit-prose` atual possui funções narrativas e `recap`.
+
+Esse tipo de recurso deve migrar para:
+
+```text
+prose
+narrative presentation
+recap
+summary
+style
+```
+
+sem depender do paradigma de jogo.
+
+---
+
+# 132. SIFT
+
+O `sift` pode evoluir para ferramenta de:
+
+```text
+pattern search
+motif detection
+story thread analysis
+```
+
+Não somente:
+
+```text
+história emergente de gameplay
+```
+
+---
+
+# 133. MAPA ESPACIAL
+
+O recurso espacial continua válido para literatura.
+
+Ele pode mostrar:
+
+```text
+lugares
+trajetos
+relações espaciais
+cenas
+movimentações
+```
+
+Mas deve ser uma visualização do universo narrativo.
+
+Não o centro do produto.
+
+---
+
+# 134. BEAT
+
+O conceito de beat deve continuar.
+
+Mas pode evoluir de:
+
+```text
+game beat
+```
+
+para:
+
+```text
+narrative beat
+```
+
+Um beat pode representar:
+
+```text
+evento
+decisão
+mudança
+revelação
+consequência
+```
+
+---
+
+# 135. NARRATIVE HISTORY
+
+Criar histórico estrutural:
+
+```text
+beat 1
+beat 2
+beat 3
+...
+```
+
+com links para o manuscrito.
+
+---
+
+# 136. CADA MODIFICAÇÃO IMPORTANTE DEVE SER EXPLICÁVEL
+
+Idealmente:
+
+```text
+Linha 243
+↓
+NarrativeAct 932
+↓
+Entity @maria
+↓
+Event ev-182
+↓
+State mutation
+```
+
+Isso transforma o Lume em uma ferramenta auditável.
+
+---
+
+# 137. AI CODING RULE — NÃO EXPLORAR O REPOSITÓRIO À TOA
+
+A IA deve seguir:
+
+```text
+EFICIENCIA
+↓
+MAPA
+↓
+ROTEAMENTO
+↓
+CONTEXT do plugin
+↓
+manifest
+↓
+types
+↓
+arquivo indicado
+↓
+teste
+```
+
+O projeto já estabelece explicitamente esse procedimento para reduzir exploração desnecessária.
+
+---
+
+# 138. QUANDO O CONTEXT ESTIVER ERRADO
+
+Não fazer:
+
+```text
+vasculhar 100 arquivos.
+```
+
+Fazer:
+
+```text
+corrigir CONTEXT
+```
+
+e então continuar.
+
+---
+
+# 139. QUANDO UM ARQUIVO ESTIVER GRANDE DEMAIS
+
+Dividir por responsabilidade.
+
+Evitar:
+
+```text
+engine.ts 4000 linhas
+```
+
+Preferir:
+
+```text
+engine/
+  runtime.ts
+  query.ts
+  mutation.ts
+  timeline.ts
+  causality.ts
+```
+
+---
+
+# 140. CÓDIGO LEGADO
+
+Ao encontrar código antigo:
+
+classificar:
+
+```text
+KEEP
+MIGRATE
+WRAP
+DEPRECATE
+REPLACE
+REMOVE
+```
+
+Nunca apagar simplesmente porque “é antigo”.
+
+---
+
+# 141. DOCUMENTAÇÃO LEGADA
+
+Documentação antiga pode estar descrevendo:
+
+```text
+produto anterior
+```
+
+ou:
+
+```text
+arquitetura anterior
+```
+
+Nesse caso:
+
+```text
+não tratar como verdade absoluta.
+```
+
+Comparar com:
+
+```text
+produto-alvo
+```
+
+---
+
+# 142. O QUE NÃO DEVE SER PRESERVADO SÓ POR SER LEGADO
+
+Exemplos:
+
+```text
+player-first UX
+score-first UX
+turn-first UX
+game prompt como UI principal
+```
+
+Esses conceitos podem ser rebaixados ou removidos da experiência padrão.
+
+---
+
+# 143. O QUE DEVE SER PRESERVADO CUIDADOSAMENTE
+
+Principalmente:
+
+```text
+DSL técnica
+Narrative IR
+SourceMap
+world model
+rules
+intent
+dry-run
+replay
+diagnostics
+plugin contract
+capabilities
+event bus
+```
+
+porque são ativos arquiteturais úteis.
+
+---
+
+# 144. DEFINIÇÃO DE “FEITO”
+
+Uma tarefa arquitetural só é considerada completa quando:
+
+```text
+código
+contrato
+testes
+documentação
+integração
+migração
+```
+
+estiverem coerentes.
+
+---
+
+# 145. DEFINIÇÃO DE “FEITO” PARA NOVO PLUGIN
+
+Um plugin só está completo quando possui:
+
+```text
+CONTEXT.md
+manifest
+types
+factory
+capabilities
+slots
+tests
+events
+permissions
+integration
+```
+
+---
+
+# 146. DEFINIÇÃO DE “FEITO” PARA NOVO FLUXO DE AUTORIA
+
+Precisa demonstrar:
+
+```text
+autor escreve texto
+→ sistema entende
+→ IR produzido
+→ referência resolvida
+→ contexto atualizado
+→ diagnóstico produzido
+→ estado narrativo atualizado
+→ UI mostra resultado
+```
+
+---
+
+# 147. DEFINIÇÃO DE “FEITO” PARA IA
+
+Precisa demonstrar:
+
+```text
+contexto reunido
+→ prompt/input estruturado
+→ resposta
+→ parser
+→ IR/proposal
+→ validação
+→ política
+→ usuário
+```
+
+Nunca:
+
+```text
+AI output
+→ eval()
+→ mutate world
+```
+
+---
+
+# 148. DEFINIÇÃO DE “FEITO” PARA REFACTOR
+
+O refactor só termina quando:
+
+```text
+API está estável ou versionada
+consumidores migrados
+testes migrados
+imports legados reduzidos
+novo caminho ativo
+documentação atualizada
+```
+
+---
+
+# 149. ESTRATÉGIA DE BRANCH
+
+Para grandes mudanças:
+
+```text
+architecture/*
+authoring/*
+kernel/*
+narrative-ir/*
+ai-runtime/*
+```
+
+Preferir mudanças menores e integráveis.
+
+---
+
+# 150. REGRA DE COMMITS
+
+Cada mudança arquitetural importante deve responder:
+
+```text
+o que mudou?
+por quê?
+qual contrato?
+qual impacto?
+como validar?
+```
+
+---
+
+# 151. REGRA DE NÃO “GOLD PLATING”
+
+Quando a IA receber:
+
+```text
+implemente X
+```
+
+ela não deve aproveitar para:
+
+```text
+implementar X
++
+timeline
++
+AI
++
+emotion
++
+new UI
++
+new DSL
++
+new runtime
+```
+
+a menos que sejam necessários ao objetivo.
+
+---
+
+# 152. MAS NÃO CONFUNDIR “SEM GOLD PLATING” COM “PRESERVAR ARQUITETURA RUIM”
+
+Se implementar X exige mudar:
+
+```text
+matcher
+registry
+dispatcher
+contract
+```
+
+então essas mudanças são parte necessária de X.
+
+Não devem ser evitadas só para reduzir o diff.
+
+---
+
+# 153. REGRA DE ALTERAÇÃO MÍNIMA SEM SER CONSERVADOR DEMAIS
+
+Princípio:
+
+> Faça a menor mudança que realmente conduz o sistema para a arquitetura-alvo, não a menor mudança que mantém a arquitetura antiga intacta.
+
+Essa distinção é crítica.
+
+---
+
+# 154. NOVO CRITÉRIO DE QUALIDADE
+
+Não perguntar apenas:
+
+```text
+isso funciona?
+```
+
+Perguntar:
+
+```text
+isso melhora o Lume como editor narrativo?
+```
+
+e:
+
+```text
+isso fortalece o desacoplamento?
+```
+
+e:
+
+```text
+isso continua substituível?
+```
+
+e:
+
+```text
+isso continua acessível ao escritor?
+```
+
+---
+
+# 155. MÉTRICAS ARQUITETURAIS
+
+Acompanhar:
+
+```text
+direct plugin imports
+capability bindings
+slot bindings
+legacy adapters
+duplicated logic
+god objects
+files > reasonable size
+public API instability
+```
+
+---
+
+# 156. MÉTRICAS DE PRODUTO
+
+Acompanhar:
+
+```text
+time to first writing
+time to understand scene
+time to find character
+time to identify inconsistency
+time to trace event
+number of required technical operations
+```
+
+O objetivo é reduzir a carga cognitiva do escritor.
+
+---
+
+# 157. TESTE FUNDAMENTAL DO NOVO LUME
+
+Perguntar:
+
+> Um escritor consegue abrir o Lume e começar a escrever sem saber como funciona o runtime?
+
+A resposta desejada é:
+
+```text
+SIM.
+```
+
+---
+
+# 158. SEGUNDO TESTE FUNDAMENTAL
+
+Perguntar:
+
+> Um autor avançado consegue acessar o mecanismo técnico sem abandonar o runtime principal?
+
+Resposta desejada:
+
+```text
+SIM.
+```
+
+---
+
+# 159. TERCEIRO TESTE
+
+Perguntar:
+
+> É possível substituir um modelo de IA sem reescrever o editor?
+
+```text
+SIM.
+```
+
+---
+
+# 160. QUARTO TESTE
+
+Perguntar:
+
+> É possível substituir um plugin sem alterar consumidores?
+
+```text
+SIM.
+```
+
+ou pelo menos:
+
+```text
+SIM, se o contrato da capability continuar compatível.
+```
+
+---
+
+# 161. QUINTO TESTE
+
+Perguntar:
+
+> Uma alteração em uma entidade pode ser rastreada até as cenas e eventos afetados?
+
+```text
+SIM.
+```
+
+---
+
+# 162. SEXTO TESTE
+
+Perguntar:
+
+> A escrita comum exige que o autor conheça ON/IF/DO?
+
+```text
+NÃO.
+```
+
+---
+
+# 163. SÉTIMO TESTE
+
+Perguntar:
+
+> O autor avançado pode escrever ON/IF/DO e intent.* diretamente?
+
+```text
+SIM.
+```
+
+---
+
+# 164. OITAVO TESTE
+
+Perguntar:
+
+> Texto natural e comandos técnicos usam runtimes diferentes?
+
+```text
+NÃO.
+```
+
+Usam interfaces diferentes para o mesmo núcleo semântico/runtime.
+
+---
+
+# 165. NONO TESTE
+
+Perguntar:
+
+> A IA pode modificar o mundo diretamente?
+
+```text
+NÃO.
+```
+
+Ela deve passar por:
+
+```text
+IR
+validation
+policy
+MutationGateway
+```
+
+---
+
+# 166. DÉCIMO TESTE
+
+Perguntar:
+
+> O Lume precisa parecer um jogo para entregar seus recursos narrativos?
+
+```text
+NÃO.
+```
+
+---
+
+# 167. PROTOCOLO DE EXECUÇÃO DA IA
+
+Sempre que receber uma tarefa:
+
+## PASSO 1
+
+Identificar:
+
+```text
+qual produto
+qual camada
+qual plugin
+qual capability
+qual contrato
+```
+
+## PASSO 2
+
+Ler:
+
+```text
+CONTEXT
+manifest
+types
+```
+
+## PASSO 3
+
+Identificar:
+
+```text
+API atual
+comportamento atual
+testes atuais
+invariantes atuais
+```
+
+## PASSO 4
+
+Classificar o trabalho:
+
+```text
+bug
+feature
+refactor
+migration
+replacement
+architecture
+UI
+domain
+```
+
+## PASSO 5
+
+Determinar:
+
+```text
+KEEP
+CHANGE
+ADD
+MIGRATE
+DEPRECATE
+REMOVE
+```
+
+## PASSO 6
+
+Implementar em ordem:
+
+```text
+contract
+adapter
+implementation
+integration
+tests
+docs
+```
+
+---
+
+# 168. QUANDO HOUVER CONFLITO
+
+Registrar:
+
+```text
+CONFLICT:
+old invariant X
+target requirement Y
+```
+
+Depois:
+
+```text
+decide
+```
+
+Não mascarar o conflito.
+
+---
+
+# 169. QUANDO A IA NÃO SOUBER ONDE ESTÁ ALGO
+
+Não procurar o repositório inteiro imediatamente.
+
+Primeiro:
+
+```text
+ROTEAMENTO
+MAPA
+CONTEXT
+```
+
+Depois busca dirigida.
+
+---
+
+# 170. QUANDO UMA IMPLEMENTAÇÃO ESTIVER ACOPLADA
+
+Perguntar:
+
+```text
+qual capability deveria existir aqui?
+```
+
+e não:
+
+```text
+como deixar este import menos feio?
+```
+
+---
+
+# 171. QUANDO UM PLUGIN FICAR GRANDE
+
+Separar:
+
+```text
+contract
+runtime
+query
+mutation
+policy
+adapter
+```
+
+mas manter uma única fronteira de domínio quando fizer sentido.
+
+---
+
+# 172. QUANDO UMA NOVA FUNÇÃO PARECER “ENGINE”
+
+Verificar primeiro:
+
+```text
+é capability?
+é regra?
+é analyzer?
+é policy?
+é projection?
+é service?
+```
+
+Antes de criar um engine.
+
+---
+
+# 173. QUANDO A IA QUISER CRIAR UM SEGUNDO MOTOR
+
+Parar e verificar:
+
+```text
+qual responsabilidade do motor original?
+```
+
+Se houver sobreposição:
+
+```text
+refatorar o original
+ou
+adicionar capability especializada
+```
+
+em vez de criar competição silenciosa.
+
+---
+
+# 174. QUANDO O MATCHER PRECISAR SER ALTERADO
+
+Pode alterar.
+
+Obrigatório então:
+
+```text
+mapear comportamento antigo
+mapear comportamento desejado
+especificar novo contrato
+testar casos antigos
+testar casos novos
+atualizar replay
+atualizar dry-run
+atualizar diagnostics
+```
+
+---
+
+# 175. QUANDO A DSL PRECISAR SER ALTERADA
+
+Nunca quebrar silenciosamente.
+
+Preferir:
+
+```text
+parser version
+migration
+compatibility layer
+diagnostics
+```
+
+---
+
+# 176. QUANDO O NARRATIVE IR PRECISAR SER ALTERADO
+
+Usar versionamento explícito:
+
+```text
+MAJOR
+MINOR
+```
+
+e migradores quando necessário.
+
+---
+
+# 177. QUANDO O WORLD MODEL PRECISAR SER ALTERADO
+
+Verificar:
+
+```text
+query
+mutation
+replay
+dry-run
+continuity
+timeline
+AI
+UI
+```
+
+porque o world é transversal.
+
+---
+
+# 178. QUANDO A UI PRECISAR SER ALTERADA
+
+Primeiro perguntar:
+
+```text
+qual é o fluxo do escritor?
+```
+
+Depois:
+
+```text
+qual componente?
+```
+
+Não começar pela estética.
+
+---
+
+# 179. QUANDO UMA FEATURE FOR “PARA JOGO”
+
+Perguntar:
+
+```text
+ela é útil para autoria narrativa?
+```
+
+Se sim:
+
+```text
+recontextualizar.
+```
+
+Se não:
+
+```text
+deixar opcional.
+```
+
+---
+
+# 180. PRINCÍPIO DA RECONTEXTUALIZAÇÃO
+
+Exemplos:
+
+```text
+play
+→ simulation preview
+
+beat
+→ narrative event
+
+score
+→ opcional de simulação
+
+turn
+→ temporal step opcional
+
+Skein
+→ causal/history graph
+
+dry-run
+→ consequence preview
+
+world map
+→ story geography
+
+combat
+→ domain pack
+
+social kit
+→ relationship modeling
+```
+
+---
+
+# 181. PRODUTO FINAL DESEJADO
+
+O usuário abre o Lume.
+
+Vê:
+
+```text
+manuscrito
+```
+
+Escreve.
+
+O sistema entende.
+
+O escritor continua escrevendo.
+
+O Lume acompanha:
+
+```text
+quem está na cena
+onde estão
+o que sabem
+o que aconteceu
+o que mudou
+o que foi prometido
+o que ainda não foi resolvido
+```
+
+Quando existe problema:
+
+```text
+o Lume mostra.
+```
+
+Quando há sugestão:
+
+```text
+o Lume propõe.
+```
+
+Quando o autor quer precisão:
+
+```text
+o modo técnico existe.
+```
+
+Quando o autor quer experimentar:
+
+```text
+simulação existe.
+```
+
+Quando quer revisar:
+
+```text
+timeline
+causalidade
+continuidade
+personagens
+histórico
+```
+
+existem.
+
+---
+
+# 182. PRINCÍPIO FINAL DE PRODUTO
+
+Nunca inverter esta relação:
+
+```text
+ESCRITOR
+  ↓
+LUME
+```
+
+para:
+
+```text
+ENGINE
+  ↓
+ESCRITOR
+```
+
+O engine existe para servir a autoria.
+
+---
+
+# 183. PRINCÍPIO FINAL DE ARQUITETURA
+
+Nunca inverter esta relação:
+
+```text
+CONTRATO
+  ↓
+IMPLEMENTAÇÃO
+```
+
+para:
+
+```text
+IMPLEMENTAÇÃO
+  ↓
+CONTRATO
+```
+
+Os contratos devem permitir:
+
+```text
+substituição
+evolução
+isolamento
+teste
+versionamento
+```
+
+---
+
+# 184. PRINCÍPIO FINAL DE IA
+
+Nunca assumir:
+
+```text
+documentação antiga = verdade eterna.
+```
+
+Usar:
+
+```text
+documentação
++
+código
++
+testes
++
+objetivo do produto
++
+arquitetura-alvo
+```
+
+e produzir uma migração coerente.
+
+---
+
+# 185. INSTRUÇÃO FINAL PARA A IA IMPLEMENTADORA
+
+Você não está mantendo simplesmente um antigo motor de aventuras.
+
+Você está transformando uma base existente em um:
+
+> **EDITOR NARRATIVO LINEAR, DINÂMICO E PROFISSIONAL PARA ESCRITORES.**
+
+O manuscrito é a superfície principal.
+
+A narrativa estruturada é o modelo semântico.
+
+O runtime é a infraestrutura.
+
+O Kernel 0 é a fundação.
+
+Plugins são módulos substituíveis.
+
+Capabilities são contratos.
+
+Slots são portas.
+
+Envelopes são unidades de comunicação.
+
+Matcher e Resolver são mecanismos de decisão especializados.
+
+Dispatcher controla a passagem das operações.
+
+Narrative IR conecta linguagem e runtime.
+
+Context Assembly conecta o texto ao mundo narrativo.
+
+Reference Resolution conecta palavras a entidades.
+
+Timeline conecta eventos.
+
+Causality conecta causas e consequências.
+
+Continuity protege consistência.
+
+AI Runtime fornece inteligência substituível.
+
+MutationGateway controla alterações.
+
+Manuscript preserva a autoria.
+
+Technical Mode preserva o poder da DSL.
+
+Simulation preserva o poder do runtime.
+
+A experiência final deve esconder a complexidade e revelar apenas aquilo que ajuda o escritor a:
+
+```text
+ESCREVER
+ENTENDER
+ORGANIZAR
+REVISAR
+EXPLORAR
+DECIDIR
+```
+
+---
+
+# 186. PRIMEIRA TAREFA DA IA ANTES DE IMPLEMENTAR
+
+Antes de modificar código em uma grande fase, produzir internamente:
+
+```text
+1. estado atual
+2. arquitetura-alvo
+3. delta arquitetural
+4. invariantes que continuam válidas
+5. invariantes que precisam mudar
+6. contratos a criar
+7. contratos a migrar
+8. plugins afetados
+9. ordem de implementação
+10. estratégia de compatibilidade
+11. testes afetados
+12. critérios de conclusão
+```
+
+Não iniciar uma grande refatoração sem essa visão.
+
+---
+
+# 187. SEGUNDA TAREFA
+
+Separar explicitamente:
+
+```text
+LEGADO
+```
+
+de:
+
+```text
+ALVO
+```
+
+Não confundir ambos.
+
+---
+
+# 188. TERCEIRA TAREFA
+
+Implementar:
+
+```text
+fundação
+→ contratos
+→ adapters
+→ migração
+→ produto
+```
+
+e não:
+
+```text
+UI nova
+→ remendos
+→ mais acoplamento
+```
+
+---
+
+# 189. QUARTA TAREFA
+
+Sempre que uma decisão antiga bloquear a evolução, perguntar:
+
+```text
+"Essa decisão ainda serve ao Lume que estamos construindo?"
+```
+
+Se não:
+
+```text
+mude-a conscientemente.
+```
+
+---
+
+# 190. DEFINIÇÃO SUPREMA DE SUCESSO
+
+O Lume terá alcançado a arquitetura e produto desejados quando:
+
+```text
+um escritor possa abrir o sistema,
+começar a escrever naturalmente,
+ter seu texto compreendido progressivamente,
+ver personagens, lugares, eventos e relações surgirem,
+acompanhar a continuidade da obra,
+acompanhar a timeline,
+receber diagnósticos,
+receber sugestões,
+explorar consequências,
+revisar causas e efeitos,
+e nunca precisar entender a arquitetura interna
+para usar o sistema em seu fluxo normal.
+```
+
+Ao mesmo tempo:
+
+```text
+um autor técnico possa ativar o Modo Técnico,
+editar DSL,
+consultar regras,
+usar intent.*,
+inspecionar entidades,
+executar dry-run,
+simular consequências,
+examinar beats,
+replayar estado
+e controlar precisamente o runtime.
+```
+
+Ambas as experiências devem usar:
+
+```text
+o mesmo sistema.
+```
+
+Não dois Lumes.
+
+Não dois motores.
+
+Não dois mundos.
+
+```text
+UMA PLATAFORMA.
+DUAS SUPERFÍCIES DE AUTORIA.
+UM RUNTIME NARRATIVO.
+UM CONTRATO ARQUITETURAL.
+```
+
+# FIM DO CONTEXT MACHINE MESTRE

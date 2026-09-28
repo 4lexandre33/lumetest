@@ -1,5 +1,4 @@
-import type { Core } from "../../../core/index.ts";
-import { fnv1aHex, worldToJson } from "./json.ts";
+import { fnv1aHex } from "./json.ts";
 import type { HostInspect, KitFileMap, PluginKit } from "../types.ts";
 
 export const KIT_LUME_FORMAT = 2;
@@ -66,6 +65,7 @@ export function renderKit(inspect: HostInspect, formatVersion: number = KIT_LUME
     generatedBy: "lume-website",
     plugins: inspect.plugins,
     capabilities: inspect.capabilities,
+    slots: inspect.slots ?? [],
     events: inspect.events,
     deniedMethods: [...DENIED_METHODS],
     host: {
@@ -108,6 +108,7 @@ export type HostInspect = {
   plugins: { name: string; version: string; provides: { name: string; version: string }[] }[];
   capabilities: { name: string; version: string; provider: string; methods: string[] }[];
   events: string[];
+  slots: { name: string; capability: string }[];
   world: JsonEntity[] | null;
 };
 export type SandboxHost = {
@@ -184,35 +185,4 @@ O snapshot host.json é a fonte de verdade das capabilities neste instante do we
     files,
     filename: `lume-plugin-kit-${fingerprint}.zip`,
   };
-}
-
-export function inspectFromCore(core: Core): HostInspect {
-  const diagnostics = core.getDiagnostics();
-  const capabilities = diagnostics.capabilities
-    .map((cap) => ({
-      name: cap.name,
-      version: cap.version,
-      provider: cap.provider,
-      methods: Object.keys(cap.api ?? {})
-        .filter((method) => !DENIED_METHODS.includes(method as (typeof DENIED_METHODS)[number]))
-        .sort(),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const plugins = core
-    .listPlugins()
-    .map((manifest) => ({
-      name: manifest.name,
-      version: manifest.version,
-      provides: [...(manifest.capabilities?.provides ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  let world = null;
-  try {
-    const ide = core.getService<{ getState: () => { game?: { worldModel?: Map<string, unknown> } | null } }>("IdeState");
-    const model = ide.getState().game?.worldModel;
-    world = model instanceof Map ? worldToJson(model) : null;
-  } catch {
-    world = null;
-  }
-  return { plugins, capabilities, events: [...KNOWN_EVENTS], world };
 }

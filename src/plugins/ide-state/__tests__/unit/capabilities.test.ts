@@ -5,7 +5,7 @@ import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from '../../..
 import { PROJECT_CLOUD_MANIFEST, createProjectCloudPlugin } from '../../../project-cloud/index.ts';
 import { IDE_STATE_MANIFEST, createIdeStatePlugin } from '../../index.ts';
 import type { IdeStateService } from '../../types.ts';
-import { createExampleProject } from '../../../narrative-engine/lib/examples.ts';
+import { createExampleProject } from "../../../narrative-engine/index.ts";
 
 describe('IDE State Capabilities', () => {
   let core: Core;

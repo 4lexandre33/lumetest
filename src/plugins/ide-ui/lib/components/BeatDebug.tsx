@@ -1,5 +1,5 @@
-import { emptyBeat, formatBeat, type BeatTrace } from "../../../narrative-engine/lib/beat.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { emptyBeat, formatBeat, type BeatTrace } from "../../../narrative-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 
 function Line({
   label,

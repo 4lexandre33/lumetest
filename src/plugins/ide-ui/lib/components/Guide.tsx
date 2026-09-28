@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { GUIDE_SLIDES } from "../../../ide-guide/lib/guide.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { GUIDE_SLIDES } from "../../../ide-guide/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { Button } from "../ui/button.tsx";
 
 export function Guide() {

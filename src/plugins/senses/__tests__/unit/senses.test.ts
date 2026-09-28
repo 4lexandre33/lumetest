@@ -5,11 +5,11 @@ import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../..
 import type { NarrativeEngineService } from "../../../narrative-engine/types.ts";
 import { SPATIAL_MANIFEST, createSpatialPlugin } from "../../../spatial/index.ts";
 import { INTENT_ENGINE_MANIFEST, createIntentEnginePlugin } from "../../../intent-engine/index.ts";
-import { query } from "../../../narrative-engine/lib/query.ts";
-import { createGame } from "../../../narrative-engine/lib/runtime.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
-import { resolveIntent, suggestIntent, executeIntent, type QueryFn } from "../../../intent-engine/lib/index.ts";
-import { interactWith } from "../../../narrative-engine/lib/runtime.ts";
+import { query } from "../../../narrative-engine/index.ts";
+import { createGame } from "../../../narrative-engine/index.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
+import { resolveIntent, suggestIntent, executeIntent, type QueryFn } from "../../../intent-engine/index.ts";
+import { interactWith } from "../../../narrative-engine/index.ts";
 import { SENSES_MANIFEST, createSensesPlugin } from "../../index.ts";
 import type { SenseEntity, SensesService } from "../../types.ts";
 

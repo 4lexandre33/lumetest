@@ -1,4 +1,4 @@
-import { coerceProject, type Project } from "../../narrative-engine/lib/project.ts";
+import { coerceProject, type Project } from "../../narrative-engine/index.ts";
 import type { IdeSettings } from "../../project-cloud/types.ts";
 
 const KEY = "lume:session:v1";

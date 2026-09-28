@@ -5,7 +5,7 @@ import * as persistence from '../../lib/persistence.ts';
 import { createCore, Core } from '../../../../core/index.ts';
 import { PROJECT_CLOUD_MANIFEST, createProjectCloudPlugin } from '../../index.ts';
 import type { ProjectCloudService, IdeSettings } from '../../types.ts';
-import { createProject } from '../../../narrative-engine/lib/project.ts';
+import { createProject } from "../../../narrative-engine/index.ts";
 
 describe('Playtest Snapshots & Settings Parity', () => {
   let core: Core;

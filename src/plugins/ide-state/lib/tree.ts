@@ -1,6 +1,6 @@
-import { classifyRule } from "../../rule-semantics/lib/classify.ts";
-import { CATEGORY_TAGS, primaryTag } from "../../narrative-engine/lib/index.ts";
-import type { Entity, Rule, SidebarBucket, SidebarTree } from "../../narrative-engine/lib/index.ts";
+import { classifyRule } from "../../rule-semantics/index.ts";
+import { CATEGORY_TAGS, primaryTag } from "../../narrative-engine/index.ts";
+import type { Entity, Rule, SidebarBucket, SidebarTree } from "../../narrative-engine/index.ts";
 import type { CompiledTaxonomy } from "../../narrative-engine/types.ts";
 
 export const ENTITY_SECTIONS = [...CATEGORY_TAGS, "other"] as const;

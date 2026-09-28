@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { applySuggestion, isAutocompleteSlot } from "../../../intent-engine/lib/index.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { applySuggestion, isAutocompleteSlot } from "../../../intent-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 
 export function CommandBar({ play = false }: { play?: boolean }) {
   const game = useIdeStore((s) => s.game);

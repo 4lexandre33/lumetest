@@ -27,6 +27,7 @@ import type {
 import { createIdeZustandStore } from './lib/orchestrator.ts';
 import type { Project, ProjectIndexEntry } from '../narrative-engine/types.ts';
 
+export * from './lib/tree.ts';
 export * from './manifest.ts';
 export * from './types.ts';
 export * from './lib/orchestrator.ts';

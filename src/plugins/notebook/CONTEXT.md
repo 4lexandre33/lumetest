@@ -5,6 +5,14 @@ Caderno humano. Plugin interno isolado: compile **e** UI. Fora do matcher.
 ## Abrir
 - `lib/notebook.ts` — `compileNotebook` / `slugOf` / `Entenda`
 - `lib/cache.ts` — hash por `###`
+- `lib/manuscript.ts` — livro, capítulo, cena, parágrafo, sentença. Ids estáveis. Não reescreve a prosa.
+- `lib/narrative-ir.ts` — IR 1.0, separada do `do:`. Acto e mapa até ao texto. Não é gaveta.
+- `lib/reference.ts` — resolvido, ambíguo ou não resolvido, com evidência. Sem candidato único, não escolhe. Sem gênero inventado.
+- `lib/sentence-context.ts` — contexto da frase: quem está, o que sabe, crê e ignora, a cena, os três tempos. Não manda o livro. Sem modelo.
+- `lib/causa.ts` — causa só na linha `causa: A -> B porque …`. Não se infere.
+- `lib/continuidade.ts` — `arco:` e `fio:` declarados. Aviso não condena. `fica assim:` grava e cala.
+- `lib/discurso.ts` — discurso e estilo com a frase citada. Não reescrevem o texto.
+- `lib/impacto.ts` — um diagnóstico: cenas que a mutação ainda afecta. Não abre branch.
 - `lib/pages.ts` — `parseCadernoLibrary` / `applyNotebookToProject` / fatia `# --- lume-caderno ---` (pad à mão antes de `start()`)
 - `lib/share.ts` — export/import `.lume.caderno.md`
 - `ui/NotebookPane.tsx` — abas, `+`, índice, editor

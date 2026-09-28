@@ -8,13 +8,16 @@ import type { TypedEvent, TypedEventConstructor } from './contracts/typed-event.
 import type { IPluginManifest, PluginFactory } from './contracts/plugin-manifest.ts';
 import type { Logger } from './logger.ts';
 import type { PluginContext } from './contracts/plugin-context.ts';
+import { PermissionError } from './contracts/errors.ts';
 
 import { EventBus } from './internal/event-bus.ts';
 import { PluginRegistry } from './internal/plugin-registry.ts';
 import { CapabilityRegistry } from './internal/capability-registry.ts';
 import { ErrorBoundary } from './internal/error-boundary.ts';
+import { Dispatcher } from './internal/dispatcher.ts';
 import { ConsoleLogger, createPluginLogger } from './logger.ts';
 import { AppError } from './contracts/errors.ts';
+import type { CapabilityHandler, DispatchResult, Envelope } from './contracts/envelope.ts';
 
 /**
  * In-memory storage para plugins
@@ -39,6 +42,8 @@ class InMemoryPluginStorage implements PluginStorage {
   }
 }
 
+type KernelNote = { code: 'lifecycle' | 'permission' | 'dispatch'; message: string; plugin?: string };
+
 /**
  * Core — Microkernel principal
  */
@@ -47,7 +52,9 @@ export class Core {
   private pluginRegistry: PluginRegistry;
   private capabilityRegistry: CapabilityRegistry;
   private errorBoundary: ErrorBoundary;
+  private dispatcher: Dispatcher;
   private logger: Logger;
+  private notes: KernelNote[] = [];
 
   constructor(logger?: Logger) {
     this.logger = logger || new ConsoleLogger('[Core]');
@@ -55,6 +62,7 @@ export class Core {
     this.pluginRegistry = new PluginRegistry(this.logger);
     this.capabilityRegistry = new CapabilityRegistry(this.logger);
     this.errorBoundary = new ErrorBoundary(this.logger);
+    this.dispatcher = new Dispatcher();
 
     this.logger.info('Core initialized');
   }
@@ -83,7 +91,14 @@ export class Core {
       if (entry.manifest.hooks?.onPluginReady) {
         await entry.manifest.hooks.onPluginReady(depName);
       }
+    }).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      this.note('lifecycle', message, pluginName);
+      throw err;
     });
+    for (const slot of entry.manifest.slots ?? []) {
+      this.dispatcher.bind(pluginName, slot.name, slot.capability);
+    }
   }
 
   /**
@@ -91,6 +106,7 @@ export class Core {
    */
   async deactivatePlugin(pluginName: string): Promise<void> {
     await this.pluginRegistry.deactivate(pluginName);
+    this.dispatcher.unbind(pluginName);
   }
 
   /**
@@ -112,6 +128,8 @@ export class Core {
    * Criar contexto que será passado ao plugin factory
    */
   private createPluginContext(pluginName: string, pluginVersion: string): PluginContext {
+    const manifest = this.pluginRegistry.get(pluginName)?.manifest;
+    const storage = this.guardStorage(pluginName, manifest, new InMemoryPluginStorage());
     return {
       pluginName,
       pluginVersion,
@@ -133,6 +151,7 @@ export class Core {
         handler: (event: E) => void | Promise<void>,
         options?: { once?: boolean; priority?: 'high' | 'normal' | 'low' }
       ) => {
+        this.guardEvent(pluginName, manifest, eventType);
         return this.eventBus.on(eventType, handler, pluginName, options);
       },
 
@@ -140,9 +159,17 @@ export class Core {
         return this.capabilityRegistry.use<T>(name, version);
       },
 
+      registerHandler: (handler) => {
+        this.registerHandler({ ...handler, provider: pluginName });
+      },
+
+      dispatch: <T,>(envelope: Envelope) => {
+        return this.dispatch<T>({ ...envelope, source: pluginName });
+      },
+
       logger: createPluginLogger(pluginName),
 
-      storage: new InMemoryPluginStorage(),
+      storage,
 
       diagnostics: {
         listSubscriptions: () => this.eventBus.listSubscriptions(),
@@ -151,6 +178,72 @@ export class Core {
         listPlugins: () => this.pluginRegistry.list().map(m => m.name)
       }
     };
+  }
+
+  private note(code: KernelNote['code'], message: string, plugin?: string): void {
+    this.notes.push({ code, message, plugin });
+  }
+
+  private guardStorage(pluginName: string, manifest: IPluginManifest | undefined, storage: PluginStorage): PluginStorage {
+    const mode = manifest?.permissions?.storage;
+    if (!mode || mode === 'write') return storage;
+    const deny = () => {
+      this.note('permission', 'storage negado', pluginName);
+      throw new PermissionError(pluginName, 'storage', 'storage negado');
+    };
+    return {
+      get: (key) => (mode === 'none' ? null : storage.get(key)),
+      set: () => deny(),
+      remove: () => deny(),
+      clear: () => deny(),
+    };
+  }
+
+  private guardEvent(pluginName: string, manifest: IPluginManifest | undefined, eventType: TypedEventConstructor): void {
+    const allowed = manifest?.permissions?.events;
+    if (!allowed) return;
+    const type = new eventType(undefined).type;
+    if (allowed.includes(type)) return;
+    this.note('permission', `evento ${type} negado`, pluginName);
+    throw new PermissionError(pluginName, 'events', `evento ${type} negado`);
+  }
+
+  /**
+   * Registo consultável. Não devolve a implementação das capabilities.
+   */
+  registry() {
+    return {
+      plugins: this.pluginRegistry.list().map((manifest) => ({
+        name: manifest.name,
+        version: manifest.version,
+        state: this.pluginRegistry.getState(manifest.name),
+        provides: manifest.capabilities?.provides?.map((item) => `${item.name}@${item.version}`) ?? [],
+        requires: manifest.requires?.mandatory?.map((item) => `${item.name}@${item.version}`) ?? [],
+        permissions: manifest.permissions ?? null,
+      })),
+      capabilities: this.capabilityRegistry.list().map((item) => ({
+        name: item.name,
+        version: item.version,
+        provider: item.provider,
+      })),
+      handlers: this.dispatcher.list(),
+    };
+  }
+
+  /**
+   * Estado do ciclo de vida. Não conhece narrativa.
+   */
+  lifecycle(pluginName: string): { state: 'pending' | 'active' | 'failed' | 'disabled'; error?: string } | undefined {
+    const entry = this.pluginRegistry.get(pluginName);
+    if (!entry) return undefined;
+    return { state: entry.state, error: entry.error?.message };
+  }
+
+  /**
+   * Avisos do kernel: ciclo de vida e permissão.
+   */
+  diagnostics(): KernelNote[] {
+    return this.notes.map((note) => ({ ...note }));
   }
 
   /**
@@ -184,6 +277,28 @@ export class Core {
    */
   getService<T = any>(name: string, version?: string): T {
     return this.capabilityRegistry.use<T>(name, version);
+  }
+
+  /**
+   * Regista um método. Não substitui getService.
+   */
+  registerHandler(handler: CapabilityHandler): void {
+    this.dispatcher.register(handler);
+  }
+
+  /**
+   * Entrega o envelope. Não lança.
+   */
+  async dispatch<T = unknown>(envelope: Envelope): Promise<DispatchResult<T>> {
+    const active = envelope?.source === 'core' || this.pluginRegistry.getState(envelope?.source) === 'active';
+    const found = this.dispatcher.resolve(envelope, active);
+    if ('error' in found) {
+      this.note('dispatch', found.error, envelope?.source);
+      return { ok: false, error: found.error };
+    }
+    const result = await this.dispatcher.run(found.handler, envelope);
+    if (!result.ok) this.note('dispatch', result.error, envelope.source);
+    return result as DispatchResult<T>;
   }
 
   /**

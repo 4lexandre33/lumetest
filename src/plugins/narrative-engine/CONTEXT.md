@@ -13,7 +13,8 @@
 - `lib/world-index.ts` — índice + avisos de beco (topic/conv/canal/vivo)
 - `lib/play-bundle.ts` — bundle play + hash `#play=` / `#sessao=`
 - `lib/project.ts` — `notebooksSource` (caderno; compile vazio até C2)
-- `types.ts` — contratos públicos
+- `lib/world-port.ts` — porta do mundo. `adaptWorld` deixa outro backend cumprir a mesma porta.
+- `lib/mutation-gateway.ts` — `do:` é a mutação. `descerMutacao` é a única porta para intent, comando e modelo.
 
 ## Provides
 NarrativeEngine, Taxonomy, QueryEngine, LanguageTools, RuleEffects

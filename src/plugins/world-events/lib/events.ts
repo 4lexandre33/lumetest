@@ -1,4 +1,4 @@
-import { cloneWorldModel, createEmptyEntity } from "../../narrative-engine/lib/world-model.ts";
+import { cloneWorldModel, createEmptyEntity } from "../../narrative-engine/index.ts";
 import type { GameState } from "../../narrative-engine/types.ts";
 
 export function ensureEventEntity(game: GameState, eventId: string): GameState {

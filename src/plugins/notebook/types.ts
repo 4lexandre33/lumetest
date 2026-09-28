@@ -1,5 +1,10 @@
 import type { NotebookCompile } from "./lib/notebook.ts";
 import type { AssistWorld, NotebookAssist } from "./lib/assist.ts";
+import type { Manuscript } from "./lib/manuscript.ts";
+import type { NarrativeIr } from "./lib/narrative-ir.ts";
+import type { ReferenceHit } from "./lib/reference.ts";
+import type { SentenceContext } from "./lib/sentence-context.ts";
+import type { WorldModel } from "../narrative-engine/index.ts";
 
 export type { NotebookCompile, NotebookIssue } from "./lib/notebook.ts";
 export type { AssistWorld, AssistWorldEntity, NotebookAssist } from "./lib/assist.ts";
@@ -10,4 +15,8 @@ export interface NotebookService {
   exportCaderno(text: string, bookId?: string): string;
   importCaderno(into: string, incoming: string): string;
   cadernoFilename(title: string): string;
+  ler(text: string): Manuscript;
+  lerIr(text: string): NarrativeIr;
+  referencias(text: string, world: WorldModel): ReferenceHit[];
+  contexto(text: string, offset: number, entitiesSource?: string): SentenceContext | null;
 }

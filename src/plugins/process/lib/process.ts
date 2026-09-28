@@ -1,4 +1,4 @@
-import { cloneWorldModel, createEmptyEntity, tickFuses } from "../../narrative-engine/lib/world-model.ts";
+import { cloneWorldModel, createEmptyEntity, tickFuses } from "../../narrative-engine/index.ts";
 import type { GameState, WorldModel } from "../../narrative-engine/types.ts";
 import { PROCESS_TAG, type InteractFn } from "../types.ts";
 

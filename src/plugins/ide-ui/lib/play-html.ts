@@ -1,6 +1,6 @@
-import { renderMarkdown } from "../../narrative-engine/lib/narrative.ts";
-import type { PlayBundle } from "../../narrative-engine/lib/play-bundle.ts";
-import { encodePlayHash } from "../../narrative-engine/lib/play-bundle.ts";
+import { renderMarkdown } from "../../narrative-engine/index.ts";
+import type { PlayBundle } from "../../narrative-engine/index.ts";
+import { encodePlayHash } from "../../narrative-engine/index.ts";
 
 function escapeHtml(text: string): string {
   return text

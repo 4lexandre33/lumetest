@@ -4,6 +4,9 @@ Frase livre → `intent.*`. Último no pipeline. Frágil: falha fechado.
 
 ## Abrir
 - `lib/nlp.ts` — `interpret(text, world, scope?)` / `splitPhrases` (grammar pt-BR; score V6)
+- `lib/command.ts` — NLP rápido dos comandos. Não chama o modelo.
+- `lib/prose.ts` — NLP da prosa até à IR. O modelo é opcional.
+- `lib/model-provider.ts` — provider pequeno. O editor não o importa.
 - `index.ts` — phrase mapper no IntentEngine (passa `options.scope`)
 
 ## Provides

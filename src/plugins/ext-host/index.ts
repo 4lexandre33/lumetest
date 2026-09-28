@@ -13,12 +13,16 @@ import {
 } from "../../core/contracts/typed-event.ts";
 import { EXT_HOST_MANIFEST } from "./manifest.ts";
 import { createExtHostService } from "./lib/registry.ts";
+import { vistaAutorizada } from "./lib/vista.ts";
 import type { ExtHostService } from "./types.ts";
 import type { Core } from "../../core/index.ts";
+import { ExternalPluginEvent } from "../../core/contracts/typed-event.ts";
 
+export * from "./lib/download.ts";
 export * from "./manifest.ts";
 export * from "./types.ts";
-export { renderKit, inspectFromCore, fingerprintFiles } from "./lib/kit.ts";
+export { renderKit, fingerprintFiles } from "./lib/kit.ts";
+export { vistaAutorizada } from "./lib/vista.ts";
 export { zipStore } from "./lib/zip.ts";
 export { runGuestSource } from "./lib/sandbox.ts";
 
@@ -34,19 +38,21 @@ export class ExtHostPlugin implements IPlugin {
 
   async activate(): Promise<void> {
     this.context.logger.info("Activating Lume External Plugin Host...");
-    const core = (globalThis as { __LUME_CORE__?: Core }).__LUME_CORE__;
-    const hostCore = core ?? (this.context as unknown as { __core?: Core }).__core;
-    if (!hostCore) {
-      // Fallback: wrap context diagnostics/getService as a Core-like facade
-      const facade = contextAsCore(this.context);
-      const { service, dispatch } = createExtHostService(facade);
-      this.service = service;
-      this.bindEvents(dispatch);
-    } else {
-      const { service, dispatch } = createExtHostService(hostCore);
-      this.service = service;
-      this.bindEvents(dispatch);
-    }
+    const grant = vistaAutorizada(
+      (name) => {
+        try {
+          return this.context.getService<Record<string, unknown>>(name);
+        } catch {
+          return null;
+        }
+      },
+      (guest, topic, payload) => {
+        void this.context.emitEvent(new ExternalPluginEvent({ plugin: guest, topic, payload: payload ?? null }), guest);
+      },
+    );
+    const { service, dispatch } = createExtHostService(grant);
+    this.service = service;
+    this.bindEvents(dispatch);
 
     this.context.registerCapability({
       name: "ExtHost",
@@ -82,20 +88,6 @@ export class ExtHostPlugin implements IPlugin {
 
 export function createExtHostPlugin(context: PluginContext): IPlugin {
   return new ExtHostPlugin(context);
-}
-
-function contextAsCore(context: PluginContext): Core {
-  return {
-    getService: context.getService.bind(context),
-    getDiagnostics: () => ({
-      plugins: context.diagnostics.listPlugins().map((name) => ({ name, version: "1.0.0", state: context.diagnostics.getPluginState(name), capabilities: [] })),
-      subscriptions: context.diagnostics.listSubscriptions(),
-      isolatedPlugins: [],
-      capabilities: [],
-    }),
-    listPlugins: () => context.diagnostics.listPlugins().map((name) => ({ name, version: "1.0.0" })),
-    emitEvent: context.emitEvent.bind(context),
-  } as unknown as Core;
 }
 
 export function getExtHost(): ExtHostService | null {

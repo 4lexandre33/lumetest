@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { completeAt, collectVocabulary, highlightSource, offsetOfLine, fieldListShouldComma, underlinesFor, tabAfterKeyword, indentOnEnter, expandEntityDecl, expandRuleStub, ctrlJumpDrawer, type CompletionItem, type SourceKind } from "../../../narrative-engine/lib/index.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { completeAt, collectVocabulary, highlightSource, offsetOfLine, fieldListShouldComma, underlinesFor, tabAfterKeyword, indentOnEnter, expandEntityDecl, expandRuleStub, ctrlJumpDrawer, type CompletionItem, type SourceKind } from "../../../narrative-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 import { menuAnchor, menuDetail, menuOpens, menuSeal } from "../completion-menu.ts";
 import { CompletionMenu } from "./CompletionMenu.tsx";
 import { cn } from "../utils.ts";

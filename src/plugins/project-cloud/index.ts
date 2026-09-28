@@ -30,7 +30,7 @@ import {
   loadSettings,
   saveSettings
 } from './lib/persistence.ts';
-import { coerceProject, cloneProject } from '../narrative-engine/lib/project.ts';
+import { coerceProject, cloneProject } from "../narrative-engine/index.ts";
 
 export * from './manifest.ts';
 export * from './types.ts';

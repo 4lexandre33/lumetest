@@ -1,6 +1,6 @@
 import type { FbeDrawer, MutationDraft } from "./write-menu.ts";
 import { FBE_DRAWERS, flagBit, isKnownLinkTarget, listItems, emitEntityId } from "./write-menu.ts";
-import { formatFuseValue, formatStatInput, isLinkTarget } from "../../narrative-engine/lib/world-model.ts";
+import { formatFuseValue, formatStatInput, isLinkTarget } from "../../narrative-engine/index.ts";
 
 export const ANOTACOES_SLICE_START = "# --- lume-anotacoes ---";
 export const ANOTACOES_SLICE_END = "# --- /lume-anotacoes ---";

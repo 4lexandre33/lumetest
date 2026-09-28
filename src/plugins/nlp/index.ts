@@ -9,11 +9,17 @@ import type { IntentEngineService } from "../intent-engine/types.ts";
 import type { VocabService } from "../vocab/types.ts";
 import { NLP_MANIFEST } from "./manifest.ts";
 import { interpret, splitPhrases } from "./lib/nlp.ts";
+import { nlpComando } from "./lib/command.ts";
+import { nlpProsa } from "./lib/prose.ts";
+import { definirModelo } from "./lib/model-provider.ts";
 import type { NlpService } from "./types.ts";
 
 export * from "./manifest.ts";
 export * from "./types.ts";
 export * from "./lib/nlp.ts";
+export * from "./lib/command.ts";
+export * from "./lib/prose.ts";
+export * from "./lib/model-provider.ts";
 
 export class NlpPlugin implements IPlugin {
   manifest: IPluginManifest = NLP_MANIFEST;
@@ -23,7 +29,7 @@ export class NlpPlugin implements IPlugin {
 
   constructor(context: PluginContext) {
     this.context = context;
-    this.service = { interpret, splitPhrases };
+    this.service = { interpret, splitPhrases, comando: nlpComando, prosa: nlpProsa, definirModelo };
   }
 
   async activate(): Promise<void> {

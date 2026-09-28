@@ -4,8 +4,8 @@ import { createCore, Core } from '../../../../core/index.ts';
 import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from '../../../narrative-engine/index.ts';
 import { ENTITY_EXTRAS_MANIFEST, createEntityExtrasPlugin } from '../../index.ts';
 import type { EntityExtrasService } from '../../types.ts';
-import { createProject } from '../../../narrative-engine/lib/project.ts';
-import { createEmptyEntity } from '../../../narrative-engine/lib/world-model.ts';
+import { createProject } from "../../../narrative-engine/index.ts";
+import { createEmptyEntity } from "../../../narrative-engine/index.ts";
 
 describe('Entity Extras Plugin', () => {
   let core: Core;

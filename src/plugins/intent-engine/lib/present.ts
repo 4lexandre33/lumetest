@@ -3,9 +3,9 @@ import {
   entityDisplayName,
   queryGameView,
   type GameState,
-} from "../../narrative-engine/lib/runtime.ts";
-import { matchSift } from "../../narrative-engine/lib/sift.ts";
-import { emptyBeat } from "../../narrative-engine/lib/beat.ts";
+} from "../../narrative-engine/index.ts";
+import { matchSift } from "../../narrative-engine/index.ts";
+import { emptyBeat } from "../../narrative-engine/index.ts";
 import type { Intent, IntentResolution, ScopeFn } from "../types.ts";
 
 export type KnowledgeFact = {

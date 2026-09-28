@@ -7,9 +7,9 @@ import { cartaoNaLinha, entityGuess, ligarPalavra, maisUmPalavra, MENU_CURSOR, n
 import { lerProsa } from "../../lib/leitor.ts";
 import { addAnnotation, markHitsOnPage, applyNamedDoToDraft, type MutableDraft } from "../../lib/annotations.ts";
 import { leituraAte, mapaDe } from "../../lib/timeline.ts";
-import { compileEntityFile } from "../../../narrative-engine/lib/world-model.ts";
-import { createExampleProject } from "../../../narrative-engine/lib/examples.ts";
-import { compileProject } from "../../../narrative-engine/lib/project.ts";
+import { compileEntityFile } from "../../../narrative-engine/index.ts";
+import { createExampleProject } from "../../../narrative-engine/index.ts";
+import { compileProject } from "../../../narrative-engine/index.ts";
 
 const bloco = `@goblin.{
   id: #A1B2;

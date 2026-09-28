@@ -4,6 +4,7 @@
  */
 
 import { createCore, Core } from './core/index.ts';
+import { OPCIONAIS } from './opcionais.ts';
 
 // 1. Core Narrative Engine Plugin
 import {
@@ -211,18 +212,18 @@ export interface LumePlatformServices {
   worldEvents: WorldEventsService;
   knowledge: KnowledgeService;
   agency: AgencyService;
-  spatial: SpatialService;
-  senses: SensesService;
-  adventureKit: AdventureKitService;
-  socialKit: SocialKitService;
-  channelKit: ChannelKitService;
-  combatKit: CombatKitService;
-  prose: ProseService;
-  sift: SiftService;
+  spatial: SpatialService | null;
+  senses: SensesService | null;
+  adventureKit: AdventureKitService | null;
+  socialKit: SocialKitService | null;
+  channelKit: ChannelKitService | null;
+  combatKit: CombatKitService | null;
+  prose: ProseService | null;
+  sift: SiftService | null;
   dryRun: DryRunService;
-  process: ProcessService;
+  process: ProcessService | null;
   chain: ChainService;
-  life: LifeService;
+  life: LifeService | null;
   vocab: VocabService;
   nlp: NlpService;
   notebook: NotebookService;
@@ -231,7 +232,7 @@ export interface LumePlatformServices {
   ideGuide: IdeGuideService;
   ideSettings: IdeSettingsPluginService;
   entityExtras: EntityExtrasService;
-  multiplayer: MultiplayerService;
+  multiplayer: MultiplayerService | null;
   extHost: ExtHostService;
 }
 
@@ -240,8 +241,9 @@ let platformCore: Core | null = null;
 /**
  * Boots the Extensible Microkernel Platform and activates all domain plugins
  */
-export async function bootLumePlatform(): Promise<{ core: Core; services: LumePlatformServices }> {
-  if (platformCore) {
+export async function bootLumePlatform(opts?: { opcionais?: boolean }): Promise<{ core: Core; services: LumePlatformServices }> {
+  const guardar = opts?.opcionais !== false;
+  if (guardar && platformCore) {
     return {
       core: platformCore,
       services: getPlatformServices(platformCore)
@@ -249,9 +251,11 @@ export async function bootLumePlatform(): Promise<{ core: Core; services: LumePl
   }
 
   const core = createCore();
-  platformCore = core;
-  if (typeof globalThis !== 'undefined') {
-    globalThis.__LUME_CORE__ = core;
+  if (guardar) {
+    platformCore = core;
+    if (typeof globalThis !== 'undefined') {
+      globalThis.__LUME_CORE__ = core;
+    }
   }
 
   // Register all plugins
@@ -286,6 +290,11 @@ export async function bootLumePlatform(): Promise<{ core: Core; services: LumePl
   core.registerPlugin(EXT_HOST_MANIFEST, createExtHostPlugin);
 
   // Activate plugins respecting dependency graph
+  const opcional = new Set(OPCIONAIS.map((item) => item.plugin));
+  const ligar = async (name: string) => {
+    if (!guardar && opcional.has(name)) return;
+    await core.activatePlugin(name);
+  };
   await core.activatePlugin('lume-narrative-engine');
   await core.activatePlugin('lume-project-cloud');
   await core.activatePlugin('lume-ide-state');
@@ -294,18 +303,18 @@ export async function bootLumePlatform(): Promise<{ core: Core; services: LumePl
   await core.activatePlugin('lume-world-events');
   await core.activatePlugin('lume-knowledge');
   await core.activatePlugin('lume-agency');
-  await core.activatePlugin('lume-spatial');
-  await core.activatePlugin('lume-senses');
-  await core.activatePlugin('lume-kit-adventure');
-  await core.activatePlugin('lume-kit-social');
-  await core.activatePlugin('lume-kit-channel');
-  await core.activatePlugin('lume-kit-combat');
-  await core.activatePlugin('lume-kit-prose');
-  await core.activatePlugin('lume-sift');
+  await ligar('lume-spatial');
+  await ligar('lume-senses');
+  await ligar('lume-kit-adventure');
+  await ligar('lume-kit-social');
+  await ligar('lume-kit-channel');
+  await ligar('lume-kit-combat');
+  await ligar('lume-kit-prose');
+  await ligar('lume-sift');
   await core.activatePlugin('lume-dry-run');
-  await core.activatePlugin('lume-process');
+  await ligar('lume-process');
   await core.activatePlugin('lume-chain');
-  await core.activatePlugin('lume-life');
+  await ligar('lume-life');
   await core.activatePlugin('lume-vocab');
   await core.activatePlugin('lume-nlp');
   await core.activatePlugin('lume-notebook');
@@ -313,7 +322,7 @@ export async function bootLumePlatform(): Promise<{ core: Core; services: LumePl
   await core.activatePlugin('lume-ide-guide');
   await core.activatePlugin('lume-ide-settings');
   await core.activatePlugin('lume-entity-extras');
-  await core.activatePlugin('lume-multiplayer');
+  await ligar('lume-multiplayer');
   await core.activatePlugin('lume-ext-host');
 
   if (typeof globalThis !== 'undefined') {
@@ -327,6 +336,13 @@ export async function bootLumePlatform(): Promise<{ core: Core; services: LumePl
 }
 
 export function getPlatformServices(core: Core): LumePlatformServices {
+  const talvez = <T,>(name: string): T | null => {
+    try {
+      return core.getService<T>(name);
+    } catch {
+      return null;
+    }
+  };
   return {
     narrativeEngine: core.getService<NarrativeEngineService>('NarrativeEngine'),
     taxonomy: core.getService<TaxonomyService>('Taxonomy'),
@@ -342,18 +358,18 @@ export function getPlatformServices(core: Core): LumePlatformServices {
     worldEvents: core.getService<WorldEventsService>('WorldEvents'),
     knowledge: core.getService<KnowledgeService>('Knowledge'),
     agency: core.getService<AgencyService>('Agency'),
-    spatial: core.getService<SpatialService>('Spatial'),
-    senses: core.getService<SensesService>('Senses'),
-    adventureKit: core.getService<AdventureKitService>('AdventureKit'),
-    socialKit: core.getService<SocialKitService>('SocialKit'),
-    channelKit: core.getService<ChannelKitService>('ChannelKit'),
-    combatKit: core.getService<CombatKitService>('CombatKit'),
-    prose: core.getService<ProseService>('Prose'),
-    sift: core.getService<SiftService>('Sift'),
+    spatial: talvez<SpatialService>('Spatial'),
+    senses: talvez<SensesService>('Senses'),
+    adventureKit: talvez<AdventureKitService>('AdventureKit'),
+    socialKit: talvez<SocialKitService>('SocialKit'),
+    channelKit: talvez<ChannelKitService>('ChannelKit'),
+    combatKit: talvez<CombatKitService>('CombatKit'),
+    prose: talvez<ProseService>('Prose'),
+    sift: talvez<SiftService>('Sift'),
     dryRun: core.getService<DryRunService>('DryRun'),
-    process: core.getService<ProcessService>('Process'),
+    process: talvez<ProcessService>('Process'),
     chain: core.getService<ChainService>('Chain'),
-    life: core.getService<LifeService>('Life'),
+    life: talvez<LifeService>('Life'),
     vocab: core.getService<VocabService>('Vocab'),
     nlp: core.getService<NlpService>('Nlp'),
     notebook: core.getService<NotebookService>('Notebook'),
@@ -362,7 +378,7 @@ export function getPlatformServices(core: Core): LumePlatformServices {
     ideGuide: core.getService<IdeGuideService>('IdeGuide'),
     ideSettings: core.getService<IdeSettingsPluginService>('IdeSettingsService'),
     entityExtras: core.getService<EntityExtrasService>('EntityExtras'),
-    multiplayer: core.getService<MultiplayerService>('Multiplayer'),
+    multiplayer: talvez<MultiplayerService>('Multiplayer'),
     extHost: core.getService<ExtHostService>('ExtHost')
   };
 }

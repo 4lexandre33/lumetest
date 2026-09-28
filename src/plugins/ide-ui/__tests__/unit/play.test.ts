@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { playHud } from "../../lib/play.ts";
-import { DRY_RUN_NOTICE } from "../../../intent-engine/lib/notices.ts";
+import { DRY_RUN_NOTICE } from "../../../intent-engine/index.ts";
 
 describe("play skin hud", () => {
   it("shows title turn and optional score", () => {

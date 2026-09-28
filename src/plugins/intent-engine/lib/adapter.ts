@@ -1,4 +1,4 @@
-import { cloneWorldModel, assignLink, clearLink } from "../../narrative-engine/lib/world-model.ts";
+import { descerMutacao } from "../../narrative-engine/index.ts";
 import type { GameState } from "../../narrative-engine/types.ts";
 import type { Intent, IntentExecution, ParseIntentOptions } from "../types.ts";
 import { presentIntent } from "./present.ts";
@@ -21,33 +21,6 @@ function pickTrigger(intent: Intent, resolvedArgs: Record<string, string>, actor
   if (leaf === "wait" || leaf === "inventory") return actor;
   if (leaf === "look") return loc ?? actor;
   return resolvedArgs.destination ?? resolvedArgs.target ?? resolvedArgs.object ?? resolvedArgs.receiver ?? actor;
-}
-
-function annotateActorIntent(
-  world: GameState["worldModel"],
-  actorId: string,
-  intent: Intent,
-  resolvedArgs: Record<string, string>,
-): boolean {
-  const actor = world.get(actorId);
-  if (!actor) return false;
-  const leaf = leafOperation(intent);
-  if (leaf) assignLink(actor, INTENT_KEY, leaf);
-  if (intent.family) assignLink(actor, `${INTENT_PREFIX}family`, intent.family);
-  for (const [name, value] of Object.entries(resolvedArgs)) {
-    assignLink(actor, `${INTENT_PREFIX}${name}`, value);
-  }
-  return true;
-}
-
-function clearActorIntent(world: GameState["worldModel"], actorId: string): void {
-  const actor = world.get(actorId);
-  if (!actor) return;
-  clearLink(actor, INTENT_KEY);
-  const keys = new Set([...Object.keys(actor.links), ...Object.keys(actor.softLinks), ...Object.keys(actor.hardLinks)]);
-  for (const key of keys) {
-    if (key.startsWith(INTENT_PREFIX)) clearLink(actor, key);
-  }
 }
 
 function unchanged(game: GameState, resolution: ReturnType<typeof resolveIntent>): IntentExecution {
@@ -120,17 +93,38 @@ function executeSingle(
   const loc = game.worldModel.get(actorId)?.links.current_location ?? null;
   const triggerId = pickTrigger(resolution.intent, resolvedArgs, actorId, loc);
 
-  const annotatedWorld = cloneWorldModel(game.worldModel);
-  if (!annotateActorIntent(annotatedWorld, actorId, resolution.intent, resolvedArgs)) {
-    return unchanged(game, resolution);
+  const leaf = leafOperation(resolution.intent);
+  const linhas: string[] = [];
+  if (leaf) linhas.push(`SET_LINK ${actorId}.softLinks.intent ${leaf}`);
+  if (resolution.intent.family) linhas.push(`SET_LINK ${actorId}.softLinks.intent_family ${resolution.intent.family}`);
+  for (const [name, value] of Object.entries(resolvedArgs)) {
+    if (value) linhas.push(`SET_LINK ${actorId}.softLinks.intent_${name} ${value}`);
+  }
+  let world = game.worldModel;
+  for (const line of linhas) {
+    const decision = descerMutacao("intent", line, world, "");
+    if (!decision.ok || !decision.world.get(actorId)) return unchanged(game, resolution);
+    world = decision.world;
   }
 
-  const next = interact({ ...game, worldModel: annotatedWorld }, triggerId);
-  clearActorIntent(next.worldModel, actorId);
+  const next = interact({ ...game, worldModel: world }, triggerId);
+  let cleared = next.worldModel;
+  const actor = cleared.get(actorId);
+  const keys = actor
+    ? new Set([...Object.keys(actor.links), ...Object.keys(actor.softLinks), ...Object.keys(actor.hardLinks)])
+    : new Set<string>();
+  const apagar: string[] = [];
+  if (keys.has(INTENT_KEY)) apagar.push(`UNLINK ${actorId}.${INTENT_KEY}`);
+  for (const key of keys) if (key.startsWith(INTENT_PREFIX)) apagar.push(`UNLINK ${actorId}.${key}`);
+  for (const line of apagar) {
+    const decision = descerMutacao("intent", line, cleared, "");
+    if (!decision.ok) return unchanged(game, resolution);
+    cleared = decision.world;
+  }
 
   return {
     resolution,
-    game: next,
+    game: { ...next, worldModel: cleared },
     executed: true,
     triggerId,
   };

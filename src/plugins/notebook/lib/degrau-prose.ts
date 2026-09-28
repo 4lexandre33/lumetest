@@ -1,5 +1,5 @@
-import { lineColumnFromOffset } from "../../narrative-engine/lib/source-ops.ts";
-import type { CompletionItem } from "../../narrative-engine/lib/complete.ts";
+import { lineColumnFromOffset } from "../../narrative-engine/index.ts";
+import type { CompletionItem } from "../../narrative-engine/index.ts";
 import { writeSuggestions, type WriteSuggestion } from "./prose-triggers.ts";
 
 export type PhraseLeaf = { owner: string; key: string; insert: string };

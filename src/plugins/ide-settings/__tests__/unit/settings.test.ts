@@ -4,7 +4,7 @@ import { createCore, Core } from '../../../../core/index.ts';
 import { PROJECT_CLOUD_MANIFEST, createProjectCloudPlugin } from '../../../project-cloud/index.ts';
 import { IDE_SETTINGS_MANIFEST, createIdeSettingsPlugin } from '../../index.ts';
 import type { IdeSettingsPluginService } from '../../types.ts';
-import { DEFAULT_IDE_SETTINGS } from '../../../project-cloud/lib/persistence.ts';
+import { DEFAULT_IDE_SETTINGS } from "../../../project-cloud/index.ts";
 
 describe('IDE Settings Plugin', () => {
   let core: Core;

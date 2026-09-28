@@ -1,7 +1,7 @@
 import { FilePlus, FolderOpen, GraduationCap } from "lucide-react";
 import { Button } from "../ui/button.tsx";
-import { EXAMPLE_CATALOG } from "../../../narrative-engine/lib/examples.ts";
-import { useIdeStore } from "../../../ide-state/lib/orchestrator.ts";
+import { EXAMPLE_CATALOG } from "../../../narrative-engine/index.ts";
+import { useIdeStore } from "../../../ide-state/index.ts";
 
 export function Welcome() {
   const catalog = useIdeStore((s) => s.catalog);

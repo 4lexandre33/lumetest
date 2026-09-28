@@ -1,4 +1,4 @@
-import { SEMANTIC_KINDS, type Rule, type SemanticKind } from "../../narrative-engine/lib/rule-engine.ts";
+import { SEMANTIC_KINDS, type Rule, type SemanticKind } from "../../narrative-engine/index.ts";
 
 const ORDER: SemanticKind[] = [...SEMANTIC_KINDS];
 

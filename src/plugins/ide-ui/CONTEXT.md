@@ -14,6 +14,7 @@ UI canónica do IDE. Fonte da verdade dos componentes.
 - `lib/components/NotebookPane.tsx` — vista caderno (C9): capa, índice, página, margem
 - `lib/components/NotebookNotes.tsx` — notas do caderno (C8), prosa, sob o motor
 - `lib/play-html.ts` — HTML estático do play-skin
+- `lib/superficie.ts` — Escrever, Pessoas, Cenas, Cronologia, Universo, Revisão, Assistente. Técnico só quando se pede. Play não é a porta.
 - `lib/components/IdeApp.tsx` — layout; export/import `.lume.caderno.md`; `#play=` após compile do caderno
 - `lib/view-registry.ts` — nomes das vistas (16)
 

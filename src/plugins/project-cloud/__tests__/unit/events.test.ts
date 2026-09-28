@@ -10,7 +10,7 @@ import {
 } from '../../../../core/contracts/typed-event.ts';
 import { PROJECT_CLOUD_MANIFEST, createProjectCloudPlugin } from '../../index.ts';
 import type { ProjectCloudService } from '../../types.ts';
-import { createProject } from '../../../narrative-engine/lib/project.ts';
+import { createProject } from "../../../narrative-engine/index.ts";
 
 describe('Project Cloud Event Emissions', () => {
   let core: Core;

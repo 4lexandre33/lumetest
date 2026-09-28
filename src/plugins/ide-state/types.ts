@@ -12,7 +12,7 @@ import type {
 } from '../narrative-engine/types.ts';
 import type { IdeSettings } from '../project-cloud/types.ts';
 import type { IntentResolution, IntentSuggestion } from '../intent-engine/types.ts';
-import type { SkeinNode, SessionJson } from '../narrative-engine/lib/index.ts';
+import type { SkeinNode, SessionJson } from "../narrative-engine/index.ts";
 
 export type EditorTab = 'entities' | 'taxonomy' | 'rules' | 'config';
 export type IdeScreen = 'welcome' | 'ide' | 'guide' | 'play';

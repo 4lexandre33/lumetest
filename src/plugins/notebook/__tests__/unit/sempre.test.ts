@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 import { compileNotebook } from "../../lib/notebook.ts";
 import { leisSempre, writeSuggestions } from "../../lib/prose-triggers.ts";
 import { decidirSempre } from "../../lib/proposta.ts";
-import { compileEntityFile } from "../../../narrative-engine/lib/world-model.ts";
-import { compileRuleFile } from "../../../narrative-engine/lib/rule-engine.ts";
+import { compileEntityFile } from "../../../narrative-engine/index.ts";
+import { compileRuleFile } from "../../../narrative-engine/index.ts";
 
 const caderno = `CADERNO:
 ### Sala

@@ -7,7 +7,7 @@ import type { IPlugin, IPluginManifest } from '../../core/contracts/plugin-manif
 import type { PluginContext } from '../../core/contracts/plugin-context.ts';
 import { IDE_SETTINGS_MANIFEST } from './manifest.ts';
 import type { IdeSettingsPluginService, IdeSettings } from './types.ts';
-import { DEFAULT_IDE_SETTINGS } from '../project-cloud/lib/persistence.ts';
+import { DEFAULT_IDE_SETTINGS } from "../project-cloud/index.ts";
 import type { ProjectCloudService } from '../project-cloud/types.ts';
 
 export * from './manifest.ts';

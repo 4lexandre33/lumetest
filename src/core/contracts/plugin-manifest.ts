@@ -17,6 +17,16 @@ export interface PluginHooks {
   init?: () => Promise<void>;
 
   /**
+   * Depois de init, antes de ficar activo.
+   */
+  start?: () => Promise<void>;
+
+  /**
+   * Antes de desactivar.
+   */
+  stop?: () => Promise<void>;
+
+  /**
    * Chamado antes de plugin ser desativado
    */
   destroy?: () => Promise<void>;
@@ -73,6 +83,11 @@ export interface IPluginManifest {
      */
     optional?: Capability[];
   };
+
+  /**
+   * Porta que este plugin consome. O kernel liga o nome à capability.
+   */
+  slots?: { name: string; capability: string }[];
 
   /**
    * Lifecycle hooks

@@ -5,8 +5,8 @@
 import type { IPlugin, IPluginManifest } from "../../core/contracts/plugin-manifest.ts";
 import type { PluginContext } from "../../core/contracts/plugin-context.ts";
 import { GameBeatGeneratedEvent, StorySiftedEvent } from "../../core/contracts/typed-event.ts";
-import type { GameState } from "../narrative-engine/lib/runtime.ts";
-import { bannerOf, matchSift, parsePadrao } from "../narrative-engine/lib/sift.ts";
+import type { GameState } from "../narrative-engine/index.ts";
+import { bannerOf, matchSift, parsePadrao } from "../narrative-engine/index.ts";
 import { SIFT_MANIFEST } from "./manifest.ts";
 import type { SiftService } from "./types.ts";
 

@@ -1,6 +1,6 @@
 /** Leaf intents from lume-vocab. Notebook does not import nlp. */
 
-export { intentLeaf, pathOfLeaf } from "../../vocab/lib/verbs.ts";
+export { intentLeaf, pathOfLeaf } from "../../vocab/index.ts";
 
 const VERB_LABELS: Record<string, string> = {
   take: "pegar",

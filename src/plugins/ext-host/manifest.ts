@@ -24,6 +24,14 @@ export const EXT_HOST_MANIFEST: IPluginManifest = {
     ],
   },
 
+  slots: [
+    { name: "narrative", capability: "NarrativeEngine" },
+    { name: "intent", capability: "IntentEngine" },
+    { name: "state", capability: "IdeState" },
+    { name: "effects", capability: "RuleEffects" },
+    { name: "semantics", capability: "RuleSemantics" },
+  ],
+
   hooks: {
     init: async () => {},
     destroy: async () => {},

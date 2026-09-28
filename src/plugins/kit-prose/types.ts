@@ -1,4 +1,4 @@
-import type { GameBeat } from "../narrative-engine/lib/runtime.ts";
+import type { GameBeat } from "../narrative-engine/index.ts";
 import type { NarrativeFunction } from "./data/functions.ts";
 import type { RecapOptions } from "./lib/recap.ts";
 
