@@ -1,6 +1,6 @@
 import { isSystemEntityId } from "../../../narrative-engine/index.ts";
-import { lerContinuidade, lerDiscurso, lerManuscrito } from "../../../notebook/index.ts";
 import { useIdeStore } from "../../../ide-state/index.ts";
+import { lerFrase } from "../leitura.ts";
 import type { Superficie } from "../superficie.ts";
 
 export function SalaPainel({ sala }: { sala: Superficie }) {
@@ -11,10 +11,10 @@ export function SalaPainel({ sala }: { sala: Superficie }) {
   const mundo = [...(compiled?.worldModel.values() ?? [])].filter((entity) => !isSystemEntityId(entity.id) && !entity.tags.has("molde"));
   const pessoas = mundo.filter((entity) => entity.tags.has("agent"));
   const resto = mundo.filter((entity) => !entity.tags.has("agent"));
-  const manuscrito = lerManuscrito(prosa);
-  const cenas = manuscrito.books.flatMap((book) => book.chapters.flatMap((chapter) => chapter.scenes.map((scene) => ({ book: book.title, chapter: chapter.title, scene: scene.title }))));
-  const revisao = sala === "revisao" ? lerContinuidade(prosa) : null;
-  const discurso = sala === "revisao" ? lerDiscurso(prosa) : null;
+  const inicio = prosa.indexOf("\n\n");
+  const leitura = lerFrase(prosa, inicio < 0 ? 0 : inicio + 2, project?.entitiesSource ?? "");
+  const cenas = (leitura?.manuscrito.books ?? []).flatMap((book) => book.chapters.flatMap((chapter) => chapter.scenes.map((scene) => ({ book: book.title, chapter: chapter.title, scene: scene.title }))));
+  const notas = sala === "revisao" ? leitura?.diagnostico.notas ?? [] : [];
 
   return (
     <div className="h-full min-h-0 overflow-auto bg-bg px-4 py-4 text-sm">
@@ -68,23 +68,27 @@ export function SalaPainel({ sala }: { sala: Superficie }) {
           <p className="text-muted">Ainda não há universo.</p>
         )
       ) : null}
-      {sala === "revisao" && revisao && discurso ? (
-        <div className="space-y-3">
-          {revisao.avisos.length ? (
-            <ul className="space-y-2">
-              {revisao.avisos.map((aviso) => (
-                <li key={aviso.id}>{aviso.texto}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted">Sem avisos.</p>
-          )}
-          <p className="text-subtle">
-            {discurso.discurso.length} notas de discurso, {discurso.estilo.length} de estilo. O texto não muda.
-          </p>
-        </div>
+      {sala === "revisao" ? (
+        notas.length ? (
+          <ul className="space-y-2">
+            {notas.map((nota, index) => (
+              <li key={`${nota.codigo}-${nota.cena}-${index}`}>{nota.texto}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted">Sem avisos.</p>
+        )
       ) : null}
-      {sala === "assistente" ? <p className="text-muted">O assistente não altera o texto. Não há modelo nesta sala.</p> : null}
+      {sala === "assistente" ? (
+        leitura?.contexto ? (
+          <div className="space-y-2">
+            <p>{leitura.contexto.text}</p>
+            <p className="text-subtle">{leitura.historia === prosa && !leitura.proposta.desceu ? "A proposta não desceu. O texto não muda." : "O texto não muda."}</p>
+          </div>
+        ) : (
+          <p className="text-muted">O assistente não altera o texto. Não há modelo nesta sala.</p>
+        )
+      ) : null}
     </div>
   );
 }

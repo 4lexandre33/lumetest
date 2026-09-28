@@ -1,4 +1,3 @@
-import { bootLumePlatform } from "../../../bootstrap.ts";
 import type { ExtHostService } from "../types.ts";
 
 function fromGlobal(): ExtHostService | null {
@@ -18,8 +17,15 @@ export async function ensureExtHost(): Promise<ExtHostService | null> {
   const existing = fromGlobal();
   if (existing) return existing;
   if (!booting) {
-    booting = bootLumePlatform()
-      .then((boot) => boot.services.extHost)
+    booting = import("../../../bootstrap.ts")
+      .then((mod) => mod.bootLumePlatform())
+      .then((boot) => {
+        try {
+          return boot.core.getService<ExtHostService>("ExtHost");
+        } catch {
+          return fromGlobal();
+        }
+      })
       .catch(() => fromGlobal())
       .finally(() => {
         booting = null;

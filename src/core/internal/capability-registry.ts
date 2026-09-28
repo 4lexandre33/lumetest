@@ -11,6 +11,8 @@ export interface CapabilityExport {
   version: string;
   provider: string;
   api: Record<string, (...args: any[]) => any>;
+  /** Se faltar, os métodos são as funções da API. O resto não sai. */
+  methods?: readonly string[];
 }
 
 export class CapabilityRegistry {
@@ -44,7 +46,7 @@ export class CapabilityRegistry {
       for (const cap of this.capabilities.values()) {
         if (cap.name === name) {
           this.logger.debug(`Resolved capability ${name} to version ${cap.version}`);
-          return cap.api as T;
+          return superficie(cap) as T;
         }
       }
     }
@@ -52,7 +54,7 @@ export class CapabilityRegistry {
     // Se versão especificada, valida compatibilidade semver
     const key = `${name}@${version}`;
     if (this.capabilities.has(key)) {
-      return this.capabilities.get(key)!.api as T;
+      return superficie(this.capabilities.get(key)!) as T;
     }
 
     // Fallback: tenta achar versão compatível
@@ -61,7 +63,7 @@ export class CapabilityRegistry {
         this.logger.debug(
           `Resolved capability ${name}@${version} to ${cap.version}`
         );
-        return cap.api as T;
+        return superficie(cap) as T;
       }
     }
 
@@ -82,4 +84,26 @@ export class CapabilityRegistry {
     const key = `${name}@${version}`;
     return this.capabilities.get(key);
   }
+}
+
+function superficie<T>(cap: CapabilityExport): T {
+  const api = cap.api;
+  const declared = new Set((cap.methods ?? Object.keys(api)).filter((name) => typeof api[name] === "function"));
+  return new Proxy(api, {
+    get(target, prop) {
+      if (typeof prop !== "string" || !declared.has(prop)) return undefined;
+      const value = target[prop];
+      return typeof value === "function" ? value.bind(target) : undefined;
+    },
+    has(_target, prop) {
+      return typeof prop === "string" && declared.has(prop);
+    },
+    ownKeys() {
+      return [...declared];
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      if (typeof prop !== "string" || !declared.has(prop)) return undefined;
+      return { configurable: true, enumerable: true, writable: false, value: api[prop]!.bind(api) };
+    },
+  }) as T;
 }

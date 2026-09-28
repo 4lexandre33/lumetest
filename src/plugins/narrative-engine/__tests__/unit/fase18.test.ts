@@ -2,7 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { adaptWorld, cloneWorldModel, compileEntityFile, mutationGateway, type WorldBackend } from "../../index.ts";
+import { adaptWorld, cloneWorldModel, compileEntityFile, type WorldBackend } from "../../index.ts";
+import { mutationGateway } from "../../../mutation-gateway/index.ts";
 
 function files(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

@@ -7,10 +7,9 @@ import type { PluginContext } from "../../core/contracts/plugin-context.ts";
 import { compileNotebook } from "./lib/notebook.ts";
 import { assistNotebook } from "./lib/assist.ts";
 import { exportCadernoMd, importCaderno, cadernoFilename } from "./lib/share.ts";
-import { lerManuscrito } from "./lib/manuscript.ts";
-import { lerIr } from "./lib/narrative-ir.ts";
 import { referenciasDe } from "./lib/reference.ts";
-import { contextoDaFrase } from "./lib/sentence-context.ts";
+import { lerIr } from "./lib/narrative-ir.ts";
+import { diagnosticoDe } from "./lib/diagnostico.ts";
 import { NOTEBOOK_MANIFEST } from "./manifest.ts";
 import type { NotebookService } from "./types.ts";
 
@@ -24,12 +23,13 @@ export * from "./lib/write-menu.ts";
 export * from "./lib/annotations.ts";
 export * from "./lib/prose-triggers.ts";
 export * from "./lib/timeline.ts";
-export * from "./lib/manuscript.ts";
 export * from "./lib/narrative-ir.ts";
 export * from "./lib/reference.ts";
-export * from "./lib/sentence-context.ts";
 export * from "./lib/causa.ts";
 export * from "./lib/continuidade.ts";
+export * from "./lib/pessoa.ts";
+export * from "./lib/intencao.ts";
+export * from "./lib/diagnostico.ts";
 export * from "./lib/discurso.ts";
 export * from "./lib/impacto.ts";
 
@@ -46,10 +46,7 @@ export class NotebookPlugin implements IPlugin {
       exportCaderno: exportCadernoMd,
       importCaderno,
       cadernoFilename,
-      ler: lerManuscrito,
-      lerIr,
       referencias: referenciasDe,
-      contexto: contextoDaFrase,
     };
   }
 
@@ -60,6 +57,18 @@ export class NotebookPlugin implements IPlugin {
       version: "1.0.0",
       provider: this.manifest.name,
       api: this.service as any,
+    });
+    this.context.registerCapability({
+      name: "NarrativeIr",
+      version: "1.0.0",
+      provider: this.manifest.name,
+      api: { ler: lerIr } as any,
+    });
+    this.context.registerCapability({
+      name: "Diagnostico",
+      version: "1.0.0",
+      provider: this.manifest.name,
+      api: { ler: diagnosticoDe } as any,
     });
     this.context.logger.info("Lume Notebook activated.");
   }

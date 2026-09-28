@@ -8,6 +8,7 @@ import type { IntentEngineService } from "../../../intent-engine/types.ts";
 import { createExampleProject } from "../../../narrative-engine/index.ts";
 import { NLP_MANIFEST, createNlpPlugin, interpret, looksLikeIntent } from "../../index.ts";
 import { VOCAB_MANIFEST, createVocabPlugin } from "../../../vocab/index.ts";
+import { NOTEBOOK_MANIFEST, createNotebookPlugin } from "../../../notebook/index.ts";
 import type { NlpService } from "../../types.ts";
 import { DRY_RUN_NOTICE } from "../../../intent-engine/index.ts";
 
@@ -22,10 +23,12 @@ describe("Nlp", () => {
     core.registerPlugin(NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin);
     core.registerPlugin(INTENT_ENGINE_MANIFEST, createIntentEnginePlugin);
     core.registerPlugin(VOCAB_MANIFEST, createVocabPlugin);
+    core.registerPlugin(NOTEBOOK_MANIFEST, createNotebookPlugin);
     core.registerPlugin(NLP_MANIFEST, createNlpPlugin);
     await core.activatePlugin("lume-narrative-engine");
     await core.activatePlugin("lume-intent-engine");
     await core.activatePlugin("lume-vocab");
+    await core.activatePlugin("lume-notebook");
     await core.activatePlugin("lume-nlp");
     narrative = core.getService<NarrativeEngineService>("NarrativeEngine");
     intent = core.getService<IntentEngineService>("IntentEngine");

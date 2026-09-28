@@ -25,6 +25,7 @@ export { renderKit, fingerprintFiles } from "./lib/kit.ts";
 export { vistaAutorizada } from "./lib/vista.ts";
 export { zipStore } from "./lib/zip.ts";
 export { runGuestSource } from "./lib/sandbox.ts";
+export { ensureExtHost } from "./lib/ensure.ts";
 
 export class ExtHostPlugin implements IPlugin {
   manifest: IPluginManifest = EXT_HOST_MANIFEST;

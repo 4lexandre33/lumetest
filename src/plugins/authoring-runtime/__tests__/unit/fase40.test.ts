@@ -1,0 +1,46 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createCore } from "../../../../core/index.ts";
+import { AUTHORING_RUNTIME_MANIFEST, createAuthoringRuntimePlugin, type AuthoringRuntimeService } from "../../index.ts";
+import { NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin } from "../../../narrative-engine/index.ts";
+import { MUTATION_GATEWAY_MANIFEST, createMutationGatewayPlugin } from "../../../mutation-gateway/index.ts";
+import { MANUSCRIPT_MANIFEST, createManuscriptPlugin } from "../../../manuscript/index.ts";
+import { SENTENCE_CONTEXT_MANIFEST, createSentenceContextPlugin } from "../../../sentence-context/index.ts";
+import { NOTEBOOK_MANIFEST, createNotebookPlugin } from "../../../notebook/index.ts";
+import { AI_RUNTIME_MANIFEST, createAiRuntimePlugin } from "../../../ai-runtime/index.ts";
+
+describe("fase 40", () => {
+  it("a autoria junta as leituras e o caderno não coordena", async () => {
+    const core = createCore();
+    core.registerPlugin(NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin);
+    core.registerPlugin(MUTATION_GATEWAY_MANIFEST, createMutationGatewayPlugin);
+    core.registerPlugin(MANUSCRIPT_MANIFEST, createManuscriptPlugin);
+    core.registerPlugin(SENTENCE_CONTEXT_MANIFEST, createSentenceContextPlugin);
+    core.registerPlugin(NOTEBOOK_MANIFEST, createNotebookPlugin);
+    core.registerPlugin(AI_RUNTIME_MANIFEST, createAiRuntimePlugin);
+    core.registerPlugin(AUTHORING_RUNTIME_MANIFEST, createAuthoringRuntimePlugin);
+    await core.activatePlugin("lume-narrative-engine");
+    await core.activatePlugin("lume-mutation-gateway");
+    await core.activatePlugin("lume-manuscript");
+    await core.activatePlugin("lume-sentence-context");
+    await core.activatePlugin("lume-notebook");
+    await core.activatePlugin("lume-ai-runtime");
+    await core.activatePlugin("lume-authoring-runtime");
+    const prosa = "### Sala\n\nMaria entrou.\n\n### Rua\n\nAna esperou.";
+    const autoria = core.getService<AuthoringRuntimeService>("AuthoringRuntime").abrir(prosa, prosa.indexOf("Maria"), "@maria.{ name: 'Maria'; tags: agent; }");
+    assert.equal(autoria.historia, prosa);
+    assert.equal(autoria.manuscrito.prose, prosa);
+    assert.equal(autoria.manuscrito.books[0]!.chapters.length > 0, true);
+    assert.equal(autoria.ir.prose, prosa);
+    assert.equal(autoria.contexto?.text, "Maria entrou.");
+    assert.equal(autoria.contexto?.cena.texto.includes("Ana esperou"), false);
+    assert.equal(Array.isArray(autoria.diagnostico.notas), true);
+    assert.equal(autoria.proposta.desceu, false);
+    assert.equal(autoria.proposta.contexto, "Maria entrou.");
+    const caderno = readFileSync("src/plugins/notebook/index.ts", "utf8");
+    assert.equal(/ler:\s*lerManuscrito/.test(caderno), false);
+    assert.equal(/lerIr,/.test(caderno), false);
+    assert.equal(/contexto:\s*contextoDaFrase/.test(caderno), false);
+  });
+});

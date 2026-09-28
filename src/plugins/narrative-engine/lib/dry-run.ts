@@ -1,5 +1,6 @@
 import { parseNarrative, pickNarrative } from "./narrative.ts";
-import { applyChanges, findMatchingRule, findMatchingRules, type EffectOp, type Rule } from "./rule-engine.ts";
+import { applyChanges, type EffectOp, type Rule } from "./rule-engine.ts";
+import { resolveRule, resolveRules } from "./rule-resolver.ts";
 import { entityDescription, type GameState } from "./runtime.ts";
 import type { ChangeAST, Entity, WorldModel } from "./types.ts";
 import { readStat } from "./world-model.ts";
@@ -101,7 +102,7 @@ export function worldDiffWouldMutate(diff: WorldDiff): boolean {
 }
 
 function candidatesOf(state: GameState, triggerId: string): DryRunCandidate[] {
-  return findMatchingRules(triggerId, state.rules, state.worldModel, state.taxonomy).map((match) => ({
+  return resolveRules(triggerId, state.rules, state.worldModel, state.taxonomy).map((match) => ({
     ruleId: match.rule.id,
     score: match.score,
   }));
@@ -134,7 +135,7 @@ function storyFor(
 export function dryRunWith(state: GameState, triggerId: string): DryRunReport {
   const world = state.worldModel;
   const candidates = candidatesOf(state, triggerId);
-  const rule = findMatchingRule(triggerId, state.rules, world, state.taxonomy);
+  const rule = resolveRule(triggerId, state.rules, world, state.taxonomy);
   const key = rule?.id ?? triggerId;
   const cycleIndex = state.ruleCounts[key] ?? 0;
   const nextWorld = rule ? applyChanges(world, rule.changes, triggerId, state.taxonomy) : world;

@@ -2,7 +2,8 @@ import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { definirModelo, nlpComando, nlpProsa } from "../../index.ts";
+import { definirModelo, ligarIr, nlpComando, nlpProsa } from "../../index.ts";
+import { lerIr } from "../../../notebook/index.ts";
 import type { WorldModel } from "../../../narrative-engine/types.ts";
 
 function files(dir: string, out: string[] = []): string[] {
@@ -27,10 +28,11 @@ describe("fase 9", () => {
     assert.equal(nlpComando("intent.x", new Map() as WorldModel), null);
 
     definirModelo(null);
+    ligarIr(lerIr);
     const prose = "### Sala\n\nJoão abriu a porta.";
     const plain = nlpProsa(prose);
     assert.equal(plain.prose, prose);
-    assert.equal(plain.version, "1.0");
+    assert.equal(plain.version, "3.0");
     assert.equal(plain.acts.some((act) => act.operation === "structure"), true);
     assert.equal(plain.acts.some((act) => act.operation === "represent"), true);
 

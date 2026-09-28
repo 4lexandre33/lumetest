@@ -49,9 +49,7 @@ export type {
   SessionJson,
   SkeinNode,
   BeatTrace,
-  WorldPort,
-  MutationPolicy,
-  MutationDecision
+  WorldPort
 } from './lib/index.ts';
 
 import type {
@@ -79,8 +77,6 @@ import type {
   DryRunReport,
   WorldDiff,
   WorldPort,
-  MutationPolicy,
-  MutationDecision,
   SiftPattern,
   CreateGameOptions
 } from './lib/index.ts';
@@ -125,7 +121,7 @@ export interface NarrativeEngineService {
   blankRules: string;
   blankTaxonomy: string;
   worldPort(world: WorldModel): WorldPort;
-  submitMutation(world: WorldModel, doLine: string, prose: string, policy?: MutationPolicy): MutationDecision;
+  compileEntities(source: string): { worldModel: WorldModel; errors: Issue[]; warnings: Issue[] };
 }
 
 export interface TaxonomyService {

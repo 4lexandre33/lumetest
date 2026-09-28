@@ -1,17 +1,23 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootLumePlatform } from '../../../bootstrap.ts';
+import { bootLumePlatform, getPlatformServices } from '../../../bootstrap.ts';
 
 describe('Lume EMPA Platform Final Cutover & Kernel Verification', () => {
   it('boots the complete platform and resolves capabilities across all domain plugins', async () => {
-    const { core, services } = await bootLumePlatform();
+    const { core } = await bootLumePlatform();
+    const services = getPlatformServices(core);
     assert.ok(core);
     assert.ok(services);
 
     // Verify Active Plugins
     const activePlugins = core.listActivePlugins();
-    assert.equal(activePlugins.length, 29);
+    assert.equal(activePlugins.length, 35);
     assert.ok(activePlugins.includes('lume-narrative-engine'));
+    assert.ok(activePlugins.includes('lume-mutation-gateway'));
+    assert.ok(activePlugins.includes('lume-ai-runtime'));
+    assert.ok(activePlugins.includes('lume-authoring-runtime'));
+    assert.ok(activePlugins.includes('lume-manuscript'));
+    assert.ok(activePlugins.includes('lume-sentence-context'));
     assert.ok(activePlugins.includes('lume-project-cloud'));
     assert.ok(activePlugins.includes('lume-ide-state'));
     assert.ok(activePlugins.includes('lume-intent-engine'));
@@ -20,6 +26,7 @@ describe('Lume EMPA Platform Final Cutover & Kernel Verification', () => {
     assert.ok(activePlugins.includes('lume-knowledge'));
     assert.ok(activePlugins.includes('lume-agency'));
     assert.ok(activePlugins.includes('lume-spatial'));
+    assert.ok(activePlugins.includes('lume-narrative-graph'));
     assert.ok(activePlugins.includes('lume-senses'));
     assert.ok(activePlugins.includes('lume-kit-adventure'));
     assert.ok(activePlugins.includes('lume-kit-social'));

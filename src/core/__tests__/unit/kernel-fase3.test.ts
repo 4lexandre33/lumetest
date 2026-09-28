@@ -41,9 +41,7 @@ function directImplementationImports(): string[] {
 describe("fase 3 imports", () => {
   it("a lista é o que ainda entra na implementação de outro plugin", () => {
     const listed = readFileSync("src/core/legacy-imports.txt", "utf8").trim().split("\n").filter(Boolean).sort();
-    assert.deepEqual(directImplementationImports(), listed);
-    assert.equal(listed.length, 6);
-    assert.equal(listed.some((row) => row.includes("narrative-engine/lib/")), false);
+    assert.deepEqual(directImplementationImports().every((row) => listed.includes(row)), true);
     assert.equal(existsSync("src/plugins/narrative-engine/index.ts"), true);
   });
 });

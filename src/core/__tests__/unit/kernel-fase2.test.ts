@@ -42,18 +42,19 @@ describe("fase 2 kernel", () => {
     }));
     await core.activatePlugin("lume-porta");
 
+    const base = { version: "1.0.0", source: "lume-porta", correlationId: "c", timestamp: "t", permissions: ["Eco"], mode: "read" as const };
     assert.equal(core.getService<{ ping: () => string }>("Saco").ping(), "saco");
     assert.deepEqual(
-      await core.dispatch({ id: "1", type: "eco", version: "1.0.0", source: "lume-porta", capability: "Eco", payload: "ola" }),
+      await core.dispatch({ ...base, id: "1", type: "eco", capability: "Eco", payload: "ola" }),
       { ok: true, value: "ola" },
     );
     assert.deepEqual(
-      await core.dispatch({ id: "2", type: "eco", version: "1.0.0", source: "lume-porta", slot: "porta", payload: "ola" }),
+      await core.dispatch({ ...base, id: "2", type: "eco", slot: "porta", payload: "ola" }),
       { ok: true, value: "ola" },
     );
-    const missing = await core.dispatch({ id: "3", type: "eco", version: "1.0.0", source: "lume-porta", slot: "nenhuma" });
+    const missing = await core.dispatch({ ...base, id: "3", type: "eco", slot: "nenhuma" });
     assert.equal(missing.ok, false);
-    const broken = await core.dispatch({ id: "4", type: "quebra", version: "1.0.0", source: "lume-porta", capability: "Eco" });
+    const broken = await core.dispatch({ ...base, id: "4", type: "quebra", capability: "Eco" });
     assert.deepEqual(broken, { ok: false, error: "falhou" });
     assert.equal(core.getService<{ ping: () => string }>("Saco").ping(), "saco");
 

@@ -17,7 +17,7 @@ Não criar SEARCH/PLAN “porque o manifesto tinha”.
 
 ## 4. Painel / superfície IDE
 Componente em `ide-ui/lib/components/`. Registrar em `view-registry.ts`.
-`src/components/ide/X.tsx` só reexporta.
+A rota importa `ide-ui/lib/components/` directamente. Não recriar `src/components/ide/`.
 
 ## 5. Plugin externo (terceiros / outra IA)
 Não criar pasta em `src/plugins/`. Descarregar o kit (Ajuda → Descarregar kit de plugins externos) — o **website** gera host.json a partir do kernel vivo.

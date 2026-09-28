@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FolderPlus, PackagePlus, X } from "lucide-react";
-import { ensureExtHost } from "../../../ext-host/lib/ensure.ts";
-import { bytesToBase64 } from "../../../ext-host/index.ts";
+import { bytesToBase64, ensureExtHost } from "../../../ext-host/index.ts";
 import type { ExtHostService, InstalledExternalPlugin, PluginKit } from "../../../ext-host/types.ts";
 import { Button } from "../ui/button.tsx";
 import { cn } from "../utils.ts";

@@ -21,10 +21,14 @@ export class Dispatcher {
   }
 
   resolve(envelope: Envelope, sourceActive: boolean): { handler: CapabilityHandler } | { error: string } {
-    if (!envelope?.id || !envelope.type || !envelope.version || !envelope.source) return { error: "envelope inválido" };
+    if (!envelope?.id || !envelope.type || !envelope.version || !envelope.source || !envelope.correlationId || !envelope.timestamp || !envelope.mode) {
+      return { error: "envelope inválido" };
+    }
+    if (!envelope.permissions?.length) return { error: "sem permissão" };
     if (envelope.source !== "core" && !sourceActive) return { error: "plugin inactivo" };
     const capability = envelope.capability ?? (envelope.slot ? this.slots.get(`${envelope.source}\0${envelope.slot}`) : undefined);
     if (!capability) return { error: envelope.slot ? "slot desconhecido" : "capability desconhecida" };
+    if (!envelope.permissions.includes(capability)) return { error: "sem permissão" };
     const handler = this.handlers.get(this.key(capability, envelope.version, envelope.type));
     if (!handler) return { error: "capability desconhecida" };
     return { handler };

@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { compileEntityFile } from "../../../narrative-engine/index.ts";
 import { believes, factsFor, ignorantOf, ignores, knows } from "../../../knowledge/index.ts";
-import { contextoDaFrase } from "../../lib/sentence-context.ts";
+import { contextoDaFrase } from "../../../sentence-context/index.ts";
 import { causasDeclaradas } from "../../lib/causa.ts";
 
 const entities = "@maria.{ name: 'Maria'; tags: agent, knows_porta, believes_fantasma, ignores_segredo; }";

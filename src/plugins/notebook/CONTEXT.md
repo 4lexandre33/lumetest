@@ -5,14 +5,17 @@ Caderno humano. Plugin interno isolado: compile **e** UI. Fora do matcher.
 ## Abrir
 - `lib/notebook.ts` — `compileNotebook` / `slugOf` / `Entenda`
 - `lib/cache.ts` — hash por `###`
-- `lib/manuscript.ts` — livro, capítulo, cena, parágrafo, sentença. Ids estáveis. Não reescreve a prosa.
-- `lib/narrative-ir.ts` — IR 1.0, separada do `do:`. Acto e mapa até ao texto. Não é gaveta.
-- `lib/reference.ts` — resolvido, ambíguo ou não resolvido, com evidência. Sem candidato único, não escolhe. Sem gênero inventado.
-- `lib/sentence-context.ts` — contexto da frase: quem está, o que sabe, crê e ignora, a cena, os três tempos. Não manda o livro. Sem modelo.
+- O manuscrito é a capability `Manuscript`. O caderno chama `lerManuscrito`. Não calcula.
+- `lib/narrative-ir.ts` — IR 2.0, separada do `do:`. Voz, tempo, modalidade, papéis e evidência só quando o texto ou a declaração os têm. Não é gaveta.
+- `lib/reference.ts` — recência, cena, número e conhecimento. Género só se a entidade declara `genero`. Sem candidato único, não escolhe.
+- O contexto da frase é a capability `SentenceContext`. A autoria junta manuscrito, IR, contexto, diagnóstico, proposta e história. O caderno não coordena.
 - `lib/causa.ts` — causa só na linha `causa: A -> B porque …`. Não se infere.
-- `lib/continuidade.ts` — `arco:` e `fio:` declarados. Aviso não condena. `fica assim:` grava e cala.
+- `lib/continuidade.ts` — `arco:`, `fio:`, `setup:`, `payoff:` e `restricao:` declarados. Avisam. `quebra:` avisa a restrição. `fica assim:` grava e cala.
+- `lib/pessoa.ts` — estado da pessoa por cena: início, pressão, crise, final. Só a linha `pessoa:`. Não lê `hp` e não avança sozinho.
+- `lib/intencao.ts` — intenção autoral por cena (`intencao:`). Compara com a IR. Não é `intent.*` e não executa verbo.
 - `lib/discurso.ts` — discurso e estilo com a frase citada. Não reescrevem o texto.
-- `lib/impacto.ts` — um diagnóstico: cenas que a mutação ainda afecta. Não abre branch.
+- `lib/impacto.ts` — um diagnóstico: cenas que a mutação ainda afecta, percorrendo o grafo. Não abre branch.
+- `lib/diagnostico.ts` — um diagnóstico: continuidade, causa, pessoa, conhecimento, estrutura, estilo, leitor e impacto.
 - `lib/pages.ts` — `parseCadernoLibrary` / `applyNotebookToProject` / fatia `# --- lume-caderno ---` (pad à mão antes de `start()`)
 - `lib/share.ts` — export/import `.lume.caderno.md`
 - `ui/NotebookPane.tsx` — abas, `+`, índice, editor

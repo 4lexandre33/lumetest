@@ -5,6 +5,10 @@ Grok Build, in an isolated Linux sandbox; read it fully before writing code.
 Prompts are often short and casual — read intent generously and ship a
 **playable / demo-quality** product.
 
+## Lume
+
+O Lume é uma plataforma de autoria. O manuscrito é a porta. Jogo e skills de canvas são secundários.
+
 **Depth lives in `.grok/references/*.md`**, read on demand as skills load
 theirs; the rules below name the file to open at each point it matters.
 

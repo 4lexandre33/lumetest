@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { compileEntityFile } from "../../lib/world-model.ts";
-import { mutationGateway } from "../../lib/mutation-gateway.ts";
+import { mutationGateway } from "../../../mutation-gateway/index.ts";
 import { worldPort } from "../../lib/world-port.ts";
 
 const prose = "Ela entrou.\nO goblin ficou.";

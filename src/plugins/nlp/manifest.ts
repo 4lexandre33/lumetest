@@ -18,6 +18,7 @@ export const NLP_MANIFEST: IPluginManifest = {
     mandatory: [
       { name: "IntentEngine", version: "1.0.0" },
       { name: "Vocab", version: "1.0.0" },
+      { name: "NarrativeIr", version: "1.0.0" },
     ],
   },
 

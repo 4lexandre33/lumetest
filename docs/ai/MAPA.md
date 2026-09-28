@@ -1,7 +1,11 @@
-# Mapa Lume EMPA
+# Mapa Lume
+
+O Lume é uma plataforma de autoria. O manuscrito é a porta. Jogo e skills de canvas são secundários.
 
 Fonte canónica da ordem de boot: `src/bootstrap.ts`.
 Este ficheiro é o **índice**. Código vive nos plugins.
+
+O inventário de imports não está completo até à fase 23. Não tratar `src/core/legacy-imports.txt` como a lista toda.
 
 ## Kernel (`src/core/`)
 
@@ -13,14 +17,14 @@ Este ficheiro é o **índice**. Código vive nos plugins.
 | Eventos | `src/core/contracts/typed-event.ts` | classes `lume:…` |
 | CONTEXT | `src/core/CONTEXT.md` | |
 
-Plugins **não** se conhecem. Falam por capability (RPC) e evento (facto). Dívida: alguns `import` diretos de `*/lib` — não expandir.
+Plugins devem falar por capability e evento. Hoje ainda há `import` directo de `*/lib`. Não expandir. A lista fechada dessa dívida é a fase 23.
 
-## Boot (29 plugins)
+## Boot (35 plugins)
 
 ```
-narrative-engine
+narrative-engine → mutation-gateway → ai-runtime → authoring-runtime
   → project-cloud → ide-state → intent-engine
-  → rule-semantics → world-events → knowledge → agency → spatial → senses → kit-adventure → kit-social → kit-channel → kit-combat → kit-prose → sift → dry-run → process → chain → life → vocab → nlp → notebook
+  → rule-semantics → world-events → knowledge → agency → spatial → narrative-graph → senses → kit-adventure → kit-social → kit-channel → kit-combat → kit-prose → sift → dry-run → process → chain → life → vocab → nlp → manuscript → sentence-context → notebook
   → ide-ui → ide-guide → ide-settings → entity-extras → multiplayer → ext-host
 ```
 
@@ -29,10 +33,17 @@ narrative-engine
 | Capability | Plugin | Ficheiro da API |
 |------------|--------|-----------------|
 | NarrativeEngine | lume-narrative-engine | `src/plugins/narrative-engine/index.ts` |
+| MutationGateway | lume-mutation-gateway | `src/plugins/mutation-gateway/index.ts` |
+| AiRuntime | lume-ai-runtime | `src/plugins/ai-runtime/index.ts` |
+| AuthoringRuntime | lume-authoring-runtime | `src/plugins/authoring-runtime/index.ts` |
 | Taxonomy | lume-narrative-engine | idem |
 | QueryEngine | lume-narrative-engine | idem |
 | LanguageTools | lume-narrative-engine | idem |
 | RuleEffects | lume-narrative-engine | `src/plugins/narrative-engine/lib/rule-effects.ts` |
+| RuleResolver | lume-narrative-engine | `src/plugins/narrative-engine/lib/rule-resolver.ts` |
+| RuleRuntime | lume-narrative-engine | `src/plugins/narrative-engine/lib/runtime.ts` |
+| WorldQuery | lume-narrative-engine | `src/plugins/narrative-engine/lib/world-capabilities.ts` |
+| WorldMutation | lume-narrative-engine | `src/plugins/narrative-engine/lib/world-capabilities.ts` |
 | IntentEngine | lume-intent-engine | `src/plugins/intent-engine/index.ts` |
 | IntentCatalog | lume-intent-engine | `src/plugins/intent-engine/lib/catalog.ts` |
 | RuleSemantics | lume-rule-semantics | `src/plugins/rule-semantics/lib/classify.ts` |
@@ -40,6 +51,7 @@ narrative-engine
 | Knowledge | lume-knowledge | `src/plugins/knowledge/lib/store.ts` |
 | Agency | lume-agency | `src/plugins/agency/index.ts` |
 | Spatial | lume-spatial | `src/plugins/spatial/lib/space.ts` |
+| NarrativeGraph | lume-narrative-graph | `src/plugins/narrative-graph/index.ts` |
 | Senses | lume-senses | `src/plugins/senses/lib/senses.ts` |
 | AdventureKit | lume-kit-adventure | `src/plugins/kit-adventure/lib/kit.ts` |
 | SocialKit | lume-kit-social | `src/plugins/kit-social/lib/kit.ts` |
@@ -54,6 +66,8 @@ narrative-engine
 | Vocab | lume-vocab | `src/plugins/vocab/lib/vocab.ts` |
 | Nlp | lume-nlp | `src/plugins/nlp/lib/nlp.ts` |
 | Notebook | lume-notebook | `src/plugins/notebook/lib/notebook.ts` |
+| Manuscript | lume-manuscript | `src/plugins/manuscript/index.ts` |
+| SentenceContext | lume-sentence-context | `src/plugins/sentence-context/index.ts` |
 | IdeState / IdeStore | lume-ide-state | `src/plugins/ide-state/lib/orchestrator.ts` |
 | IdeUI / IdeComponents | lume-ide-ui | `src/plugins/ide-ui/` |
 | ProjectCloud / ProjectHistory | lume-project-cloud | `src/plugins/project-cloud/lib/persistence.ts` |

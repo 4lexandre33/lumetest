@@ -19,8 +19,8 @@ describe("fase 6", () => {
     ].join("\n");
     const ir = lerIr(prose);
     assert.equal(ir.prose, prose);
-    assert.equal(ir.version, "1.0");
-    assert.equal(ir.major, 1);
+    assert.equal(ir.version, "3.0");
+    assert.equal(ir.major, 3);
     assert.equal(ir.minor, 0);
     assert.deepEqual(ir.acts.map((act) => act.operation), [
       "structure",
@@ -32,7 +32,7 @@ describe("fase 6", () => {
       "interiorize",
     ]);
     for (const act of ir.acts) {
-      assert.equal(act.version, "1.0");
+      assert.equal(act.version, "3.0");
       assert.equal("do" in act, false);
       assert.equal("tags" in act, false);
       assert.equal("stats" in act, false);

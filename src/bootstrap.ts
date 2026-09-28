@@ -4,6 +4,7 @@
  */
 
 import { createCore, Core } from './core/index.ts';
+import { ordemDeBoot } from './core/boot-order.ts';
 import { OPCIONAIS } from './opcionais.ts';
 
 // 1. Core Narrative Engine Plugin
@@ -15,6 +16,36 @@ import {
   type QueryEngineService,
   type LanguageToolsService
 } from './plugins/narrative-engine/index.ts';
+
+import {
+  MUTATION_GATEWAY_MANIFEST,
+  createMutationGatewayPlugin
+} from './plugins/mutation-gateway/index.ts';
+
+import {
+  AI_RUNTIME_MANIFEST,
+  createAiRuntimePlugin
+} from './plugins/ai-runtime/index.ts';
+
+import {
+  AUTHORING_RUNTIME_MANIFEST,
+  createAuthoringRuntimePlugin
+} from './plugins/authoring-runtime/index.ts';
+
+import {
+  MANUSCRIPT_MANIFEST,
+  createManuscriptPlugin
+} from './plugins/manuscript/index.ts';
+
+import {
+  SENTENCE_CONTEXT_MANIFEST,
+  createSentenceContextPlugin
+} from './plugins/sentence-context/index.ts';
+
+import {
+  NARRATIVE_GRAPH_MANIFEST,
+  createNarrativeGraphPlugin
+} from './plugins/narrative-graph/index.ts';
 
 // 2. Project Cloud & Persistence Plugin
 import {
@@ -241,12 +272,12 @@ let platformCore: Core | null = null;
 /**
  * Boots the Extensible Microkernel Platform and activates all domain plugins
  */
-export async function bootLumePlatform(opts?: { opcionais?: boolean }): Promise<{ core: Core; services: LumePlatformServices }> {
+export async function bootLumePlatform(opts?: { opcionais?: boolean; servicos?: boolean }): Promise<{ core: Core; services?: LumePlatformServices }> {
   const guardar = opts?.opcionais !== false;
   if (guardar && platformCore) {
     return {
       core: platformCore,
-      services: getPlatformServices(platformCore)
+      ...(opts?.servicos ? { services: getPlatformServices(platformCore) } : {})
     };
   }
 
@@ -260,6 +291,9 @@ export async function bootLumePlatform(opts?: { opcionais?: boolean }): Promise<
 
   // Register all plugins
   core.registerPlugin(NARRATIVE_ENGINE_MANIFEST, createNarrativeEnginePlugin);
+  core.registerPlugin(MUTATION_GATEWAY_MANIFEST, createMutationGatewayPlugin);
+  core.registerPlugin(AI_RUNTIME_MANIFEST, createAiRuntimePlugin);
+  core.registerPlugin(AUTHORING_RUNTIME_MANIFEST, createAuthoringRuntimePlugin);
   core.registerPlugin(PROJECT_CLOUD_MANIFEST, createProjectCloudPlugin);
   core.registerPlugin(IDE_STATE_MANIFEST, createIdeStatePlugin);
   core.registerPlugin(INTENT_ENGINE_MANIFEST, createIntentEnginePlugin);
@@ -268,6 +302,7 @@ export async function bootLumePlatform(opts?: { opcionais?: boolean }): Promise<
   core.registerPlugin(KNOWLEDGE_MANIFEST, createKnowledgePlugin);
   core.registerPlugin(AGENCY_MANIFEST, createAgencyPlugin);
   core.registerPlugin(SPATIAL_MANIFEST, createSpatialPlugin);
+  core.registerPlugin(NARRATIVE_GRAPH_MANIFEST, createNarrativeGraphPlugin);
   core.registerPlugin(SENSES_MANIFEST, createSensesPlugin);
   core.registerPlugin(KIT_ADVENTURE_MANIFEST, createKitAdventurePlugin);
   core.registerPlugin(KIT_SOCIAL_MANIFEST, createKitSocialPlugin);
@@ -281,6 +316,8 @@ export async function bootLumePlatform(opts?: { opcionais?: boolean }): Promise<
   core.registerPlugin(LIFE_MANIFEST, createLifePlugin);
   core.registerPlugin(VOCAB_MANIFEST, createVocabPlugin);
   core.registerPlugin(NLP_MANIFEST, createNlpPlugin);
+  core.registerPlugin(MANUSCRIPT_MANIFEST, createManuscriptPlugin);
+  core.registerPlugin(SENTENCE_CONTEXT_MANIFEST, createSentenceContextPlugin);
   core.registerPlugin(NOTEBOOK_MANIFEST, createNotebookPlugin);
   core.registerPlugin(IDE_UI_MANIFEST, createIdeUIPlugin);
   core.registerPlugin(IDE_GUIDE_MANIFEST, createIdeGuidePlugin);
@@ -289,41 +326,17 @@ export async function bootLumePlatform(opts?: { opcionais?: boolean }): Promise<
   core.registerPlugin(MULTIPLAYER_MANIFEST, createMultiplayerPlugin);
   core.registerPlugin(EXT_HOST_MANIFEST, createExtHostPlugin);
 
-  // Activate plugins respecting dependency graph
+  // Activate plugins respecting dependency graph.
   const opcional = new Set(OPCIONAIS.map((item) => item.plugin));
-  const ligar = async (name: string) => {
-    if (!guardar && opcional.has(name)) return;
+  const ordem = ordemDeBoot(core.listPlugins().map((manifest) => ({
+    name: manifest.name,
+    provides: manifest.capabilities?.provides?.map((item) => item.name) ?? [],
+    requires: manifest.requires?.mandatory?.map((item) => item.name) ?? [],
+  })));
+  for (const name of ordem) {
+    if (!guardar && opcional.has(name)) continue;
     await core.activatePlugin(name);
-  };
-  await core.activatePlugin('lume-narrative-engine');
-  await core.activatePlugin('lume-project-cloud');
-  await core.activatePlugin('lume-ide-state');
-  await core.activatePlugin('lume-intent-engine');
-  await core.activatePlugin('lume-rule-semantics');
-  await core.activatePlugin('lume-world-events');
-  await core.activatePlugin('lume-knowledge');
-  await core.activatePlugin('lume-agency');
-  await ligar('lume-spatial');
-  await ligar('lume-senses');
-  await ligar('lume-kit-adventure');
-  await ligar('lume-kit-social');
-  await ligar('lume-kit-channel');
-  await ligar('lume-kit-combat');
-  await ligar('lume-kit-prose');
-  await ligar('lume-sift');
-  await core.activatePlugin('lume-dry-run');
-  await ligar('lume-process');
-  await core.activatePlugin('lume-chain');
-  await ligar('lume-life');
-  await core.activatePlugin('lume-vocab');
-  await core.activatePlugin('lume-nlp');
-  await core.activatePlugin('lume-notebook');
-  await core.activatePlugin('lume-ide-ui');
-  await core.activatePlugin('lume-ide-guide');
-  await core.activatePlugin('lume-ide-settings');
-  await core.activatePlugin('lume-entity-extras');
-  await ligar('lume-multiplayer');
-  await core.activatePlugin('lume-ext-host');
+  }
 
   if (typeof globalThis !== 'undefined') {
     globalThis.__LUME_CORE__ = core;
@@ -331,7 +344,7 @@ export async function bootLumePlatform(opts?: { opcionais?: boolean }): Promise<
 
   return {
     core,
-    services: getPlatformServices(core)
+    ...(opts?.servicos ? { services: getPlatformServices(core) } : {})
   };
 }
 

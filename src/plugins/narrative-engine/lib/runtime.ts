@@ -1,7 +1,8 @@
 import { parseNarrative, pickNarrative, renderMarkdown, humanizeEntityId } from "./narrative.ts";
 import { query } from "./query.ts";
 import { applyRuleEffects, MAX_EFFECT_DEPTH } from "./rule-effects.ts";
-import { applyChanges, findMatchingRule, findMatchingRules, type Rule, type RuleMatch } from "./rule-engine.ts";
+import { applyChanges, type Rule, type RuleMatch } from "./rule-engine.ts";
+import { resolveRule, resolveRules } from "./rule-resolver.ts";
 import { emptyBeat, matchTrace, vivosFromHistory, type BeatTrace } from "./beat.ts";
 import { matchSift, type SiftHit, type SiftPattern } from "./sift.ts";
 import { EMPTY_TAXONOMY, type CompiledTaxonomy } from "./taxonomy.ts";
@@ -81,8 +82,8 @@ export function interactWith(state: GameState, triggerId: string): GameState {
   try {
     const world = state.worldModel;
     const tax = state.taxonomy;
-    const candidates = findMatchingRules(triggerId, state.rules, world, tax);
-    const rule = findMatchingRule(triggerId, state.rules, world, tax);
+    const candidates = resolveRules(triggerId, state.rules, world, tax);
+    const rule = resolveRule(triggerId, state.rules, world, tax);
     const key = rule?.id ?? triggerId;
     const cycleIndex = state.ruleCounts[key] ?? 0;
     let nextWorld = world;

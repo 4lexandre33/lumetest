@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { contextoDaFrase } from "../../lib/sentence-context.ts";
+import { contextoDaFrase } from "../../../sentence-context/index.ts";
 
 const entities = [
   "@maria.{ name: 'Maria'; tags: agent, knows_porta; }",

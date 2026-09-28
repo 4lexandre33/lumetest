@@ -6,11 +6,9 @@ import {
   compileProject,
   createExampleProject,
   createGame,
-  definirPolitica,
-  descerMutacao,
   interactWith,
-  type OrigemMutacao,
 } from "../../../narrative-engine/index.ts";
+import { definirPolitica, descerMutacao, type OrigemMutacao } from "../../../mutation-gateway/index.ts";
 import { executeIntent, type QueryFn } from "../../../intent-engine/index.ts";
 import { aplicarLinhaComando } from "../../lib/comando.ts";
 import { query } from "../../../narrative-engine/index.ts";
@@ -19,7 +17,7 @@ describe("fase 10", () => {
   afterEach(() => definirPolitica(null));
 
   it("intent, comando e modelo descem à mesma gateway e à mesma política", () => {
-    const gate = readFileSync(new URL("../../../narrative-engine/lib/mutation-gateway.ts", import.meta.url), "utf8");
+    const gate = readFileSync(new URL("../../../mutation-gateway/lib/gateway.ts", import.meta.url), "utf8");
     assert.equal(gate.includes("descerModelo"), false);
     assert.equal(gate.includes('origem === "modelo"'), false);
 

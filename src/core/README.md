@@ -1,4 +1,6 @@
-# Lume Core — Microkernel Platform Architecture
+# Lume Core
+
+O Lume é uma plataforma de autoria. O manuscrito é a porta. Jogo e skills de canvas são secundários.
 
 Este diretório contém o **Core** (microkernel) da plataforma Lume, responsável por:
 

@@ -25,7 +25,7 @@ IdeUI, IdeComponents
 NarrativeEngine, ProjectCloud, IdeStore
 
 ## Não fazer
-- Não copiar componentes para `src/components/ide/` (lá só `export { X } from plugins/...`)
+- Não recriar `src/components/ide/`. A rota usa estes componentes.
 - Não mostrar atalhos de escolha sempre visíveis; o menu único abre no cursor só com `.` ou Ctrl+Espaço. Um ponto, um nível — não o catálogo inteiro. Enter substitui o trecho.
 - Não lógica de compile/interact aqui — store
 

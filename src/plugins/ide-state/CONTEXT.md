@@ -14,7 +14,7 @@ IdeState, IdeStore
 NarrativeEngine, ProjectCloud
 
 ## Não fazer
-- Não duplicar store em `src/lib/ide/store.ts` (já reexporta)
+- Não recriar `src/lib/ide/store.ts`. A store vive aqui.
 - Pastas = `project.settings.tree`, não tags do world model
 - Dívida: importa `narrative-engine/lib` e `intent-engine/lib`. Não acrescentar mais imports de plugin
 

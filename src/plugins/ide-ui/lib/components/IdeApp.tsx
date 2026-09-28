@@ -18,14 +18,14 @@ import { ExtPluginsWindow } from "./ExtPluginsWindow.tsx";
 import { NotebookPane, NotebookTabstrip } from "../../../notebook/ui/NotebookPane.tsx";
 import { NotebookViewProvider } from "../../../notebook/ui/notebook-view.tsx";
 import { SalaPainel } from "./SalaPainel.tsx";
-import { ROTULO, salasVisiveis, type Superficie } from "../superficie.ts";
+import { ROTULO, salasVisiveis, ferramentasDaSala, type Superficie } from "../superficie.ts";
 import { useIdeStore, AUTOSAVE_MS } from "../../../ide-state/index.ts";
 import { toWireProject, buildPlayBundle, encodeSessionHash } from "../../../narrative-engine/index.ts";
 import { applyNotebookToProject } from "../../../notebook/index.ts";
 import { exportCadernoMd, cadernoFilename } from "../../../notebook/index.ts";
 import { staticPlayHtml, playShareUrl, sessionShareUrl } from "../play-html.ts";
 import { cn } from "../utils.ts";
-import { ensureExtHost } from "../../../ext-host/lib/ensure.ts";
+import { ensureExtHost } from "../../../ext-host/index.ts";
 
 type MenuId = "projeto" | "editar" | "executar" | "depurar" | "ajuda";
 
@@ -110,6 +110,7 @@ export function IdeApp() {
   const [sala, setSala] = useState<Superficie>("escrever");
   const [tecnicoPedido, setTecnicoPedido] = useState(false);
   const visiveis = salasVisiveis(tecnicoPedido);
+  const tec = new Set(ferramentasDaSala(sala));
   const barRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cadernoRef = useRef<HTMLInputElement>(null);
@@ -298,7 +299,7 @@ export function IdeApp() {
         <button type="button" onClick={openWelcome} className="mr-1 shrink-0 px-2 font-display text-lg leading-none hover:text-muted">
           Lume
         </button>
-        {MENUS.map((m) => (
+        {MENUS.filter((m) => (m.id === "executar" ? tec.has("play") : m.id === "depurar" ? tec.has("debug") : true)).map((m) => (
           <div key={m.id} className="relative">
             <button
               type="button"
@@ -316,9 +317,9 @@ export function IdeApp() {
                     <MenuItem label="Nova história" onSelect={() => closeAnd(newBlank)} />
                     <MenuItem label="Abrir…" onSelect={() => closeAnd(openWelcome)} />
                     <MenuItem label="Guardar" kbd="⌘S" onSelect={() => closeAnd(saveNow)} />
-                    <MenuItem label="Exportar JSON" onSelect={() => closeAnd(exportJson)} />
+                    {tec.has("export") ? <MenuItem label="Exportar JSON" onSelect={() => closeAnd(exportJson)} /> : null}
                     <MenuItem label="Importar JSON…" onSelect={() => closeAnd(() => fileRef.current?.click())} />
-                    <MenuItem label="Exportar caderno" onSelect={() => closeAnd(exportCadernoFile)} />
+                    {tec.has("export") ? <MenuItem label="Exportar caderno" onSelect={() => closeAnd(exportCadernoFile)} /> : null}
                     <MenuItem label="Importar caderno…" onSelect={() => closeAnd(() => cadernoRef.current?.click())} />
                     <div className="my-1 h-px bg-border" />
                     <MenuItem label="Apagar esta história" danger onSelect={() => closeAnd(deleteCurrent)} />
@@ -442,7 +443,7 @@ export function IdeApp() {
                     <div className="min-h-0 flex-1">
                       <PreviewPane mode="ide" />
                     </div>
-                    {skeinOpen ? (
+                    {tec.has("skein") && skeinOpen ? (
                       <div className="h-40 shrink-0 border-t border-border">
                         <Skein />
                       </div>
@@ -485,7 +486,7 @@ export function IdeApp() {
               <div className="min-h-0 flex-1">
                 <PreviewPane mode="ide" />
               </div>
-              {skeinOpen ? (
+              {tec.has("skein") && skeinOpen ? (
                 <div className="h-40 shrink-0 border-t border-border">
                   <Skein />
                 </div>

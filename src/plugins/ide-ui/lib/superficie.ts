@@ -17,3 +17,12 @@ export const ROTULO: Record<Superficie, string> = {
 export function salasVisiveis(tecnicoPedido: boolean): Superficie[] {
   return tecnicoPedido ? [...SALAS, "tecnico"] : [...SALAS];
 }
+
+export const FERRAMENTAS = ["play", "skein", "debug", "export"] as const;
+
+export type Ferramenta = (typeof FERRAMENTAS)[number];
+
+/** Play, Skein, Debug e export só no Técnico. A superfície de escritor não as tem. */
+export function ferramentasDaSala(sala: Superficie): Ferramenta[] {
+  return sala === "tecnico" ? [...FERRAMENTAS] : [];
+}

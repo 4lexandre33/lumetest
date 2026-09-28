@@ -2,6 +2,8 @@
  * Envelope — unidade de comunicação entre capabilities.
  * Não conhece narrativa.
  */
+export type EnvelopeMode = "read" | "write" | "simulate";
+
 export type Envelope<T = unknown> = {
   id: string;
   type: string;
@@ -11,6 +13,12 @@ export type Envelope<T = unknown> = {
   capability?: string;
   slot?: string;
   payload?: T;
+  correlationId: string;
+  causationId?: string;
+  timestamp: string;
+  permissions: string[];
+  context?: Record<string, unknown>;
+  mode: EnvelopeMode;
 };
 
 export type DispatchResult<T = unknown> =

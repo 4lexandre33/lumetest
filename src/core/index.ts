@@ -18,6 +18,7 @@ import { Dispatcher } from './internal/dispatcher.ts';
 import { ConsoleLogger, createPluginLogger } from './logger.ts';
 import { AppError } from './contracts/errors.ts';
 import type { CapabilityHandler, DispatchResult, Envelope } from './contracts/envelope.ts';
+import { capabilityDeclarada } from './enforcement.ts';
 
 /**
  * In-memory storage para plugins
@@ -135,6 +136,10 @@ export class Core {
       pluginVersion,
 
       registerCapability: (capability) => {
+        const declaradas = manifest?.capabilities?.provides?.map((item) => item.name) ?? [];
+        if (!capabilityDeclarada(declaradas, capability.name)) {
+          throw new Error(`capability não declarada: ${capability.name}`);
+        }
         this.capabilityRegistry.register(capability);
       },
 

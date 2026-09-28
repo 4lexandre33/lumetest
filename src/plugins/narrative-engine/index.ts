@@ -210,7 +210,7 @@ export class NarrativeEnginePlugin implements IPlugin {
       blankRules: engine.BLANK_RULES,
       blankTaxonomy: engine.BLANK_TAXONOMY,
       worldPort: (world) => engine.worldPort(world),
-      submitMutation: (world, doLine, prose, policy) => engine.mutationGateway(engine.worldPort(world), policy).submit(doLine, prose)
+      compileEntities: (source) => engine.compileEntityFile(source)
     };
   }
 
@@ -256,13 +256,40 @@ export class NarrativeEnginePlugin implements IPlugin {
       provider: this.manifest.name,
       api: engine.ruleEffectsService as any
     });
+    this.context.registerCapability({
+      name: 'RuleResolver',
+      version: '1.0.0',
+      provider: this.manifest.name,
+      api: engine.ruleResolver() as any
+    });
+    this.context.registerCapability({
+      name: 'RuleRuntime',
+      version: '1.0.0',
+      provider: this.manifest.name,
+      api: { createGame: engine.createGame, interactWith: engine.interactWith, bootGame: engine.bootGame } as any
+    });
+
+    const query = engine.worldQuery();
+    const mutation = engine.worldMutation();
+    this.context.registerCapability({
+      name: 'WorldQuery',
+      version: '1.0.0',
+      provider: this.manifest.name,
+      api: query as any
+    });
+    this.context.registerCapability({
+      name: 'WorldMutation',
+      version: '1.0.0',
+      provider: this.manifest.name,
+      api: mutation as any
+    });
 
     // Run init hook if defined
     if (this.manifest.hooks?.init) {
       await this.manifest.hooks.init();
     }
 
-    this.context.logger.info('Lume Narrative Engine Plugin activated successfully with 5 capabilities.');
+    this.context.logger.info('Lume Narrative Engine Plugin activated successfully with 9 capabilities.');
   }
 
   async deactivate(): Promise<void> {

@@ -1,5 +1,6 @@
 import type { Entity, StatValue } from "../../narrative-engine/index.ts";
-import { canonicalEntityId, cloneEntity, compileEntityFile, descerMutacao, formatFuseValue, formatStatInput, isCanonicalEntityId, isSystemEntityId, serializeEntityBlock, shortCodeFromSlug } from "../../narrative-engine/index.ts";
+import { canonicalEntityId, cloneEntity, compileEntityFile, formatFuseValue, formatStatInput, isCanonicalEntityId, isSystemEntityId, serializeEntityBlock, shortCodeFromSlug } from "../../narrative-engine/index.ts";
+import { descerMutacao } from "../../mutation-gateway/index.ts";
 import { deleteEntityBlock, handwrittenInsertAt, inCadernoSlice, insertEntity, locateEntityBlock } from "../../narrative-engine/index.ts";
 import { FBE_DRAWERS, type FbeDrawer } from "../../narrative-engine/index.ts";
 import { authorshipTimeline, leituraAte } from "./timeline.ts";

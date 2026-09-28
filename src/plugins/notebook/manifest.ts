@@ -11,7 +11,11 @@ export const NOTEBOOK_MANIFEST: IPluginManifest = {
   author: "Lume Architecture Platform",
 
   capabilities: {
-    provides: [{ name: "Notebook", version: "1.0.0" }],
+    provides: [
+      { name: "Notebook", version: "1.0.0" },
+      { name: "NarrativeIr", version: "1.0.0" },
+      { name: "Diagnostico", version: "1.0.0" },
+    ],
   },
 
   requires: {

@@ -1,5 +1,4 @@
-import { findMatchingRule } from "../../narrative-engine/index.ts";
-import { cloneWorldModel } from "../../narrative-engine/index.ts";
+import { ruleResolver, worldQuery } from "../../narrative-engine/index.ts";
 import type { CompiledTaxonomy, GameState, WorldModel } from "../../narrative-engine/types.ts";
 import type {
   CatalogNode,
@@ -241,7 +240,7 @@ function hasMatchingRule(
   const parts = path.split(".");
   const leaf = parts[parts.length - 1] ?? "";
   const family = parts[0] ?? "action";
-  const world = cloneWorldModel(game.worldModel);
+  const world = worldQuery().snapshot(game.worldModel);
   const entity = world.get(actor);
   if (!entity) return false;
   entity.links.intent = leaf;
@@ -249,7 +248,7 @@ function hasMatchingRule(
   for (const [name, value] of Object.entries(args)) {
     entity.links[`intent_${name}`] = value;
   }
-  return findMatchingRule(triggerId, game.rules, world, game.taxonomy) != null;
+  return ruleResolver().resolveRule(triggerId, game.rules, world, game.taxonomy) != null;
 }
 
 function viableEntityIds(

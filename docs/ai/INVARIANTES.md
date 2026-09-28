@@ -1,5 +1,9 @@
 # Invariantes — o que nunca fazer
 
+O Lume é uma plataforma de autoria. O manuscrito é a porta. Jogo e skills de canvas são secundários.
+
+Extrair capability é permitido. A proibição fica no matcher e na prosa: um só findMatchingRule, e a prosa não se reescreve.
+
 Se um pedido chocar com isto, **recusar a parte ilegal** e fazer o resto no idioma Lume.
 
 ## Motor
@@ -25,7 +29,7 @@ Se um pedido chocar com isto, **recusar a parte ilegal** e fazer o resto no idio
 13. Código **novo** não importa outro plugin. Capability + evento.
 14. Não criar plugin por categoria (ConstraintEngine, LifecycleEngine, FearEngine).
 15. Não primitivas FEAR/FLEE/TALK/ATTACK. Catálogo de intent e regras compostas bastam.
-16. UI canónica em `src/plugins/ide-ui/lib/components/`. `src/components/ide/X` reexporta; não duplicar lógica.
+16. UI canónica em `src/plugins/ide-ui/lib/components/`. A fachada `src/components/ide/` foi retirada; não a recriar.
 17. Pedido “fase N, sem mais e sem menos” = não ouro, não TIME, não tick NPC, não Inspector, salvo o texto do pedido.
 
 ## Testes

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { lerManuscrito } from "../../lib/manuscript.ts";
+import { lerManuscrito } from "../../../manuscript/index.ts";
 
 describe("fase 5", () => {
   it("lê livro, capítulo, cena, parágrafo e sentença sem reescrever a prosa", () => {

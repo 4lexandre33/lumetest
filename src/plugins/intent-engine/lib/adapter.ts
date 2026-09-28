@@ -1,4 +1,4 @@
-import { descerMutacao } from "../../narrative-engine/index.ts";
+import { descerMutacao } from "../../mutation-gateway/index.ts";
 import type { GameState } from "../../narrative-engine/types.ts";
 import type { Intent, IntentExecution, ParseIntentOptions } from "../types.ts";
 import { presentIntent } from "./present.ts";

@@ -1,4 +1,4 @@
-import { lerManuscrito } from "./manuscript.ts";
+import { lerManuscrito } from "../../manuscript/index.ts";
 
 export type Evidencia = { start: number; end: number; text: string };
 

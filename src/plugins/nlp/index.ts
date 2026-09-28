@@ -10,7 +10,7 @@ import type { VocabService } from "../vocab/types.ts";
 import { NLP_MANIFEST } from "./manifest.ts";
 import { interpret, splitPhrases } from "./lib/nlp.ts";
 import { nlpComando } from "./lib/command.ts";
-import { nlpProsa } from "./lib/prose.ts";
+import { ligarIr, nlpProsa } from "./lib/prose.ts";
 import { definirModelo } from "./lib/model-provider.ts";
 import type { NlpService } from "./types.ts";
 
@@ -35,6 +35,7 @@ export class NlpPlugin implements IPlugin {
   async activate(): Promise<void> {
     this.context.logger.info("Activating Lume NLP Plugin...");
     this.context.getService<VocabService>("Vocab");
+    ligarIr((prose) => this.context.getService<{ ler: (prose: string) => { prose: string; version: string; acts: { operation: string; text: string }[] } }>("NarrativeIr").ler(prose));
     const intent = this.context.getService<IntentEngineService>("IntentEngine");
     this.unregister = intent.registerPhraseMapper((text, game, scopeFn) => {
       const snap = scopeFn?.(game.worldModel, game.playerEntityId);

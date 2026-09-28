@@ -42,7 +42,7 @@ import { aplicarLinhaComando } from "../lib/comando.ts";
 import { replaceBookSource } from "../lib/pages.ts";
 import { useNotebookView } from "./notebook-view.tsx";
 import { menuAnchor, menuDetail, menuOpens, menuSeal } from "../../ide-ui/index.ts";
-import { CompletionMenu } from "../../ide-ui/lib/components/CompletionMenu.tsx";
+import { CompletionMenu } from "../../ide-ui/components.ts";
 
 const LINE_PX = 24;
 const PAD_TOP = 16;
